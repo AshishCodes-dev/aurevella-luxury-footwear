@@ -13,9 +13,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // CORS setup: allow ONLY the origin in CLIENT_URL
-const allowedOrigin = process.env.CLIENT_URL;
 const corsOptions = {
   origin: (origin, callback) => {
+    const allowedOrigin = process.env.CLIENT_URL;
     // Allow non-browser / server-to-server requests (no origin header)
     // or requests matching CLIENT_URL
     if (!origin || origin === allowedOrigin) {

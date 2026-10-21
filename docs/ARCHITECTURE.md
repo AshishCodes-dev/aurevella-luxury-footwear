@@ -4,7 +4,7 @@
 > Outlines the deployment topology, technology trade-offs, and phased execution roadmap.
 
 - **Last updated**: October 22, 2026  
-- **Status**: Draft v1
+- **Status**: Draft v1.1
 
 ---
 
@@ -17,60 +17,87 @@ flowchart LR
     subgraph Client Tier
         User([Customer / Admin])
         Browser["React 19 + Vite SPA\n(Tailwind CSS v4)"]
+        LocalCart[(Local Storage\nGuest Cart)]
     end
 
     subgraph Application Tier
         ExpressAPI["Node.js + Express API\n(Helmet, Morgan, CORS, Cookie-Parser)"]
+        RawWebhook["express.raw()\n/api/payments/webhook"]
+        JSONParser["express.json()\nStandard Routes"]
     end
 
     subgraph Data & Third-Party Tier
-        MongoDB[(MongoDB Atlas\nMongoose ODM)]
-        Razorpay["Razorpay Payment Gateway\n(Orders API & Webhooks)"]
+        MongoDB[(MongoDB Atlas Replica Set\nMongoose ODM)]
+        Razorpay["Razorpay Payment Gateway\n(Orders API, Refunds & Webhooks)"]
         MediaStore["Media Storage\n(Cloudinary / Disk) [OPEN]"]
+        EmailService["Transactional Email\n(Resend/SendGrid/SES) [OPEN]"]
     end
 
     User -->|Interacts| Browser
-    Browser -->|HTTPS / REST API\n(httpOnly Secure Cookies)| ExpressAPI
-    ExpressAPI -->|Mongoose Queries| MongoDB
-    ExpressAPI -->|Create Order / Verify HMAC| Razorpay
+    Browser <-->|Guest Cart Sync| LocalCart
+    Browser -->|HTTPS / Custom CSRF Header\n(httpOnly Secure Cookies)| ExpressAPI
+    ExpressAPI --> RawWebhook
+    ExpressAPI --> JSONParser
+    ExpressAPI -->|Transactions / Atomic Updates| MongoDB
+    ExpressAPI -->|Create Order / Verify HMAC / Refunds| Razorpay
     ExpressAPI -->|Upload / Fetch Images| MediaStore
-    Razorpay -.->|Server Webhook Event| ExpressAPI
+    ExpressAPI -->|Dispatch Order & Auth Emails| EmailService
+    Razorpay -.->|Server Webhook Event (Raw JSON)| RawWebhook
 ```
+
+### Core Currency Principle
+- **All monetary calculations and stored attributes represent integer PAISE (1 INR = 100 paise)**. All API requests and responses carry amounts with the `Paise` suffix (e.g., `totalAmountPaise`). Rupees are derived on the client strictly for formatted UI display.
 
 ---
 
-## 2. Layer Responsibilities
+## 2. Layer Responsibilities & Middleware Ordering
 
 ### 2.1 Frontend Single Page Application (SPA)
-- **Role**: Presentational and interactive layer executed client-side in the user's browser.
+- **Role**: Presentational and interactive client running in the user's browser.
 - **Technologies**: React 19, Vite, Tailwind CSS v4.
 - **Responsibilities**:
-  - Render responsive UI according to brand luxury design guidelines.
-  - Manage client state (active cart view, authenticated user session state, variant selections).
-  - Communicate with backend Express API via asynchronous `fetch` calls.
+  - Render responsive luxury UI conforming to brand guidelines.
+  - Manage guest cart in browser storage; initiate merge to database cart upon login.
   - Mount Razorpay Checkout modal for customer payment capture.
-  - Perform client-side format validation to give instantaneous feedback to users.
+  - Transmit custom CSRF verification header (`X-Aurevella-Request: 1`) on all mutating requests.
+  - Display prices converted from paise to rupees (`₹ (paise / 100).toLocaleString('en-IN')`).
 
 ### 2.2 Backend Application Programming Interface (API)
-- **Role**: Business logic enforcement, security gateway, and transactional coordinator.
+- **Role**: Business logic enforcement, security boundary, and transactional coordinator.
 - **Technologies**: Node.js v24+, Express v4/v5, Mongoose v8.
 - **Responsibilities**:
-  - Authenticate requests, parse secure JWTs from cookies, and enforce role-based access control.
-  - Execute business rules: calculate prices server-side, check and decrement inventory atomically.
-  - Communicate securely with external APIs (Razorpay order creation and signature verification).
+  - Authenticate requests, parse secure JWTs from cookies, re-fetch user from DB on every protected request for immediate role/revocation enforcement.
+  - Enforce server-side pricing, atomic stock reservations, and order state transitions.
+  - Coordinate payment verification via a unified atomic routine shared between callbacks and webhooks.
   - Sanitize all inbound requests and return standardized JSON responses.
 
-### 2.3 Backend Directory Responsibilities
+### 2.3 Express Middleware Pipeline & Critical Ordering
+The Express pipeline must mount raw body parsing for payment webhooks **prior** to generic JSON parsing:
+
+```text
+1. helmet()                        # Standard defensive security headers
+2. cors(corsOptions)               # Strict origin matching to CLIENT_URL
+3. cookie-parser()                 # Parse signed/secure cookies
+4. express.raw({ type: ... })      # MOUNTED FIRST on /api/payments/webhook for HMAC signature verification
+5. express.json()                  # MOUNTED SUBSEQUENTLY for all standard JSON API routes
+6. express.urlencoded()            # Form parsing
+7. custom CSRF header guard        # Enforce X-Aurevella-Request header on mutating requests
+8. morgan()                        # Request logging (never logging PII or secrets)
+9. API Router mounting             # /api/auth, /api/products, /api/payments, etc.
+10. 404 Handler                    # Catch-all route not found
+11. Central Error Handler          # Global error interception, sanitize stacks in production
+```
 
 ```text
 backend/src/
-├── app.js               # Express application configuration, middleware pipeline & error handling
+├── app.js               # Express application configuration & ordered middleware pipeline
+├── server.js            # Entry point initializing db connection and HTTP listener
 ├── config/              # Infrastructure clients (db.js connection, Razorpay client instance)
-├── controllers/         # Business logic functions handling requests, validation & responses
-├── middleware/          # Reusable filters (auth verification, role guards, validation, rate limiters)
-├── models/              # Mongoose schemas enforcing domain rules, validation & indexes
+├── controllers/         # Business logic handlers (auth, products, orders, payments, admin)
+├── middleware/          # Security filters (authenticate, authorizeAdmin, csrfGuard, rateLimiter)
+├── models/              # Mongoose schemas (User, Product, ProductVariant, StockReservation, Order, Payment)
 ├── routes/              # Express Router definitions binding endpoints to controller handlers
-└── utils/               # Pure helper utilities (price calculation, token issuance, error classes)
+└── utils/               # Pure helper utilities (price calculation, token issuance, seedAdmin)
 ```
 
 ---
@@ -80,29 +107,32 @@ backend/src/
 ### 3.1 Authentication & User Routes (`/api/auth`)
 | Method | Path | Access Level | Purpose |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/register` | Public | Register new customer account and establish session. |
+| `POST` | `/api/auth/register` | Public | Register new customer account and establish session cookie. |
 | `POST` | `/api/auth/login` | Public | Authenticate user credentials and issue secure session cookie. |
 | `POST` | `/api/auth/logout` | Authenticated | Invalidate session and clear authentication cookie. |
-| `GET` | `/api/auth/me` | Authenticated | Retrieve current user profile and role. |
+| `GET` | `/api/auth/me` | Authenticated | Retrieve current user profile and role (re-queried from DB). |
 | `PUT` | `/api/auth/profile` | Customer / Admin | Update personal name and contact number. |
+| `POST` | `/api/auth/forgot-password`| Public | Send password reset link to user's email (generic response). |
+| `POST` | `/api/auth/reset-password` | Public | Reset password using verified single-use 30-min token `[ASSUMPTION]`. |
 | `POST` | `/api/auth/addresses` | Customer | Add a new shipping address to user profile. |
 | `PUT` | `/api/auth/addresses/:id` | Customer | Update an existing shipping address. |
 | `DELETE`| `/api/auth/addresses/:id` | Customer | Delete a saved shipping address. |
 
-### 3.2 Product & Collection Routes (`/api/products`, `/api/collections`)
+### 3.2 Product & Collection Routes (`/api/products`, `/api/collections`, `/api/categories`)
 | Method | Path | Access Level | Purpose |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/products` | Public | List published products with optional category/collection filtering. |
 | `GET` | `/api/products/:slug` | Public | Get single product detail by slug with variants and custom options. |
-| `GET` | `/api/collections` | Public | List all active collections (e.g., Limited Edition, Heritage). |
+| `GET` | `/api/collections` | Public | List all active collections (e.g., Limited Edition, Sample Collection). |
 | `GET` | `/api/collections/:slug` | Public | Get specific collection details and associated product list. |
-| `GET` | `/api/categories` | Public | List available product categories. |
+| `GET` | `/api/categories` | Public | List available product categories (e.g., Heels, Flats `[ASSUMPTION]`). |
 
 ### 3.3 Shopping Cart Routes (`/api/cart`)
 | Method | Path | Access Level | Purpose |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/cart` | Customer | Fetch current authenticated customer's persistent cart. |
 | `POST` | `/api/cart/items` | Customer | Add variant item with quantity and customization options to cart. |
+| `POST` | `/api/cart/merge` | Customer | Merge local browser guest cart items into database cart upon login. |
 | `PUT` | `/api/cart/items/:itemId` | Customer | Update quantity of a line item in cart. |
 | `DELETE`| `/api/cart/items/:itemId` | Customer | Remove specific line item from cart. |
 | `DELETE`| `/api/cart` | Customer | Clear all items from current cart. |
@@ -111,14 +141,15 @@ backend/src/
 | Method | Path | Access Level | Purpose |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/orders` | Customer | Retrieve historical orders for logged-in customer. |
-| `GET` | `/api/orders/:id` | Customer | Retrieve detailed order breakdown by ID (owned by customer). |
+| `GET` | `/api/orders/:id` | Customer | Retrieve detailed order breakdown by ID (includes `orderStatus` and `paymentStatus`). |
+| `POST` | `/api/orders/:id/cancel` | Customer | Cancel order before dispatch (`placed` / `processing`); releases or restores stock `[OPEN]`. |
 
 ### 3.5 Payment Routes (`/api/payments`)
 | Method | Path | Access Level | Purpose |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/payments/create-order` | Customer | Create official Razorpay Order ID for cart checkout. |
-| `POST` | `/api/payments/verify` | Customer | Verify HMAC SHA-256 signature after payment modal completion. |
-| `POST` | `/api/payments/webhook` | Public (Verified) | Handle Razorpay asynchronous webhook events (e.g., `payment.captured`). |
+| `POST` | `/api/payments/create-order` | Customer | Atomically reserve stock for 15 min and generate Razorpay Order ID. |
+| `POST` | `/api/payments/verify` | Customer | Client callback calling shared `finalizeOrderPayment` to verify HMAC signature. |
+| `POST` | `/api/payments/webhook` | Public (Verified) | Server-to-server webhook (raw body) calling shared `finalizeOrderPayment`. |
 
 ### 3.6 Admin Routes (`/api/admin`)
 | Method | Path | Access Level | Purpose |
@@ -128,96 +159,153 @@ backend/src/
 | `PUT` | `/api/admin/products/:id` | Admin | Update product information, description, and status. |
 | `DELETE`| `/api/admin/products/:id` | Admin | Deactivate or remove a product. |
 | `POST` | `/api/admin/products/:id/variants`| Admin | Add size, colour, SKU, and stock variant to product. |
-| `PUT` | `/api/admin/products/:id/variants/:variantId` | Admin | Update variant stock, pricing override, and active state. |
+| `PUT` | `/api/admin/products/:id/variants/:variantId` | Admin | Update variant stock, pricing override in paise, and active state. |
+| `POST` | `/api/admin/categories` | Admin | Create a new category. |
+| `PUT` | `/api/admin/categories/:id` | Admin | Update category details or display order. |
+| `DELETE`| `/api/admin/categories/:id` | Admin | Deactivate or delete category. |
+| `POST` | `/api/admin/collections` | Admin | Create an editorial collection (including Limited Edition). |
+| `PUT` | `/api/admin/collections/:id` | Admin | Update collection banner, description, or batch cap. |
+| `DELETE`| `/api/admin/collections/:id` | Admin | Deactivate or delete collection. |
+| `GET` | `/api/admin/customization-options` | Admin | List all customization schemas. |
+| `POST` | `/api/admin/customization-options` | Admin | Create new customization schema blueprint. |
+| `PUT` | `/api/admin/customization-options/:id` | Admin | Update customization schema blueprint. |
+| `DELETE`| `/api/admin/customization-options/:id` | Admin | Deactivate customization schema blueprint. |
+| `POST` | `/api/admin/media/sign-upload` | Admin | Generate secure signed upload parameters for Cloudinary `[OPEN]`. |
 | `GET` | `/api/admin/orders` | Admin | List all store orders with status and date filters. |
 | `GET` | `/api/admin/orders/:id` | Admin | View comprehensive order details, snapshots, and payment ID. |
 | `PUT` | `/api/admin/orders/:id/status` | Admin | Update order lifecycle status and tracking courier reference. |
+| `POST` | `/api/admin/orders/:id/cancel` | Admin | Administrative order cancellation; restores stock. |
+| `POST` | `/api/admin/orders/:id/refund` | Admin | Issue full or partial refund via Razorpay Refund API. |
+| `GET` | `/api/admin/inquiries`| Admin | List contact submissions for admin concierge response. |
+| `PUT` | `/api/admin/inquiries/:id/status` | Admin | Update status of customer inquiry (`new`, `in_progress`, `resolved`). |
 
-### 3.7 General & Inquiries (`/api/contact`, `/api/health`)
+### 3.7 General & System (`/api/contact`, `/api/health`)
 | Method | Path | Access Level | Purpose |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/health` | Public | Return server health status and MongoDB connection state. |
 | `POST` | `/api/contact` | Public | Receive customer contact form inquiry and store in database. |
-| `GET` | `/api/admin/inquiries`| Admin | List contact submissions for admin concierge response. |
 
 ---
 
 ## 4. Key Architectural Flows
 
-### 4.1 Signup & Login Flow
+### 4.1 Signup, Login & Session Lifetimes
 ```text
-1. User enters email and password into React UI.
-2. Frontend sends POST /api/auth/login with credentials.
-3. Express controller validates inputs and retrieves user record via Mongoose.
-4. Controller compares password hash using bcrypt.compare().
-5. On success: Express signs JWT containing { userId, role } using JWT_SECRET.
-6. Express sets httpOnly, Secure, SameSite=Lax cookie 'token' in HTTP response header.
-7. Frontend receives user profile metadata and updates authentication context.
+1. Customer submits credentials via POST /api/auth/login with custom CSRF header.
+2. Controller verifies email, fetches user with password hash (using explicit select).
+3. Compares password via bcrypt.compare().
+4. Issues JWT session token signed with JWT_SECRET:
+   - Customer Session Lifetime: 7 days [ASSUMPTION].
+   - Admin Session Lifetime: 24 hours [ASSUMPTION].
+5. Attaches httpOnly, Secure, SameSite=Lax cookie 'token'.
+6. On every subsequent authenticated request, middleware reads cookie and re-queries DB
+   user record to guarantee immediate role updates and revocation enforcement.
 ```
 
-### 4.2 Checkout, Razorpay Payment, Verification & Webhook Flow
+### 4.2 Checkout, Stock Reservation & Payment Verification Flow
 ```text
-1. Customer initiates checkout on /checkout page.
+Phase 1: Checkout Initiation & Atomic Stock Reservation
+1. Customer initiates checkout on /checkout.
 2. Frontend sends POST /api/payments/create-order with selected shipping address ID.
-3. Backend fetches customer cart and re-calculates subtotals from active database product prices.
-4. Backend verifies that all variants have adequate stock.
-5. Backend calls Razorpay API: razorpay.orders.create({ amount: totalInPaise, currency: "INR", receipt: orderId }).
-6. Backend creates a pending Order document (status: "Payment Pending") and responds with { razorpayOrderId, amount, keyId }.
-7. Frontend opens Razorpay Checkout modal using received credentials.
-8. Customer completes payment on Razorpay modal.
-9. Razorpay modal returns { razorpay_order_id, razorpay_payment_id, razorpay_signature } to frontend.
-10. Frontend immediately posts these credentials to POST /api/payments/verify.
-11. Backend generates expected signature: HMAC_SHA256(razorpay_order_id + "|" + razorpay_payment_id, RAZORPAY_KEY_SECRET).
-12. If signature matches:
-    a) Backend checks idempotency (ensures order is not already processed).
-    b) Atomically updates Order status to "Placed" and links payment details.
-    c) Atomically decrements variant stock counts in database.
-    d) Empties customer's cart.
-    e) Responds with { success: true, orderId }.
-13. If user closes browser before step 10: Razorpay Webhook (POST /api/payments/webhook) verifies signature and executes step 12 asynchronously.
-```
+3. Backend starts a MongoDB multi-document transaction (supported on Atlas replica sets):
+   a) Recalculates subtotalPaise from database prices for all cart items.
+   b) Verifies and reserves stock for every variant:
+      ProductVariant.updateOne(
+        { _id: item.variantId, $expr: { $gte: [{ $subtract: ["$stock", "$reservedQuantity"] }, item.quantity] } },
+        { $inc: { reservedQuantity: item.quantity } }
+      )
+      * If modifiedCount === 0 for any item, abort transaction; return 400 "Insufficient stock".
+   c) If product belongs to Limited Edition collection with totalBatchLimit:
+      Collection.updateOne(
+        { _id: collId, $expr: { $gte: [{ $subtract: ["$totalBatchLimit", { $add: ["$batchReservedCount", "$batchSoldCount"] }] }, item.quantity] } },
+        { $inc: { batchReservedCount: item.quantity } }
+      )
+      * If modifiedCount === 0, abort transaction; return 400 "Limited Edition batch limit reached".
+   d) Generates unique orderNumber via atomic counters collection.
+   e) Creates Order document with orderStatus: "pending_payment", paymentStatus: "pending".
+   f) Creates StockReservation documents with status: "active", expiresAt: now + 15 minutes [ASSUMPTION].
+   g) Commits MongoDB transaction.
+4. Backend calls Razorpay API: razorpay.orders.create({ amount: totalAmountPaise, currency: "INR", receipt: orderNumber }).
+5. Order updated with razorpayOrderId. Backend responds with { razorpayOrderId, amountPaise, keyId, orderNumber }.
 
-### 4.3 Admin Product & Variant Creation Flow
-```text
-1. Admin logs into /admin dashboard.
-2. Admin submits product title, category, craftsmanship narrative, and base price via POST /api/admin/products.
-3. Backend validates inputs, generates unique URL slug, and stores base Product document.
-4. Admin defines variants: adds sizes (e.g. EU 41, 42, 43), leather colours, SKUs, and stock quantities.
-5. Admin defines customization options (if applicable) specifying input types, label, and surcharge.
-6. Backend persists variants and options, indexing SKUs for fast lookup.
-7. Product immediately becomes visible in store catalogue.
+Phase 2: Payment Execution & Verification
+6. Frontend launches Razorpay modal; customer completes payment.
+7. Razorpay modal returns { razorpay_order_id, razorpay_payment_id, razorpay_signature }.
+8. Frontend sends credentials to POST /api/payments/verify. In parallel, Razorpay sends webhook to POST /api/payments/webhook.
+9. BOTH endpoints delegate execution to ONE shared atomic function: finalizeOrderPayment(orderId, paymentData, isWebhook).
+
+Phase 3: The Atomic Payment Finalization Gate
+10. Verification Checks:
+    a) Verify HMAC SHA-256 signature against RAZORPAY_KEY_SECRET (for /verify) or RAZORPAY_WEBHOOK_SECRET (for webhook).
+    b) For /verify, verify order belongs to logged-in user.
+    c) Verify paymentData.amountPaise === order.totalAmountPaise.
+    d) Verify paymentData.currency === "INR".
+    e) Verify razorpay_order_id matches order.razorpayOrderId.
+11. ATOMIC GATE:
+    Order.findOneAndUpdate(
+      { _id: orderId, paymentStatus: "pending" },
+      { 
+        $set: { 
+          paymentStatus: "paid", 
+          orderStatus: "placed",
+          "paymentDetails.razorpayPaymentId": razorpay_payment_id,
+          "paymentDetails.method": paymentData.method
+        },
+        $push: { statusHistory: { status: "placed", timestamp: new Date(), actor: "system" } }
+      },
+      { new: true }
+    )
+    * If modifiedCount === 0 (or returned doc is null): Order was ALREADY finalized by the concurrent callback/webhook!
+      Return current order status immediately (idempotent no-op; avoid double stock decrement).
+12. If update succeeded:
+    a) In a transaction, consume stock:
+       ProductVariant.updateOne({ _id: item.variantId }, { $inc: { stock: -item.quantity, reservedQuantity: -item.quantity } })
+       Collection.updateOne({ _id: collId }, { $inc: { batchSoldCount: item.quantity, batchReservedCount: -item.quantity } })
+       StockReservation.updateMany({ order: orderId }, { $set: { status: "consumed" } })
+    b) Clear customer's database cart.
+    c) Record payment in `payments` collection with unique partial index on razorpayPaymentId.
+    d) Dispatch order confirmation transactional email via background worker.
+
+Phase 4: Late-Payment Edge Case (Payment Captured After Reservation Expired)
+13. If order was marked "expired" (15-min timeout elapsed, stock reservations released back to pool):
+    a) Attempt to re-reserve stock:
+       ProductVariant.updateOne(
+         { _id: item.variantId, $expr: { $gte: [{ $subtract: ["$stock", "$reservedQuantity"] }, item.quantity] } },
+         { $inc: { stock: -item.quantity } }
+       )
+    b) If re-reservation succeeds -> fulfill order, mark orderStatus: "placed", paymentStatus: "paid".
+    c) If re-reservation fails (stock was taken by another buyer during delay):
+       - Mark orderStatus: "cancelled", paymentStatus: "refunded", flag "needs_attention: true".
+       - Automatically trigger Razorpay Refund API (full refund for totalAmountPaise).
+       - Notify admin concierge and send explanatory email to customer.
 ```
 
 ---
 
 ## 5. Media & Image Storage Strategy `[OPEN]`
 
-High-resolution photography is paramount for AUREVELLA luxury footwear. The exact storage mechanism depends on the client's confirmed hosting plan.
-
-### Comparison Table: Image Storage Options
 | Dimension | Option 1: Cloudinary (Recommended) | Option 2: Local Server Disk |
 | :--- | :--- | :--- |
 | **Storage Location** | Global Cloudinary CDN & storage bucket. | Hosting server file system (`/uploads` directory). |
-| **Cost** | Free tier (up to 25 credits/month; ~25,000 transformations or 25GB storage/bandwidth). | Included with hosting plan storage space. |
+| **Cost** | Free tier (verify limits before quoting to client) `[OPEN]`. | Included with hosting plan storage space. |
 | **Performance** | Extremely fast; delivered via global edge CDN. Automatic WebP/AVIF format optimization. | Bound to server bandwidth and physical server location. |
 | **Backup & Resilience**| High; images persist independently of application server redeployments or container resets. | Fragile; server migration or redeployment requires manual backup and transfer of media folder. |
-| **Trade-off Summary** | **Best for luxury visual fidelity and speed.** Negligible risk of exceeding free tier during initial launch. | Simple to configure if plan permits disk writes, but slower page loads for customers. |
-
-*Recommendation*: Adopt Cloudinary for automatic format delivery (`f_auto`, `q_auto`), keeping the application server stateless.
+| **Trade-off Summary** | **Best for luxury visual fidelity and speed.** Stateless server architecture. | Simple to configure if plan permits disk writes, but slower page loads for customers. |
 
 ---
 
 ## 6. Deployment Architecture Decision Matrix `[OPEN]`
 
-The deployment layout depends directly on the client's Hostinger plan details (`[OPEN]` Question Q-1):
+> **Subdomain Architecture Requirement**: Because authentication tokens are delivered via `httpOnly`, `SameSite=Lax` cookies, the Express API **must** be deployed on a subdomain of the client's registered domain (e.g., `https://api.aurevella.com` where frontend is `https://aurevella.com`). If a host does not permit mapping custom subdomains with valid SSL certificates, cross-origin cookie authentication will fail and the auth strategy must be revisited.
 
 | Option | Architecture Layout | Feasibility & Hosting Requirements | Advantages | Considerations |
 | :--- | :--- | :--- | :--- | :--- |
-| **Option A: Unified Hostinger** | Both React static build and Node.js Express API hosted directly on Hostinger. | Requires a Hostinger VPS or Cloud Startup plan with Node.js runtime support. | Single hosting provider, single billing account, simplified domain mapping. | Incompatible with standard Hostinger Shared Web Hosting plans that only support PHP/static. |
-| **Option B: Decoupled Hosting (Hybrid)** | Frontend static files hosted on Hostinger (via domain web root); Backend API hosted on a dedicated Node host (e.g., Render, Railway, or VPS). | Works with **any** Hostinger plan (including basic Shared Hosting). | Flexible; enables specialized backend runtime with auto-restart, logging, and free TLS. | Requires configuring DNS subdomain (e.g. `api.aurevella.com`) pointing to backend host and strict CORS. |
-| **Option C: Managed Cloud PaaS** | Frontend deployed to global Edge CDN (Vercel/Cloudflare); Backend on Node host; Hostinger domain pointed via DNS. | Domain stays on Hostinger; hosting moves to specialized developer platforms. | Highest performance, global caching, automated CI/CD directly from GitHub. | Client's existing hosting storage is unused; billing might incur separate services later if scaling. |
+| **Option A: Unified Hostinger** | Both React static build and Node.js Express API hosted directly on Hostinger. | Requires a Hostinger VPS or Cloud Startup plan with Node.js runtime support `[OPEN]`. | Single hosting provider, single billing account, simplified domain mapping. | Incompatible with standard Hostinger Shared Web Hosting plans that only support PHP/static. |
+| **Option B: Decoupled Hosting (Hybrid)** | Frontend static files hosted on Hostinger; Backend API hosted on a dedicated Node host (e.g., Render, Railway, VPS). | Works with **any** Hostinger plan. Backend host **must** be mapped to `api.<clientdomain>` via DNS CNAME. | Flexible; enables specialized backend runtime with auto-restart, logging, and free TLS. | Requires configuring DNS subdomain pointing to backend host and strict CORS. |
+| **Option C: Managed Cloud PaaS** | Frontend deployed to global Edge CDN (Vercel/Cloudflare); Backend on Node host; Hostinger domain pointed via DNS. | Domain stays on Hostinger; hosting moves to specialized developer platforms. Backend host mapped to `api.<clientdomain>`. | Highest performance, global caching, automated CI/CD directly from GitHub. | Client's existing hosting storage is unused; billing might incur separate services later if scaling. |
 
-*Decision Rule*: Confirm client's specific Hostinger package before committing to Option A or Option B.
+### Note on Backups and Hosting Reliability `[OPEN]`
+- **Free Tier Limitations [VERIFY before quoting to client]**: Free database tiers (e.g., MongoDB Atlas M0 free tier) do not include automated daily point-in-time backups, have connection and storage limits, and lack high-availability SLAs. Free backend hosting instances may experience cold starts (sleeping) that disrupt incoming Razorpay webhooks. Budgeting for dedicated production infrastructure must be confirmed with the client `[OPEN]`.
 
 ---
 
@@ -226,10 +314,22 @@ The deployment layout depends directly on the client's Hostinger plan details (`
 | Phase | Milestone Name | Primary Focus & Deliverable Goal |
 | :--- | :--- | :--- |
 | **Phase 1** | **Design System & Homepage** | Establish brand luxury visual identity (Tailwind v4 tokens, serif typography, dark palette) and complete responsive homepage, hero narrative, craftsmanship showcase, and social concierge links. |
-| **Phase 2** | **Authentication & Accounts** | Implement JWT httpOnly cookie authentication, customer registration, login/logout, profile management, and shipping address book. |
+| **Phase 2** | **Authentication & Accounts** | Implement JWT httpOnly cookie authentication, customer registration, login/logout, profile management, shipping address book, and password reset flow. |
 | **Phase 3** | **Product Catalogue & Admin** | Implement product model, variant inventory management, categories, customer-facing catalogue browsing, filtering, and admin product/stock management portal. |
-| **Phase 4** | **Cart & Checkout Architecture** | Build persistent database-backed customer cart, line-item customization attachment, order calculation engine, and multi-step checkout screen. |
-| **Phase 5** | **Razorpay Payments** | Integrate Razorpay Orders API, client modal popup, cryptographic HMAC signature verification, idempotent order processing, and webhook listeners. |
-| **Phase 6** | **Limited Edition & Customization** | Build Limited Edition badges with batch caps, and deploy flexible per-product bespoke customization engine (monograms, leather selection). |
-| **Phase 7** | **Testing & Security Hardening** | Execute full negative testing suite, rate limiting, NoSQL injection audit, OWASP security hardening, and performance asset optimization. |
-| **Phase 8** | **Hostinger Production Deployment** | Configure production environment, build static frontend assets, deploy backend according to agreed deployment architecture, point client domain, verify SSL and live payment processing. |
+| **Phase 4** | **Cart & Checkout Architecture** | Build persistent database-backed customer cart, guest cart merging, 15-min stock reservation engine, and multi-step checkout screen. |
+| **Phase 5** | **Razorpay Payments** | Integrate Razorpay Orders API, client modal, shared `finalizeOrderPayment` verification, raw body webhook parser, idempotent order processing, and refund APIs. |
+| **Phase 6** | **Limited Edition & Customization** | Build Limited Edition badges with batch reservation caps, and deploy flexible per-product bespoke customization engine. |
+| **Phase 7** | **Testing & Security Hardening** | Execute full negative testing suite, CSRF header checks, rate limiting, NoSQL injection audit, OWASP security hardening, and performance optimization. |
+| **Phase 8** | **Hostinger Production Deployment** | Configure production environment, build static frontend assets, deploy backend according to agreed deployment architecture on `api.` subdomain, point client domain, verify SSL and live payment processing. |
+
+---
+
+## Changelog v1.1
+- **Money Unit Standard**: Standardized all monetary figures to integer PAISE (`amountPaise`, `totalAmountPaise`, `subtotalPaise`).
+- **Unified Status Enums**: Updated all architectural diagrams and flows to use `pending_payment`, `placed`, `processing`, `shipped`, `delivered`, `cancelled`, `expired` for orders, and `pending`, `paid`, `failed`, `refunded`, `partially_refunded` for payments.
+- **Stock Reservation Architecture**: Designed 15-minute atomic stock reservation within MongoDB replica set transactions during checkout initiation (`create-order`), with automatic release on cancel/expiry and consumption on payment.
+- **Single Payment Gate**: Unified `/verify` and `/webhook` into a single shared atomic `finalizeOrderPayment` handler utilizing atomic `findOneAndUpdate` on `{ paymentStatus: 'pending' }` to eliminate race conditions.
+- **Raw Webhook Parser**: Documented mandatory `express.raw()` body parsing mounted before `express.json()` for cryptographic Razorpay webhook signature validation.
+- **Subdomain Cookie Architecture**: Specified the requirement for hosting the API on a subdomain (`api.<clientdomain>`) to enable `SameSite=Lax` cookie authentication.
+- **Extended Endpoints Catalog**: Added admin CRUD for categories, collections, customization schemas, image upload, order cancellation, refunds, and customer password reset.
+- **Removed Fabricated Content**: Eliminated all unconfirmed product names, category labels, and claims in favor of neutral, client-aligned specifications.

@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "check-env": "node scripts/checkEnv.js"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",

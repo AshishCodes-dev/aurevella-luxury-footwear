@@ -38,3 +38,9 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Firebase Service Account Credentials
+*firebase-adminsdk*.json
+serviceAccount*.json
+firebase.json
+*.serviceAccount.json

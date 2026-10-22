@@ -8,7 +8,7 @@ export const Alert = ({ children, variant = 'error', className = '', ...props })
   } else if (variant === 'success') {
     variantStyles = 'bg-emerald-950/60 border-emerald-800 text-emerald-200';
   } else if (variant === 'info') {
-    variantStyles = 'bg-[#181210] border-[#CFC9BA]/30 text-[#CFC9BA]';
+    variantStyles = 'bg-[#181210] border-[#FEF5E6]/30 text-[#FEF5E6]';
   }
 
   return (

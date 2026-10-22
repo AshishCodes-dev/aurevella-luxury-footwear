@@ -1,119 +1,118 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Menu, X, ArrowUpRight } from 'lucide-react';
 import Logo from './Logo.jsx';
-import { useAuth } from '../context/AuthContext.jsx';
-import { Button } from './ui/button.jsx';
 import { siteConfig } from '../content/site.js';
+import Button from './ui/button.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 
 export const AppShell = ({ children }) => {
   const { user, isAuthenticated, logout } = useAuth();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   const drawerRef = useRef(null);
   const menuButtonRef = useRef(null);
 
-  // Close drawer on route change
+  // Close mobile drawer on route change
   useEffect(() => {
-    setDrawerOpen(false);
-  }, [location.pathname]);
+    setMobileMenuOpen(false);
+  }, [navigate]);
+
+  // Handle Escape key to close mobile drawer
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileMenuOpen]);
 
   // Lock body scroll when mobile drawer is open
   useEffect(() => {
-    if (drawerOpen) {
-      const originalOverflow = document.body.style.overflow;
+    if (mobileMenuOpen) {
       document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = originalOverflow;
-      };
+    } else {
+      document.body.style.overflow = '';
     }
-  }, [drawerOpen]);
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
 
-  // Close drawer on Escape key and handle Focus Trap
+  // Focus trap inside mobile drawer
   useEffect(() => {
-    if (!drawerOpen) return;
+    if (!mobileMenuOpen || !drawerRef.current) return;
 
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        setDrawerOpen(false);
-        menuButtonRef.current?.focus();
-        return;
-      }
+    const focusableElements = drawerRef.current.querySelectorAll(
+      'a[href], button:not([disabled]), textarea, input, select'
+    );
+    if (focusableElements.length === 0) return;
 
-      if (e.key === 'Tab' && drawerRef.current) {
-        const focusableElements = drawerRef.current.querySelectorAll(
-          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusableElements.length === 0) return;
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
 
-        const firstElement = focusableElements[0];
-        const lastElement = focusableElements[focusableElements.length - 1];
+    const handleTabKey = (e) => {
+      if (e.key !== 'Tab') return;
 
-        if (e.shiftKey) {
-          if (document.activeElement === firstElement) {
-            e.preventDefault();
-            lastElement.focus();
-          }
-        } else {
-          if (document.activeElement === lastElement) {
-            e.preventDefault();
-            firstElement.focus();
-          }
+      if (e.shiftKey) {
+        if (document.activeElement === firstElement) {
+          lastElement.focus();
+          e.preventDefault();
+        }
+      } else {
+        if (document.activeElement === lastElement) {
+          firstElement.focus();
+          e.preventDefault();
         }
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-
-    // Initial focus into drawer
-    const focusTimer = setTimeout(() => {
-      const closeBtn = drawerRef.current?.querySelector('button');
-      closeBtn?.focus();
-    }, 50);
+    window.addEventListener('keydown', handleTabKey);
+    firstElement.focus();
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      clearTimeout(focusTimer);
+      window.removeEventListener('keydown', handleTabKey);
     };
-  }, [drawerOpen]);
+  }, [mobileMenuOpen]);
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
   };
 
   const navLinkClasses = ({ isActive }) =>
-    `text-xs uppercase tracking-widest min-h-[44px] inline-flex items-center px-3 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#CFC9BA] ${
+    `text-xs uppercase tracking-widest min-h-[44px] inline-flex items-center px-3 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] ${
       isActive
-        ? 'text-[#CFC9BA] font-semibold border-b border-[#CFC9BA]'
-        : 'text-[#9E9685] hover:text-[#CFC9BA]'
+        ? 'text-[#FEF5E6] font-semibold border-b border-[#FEF5E6]'
+        : 'text-[#B8AD9A] hover:text-[#FEF5E6]'
     }`;
 
   const mobileNavLinkClasses = ({ isActive }) =>
-    `text-lg font-serif tracking-widest min-h-[48px] flex items-center px-4 py-2 border-l-2 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#CFC9BA] ${
+    `text-lg font-serif tracking-widest min-h-[48px] flex items-center px-4 py-2 border-l-2 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] ${
       isActive
-        ? 'text-[#CFC9BA] border-[#CFC9BA] bg-[#181210]'
-        : 'text-[#9E9685] border-transparent hover:text-[#CFC9BA] hover:bg-[#181210]/60'
+        ? 'text-[#FEF5E6] border-[#FEF5E6] bg-[#181210]'
+        : 'text-[#B8AD9A] border-transparent hover:text-[#FEF5E6] hover:bg-[#181210]/60'
     }`;
 
   return (
-    <div className="min-h-screen bg-[#0F0A09] text-[#CFC9BA] flex flex-col selection:bg-[#2E1814] selection:text-[#CFC9BA]">
+    <div className="min-h-screen bg-[#0F0A09] text-[#B8AD9A] flex flex-col selection:bg-[#2F1C15] selection:text-[#FEF5E6]">
       {/* Skip to Content accessible link */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-[#CFC9BA] focus:text-[#0F0A09] focus:text-xs focus:font-medium focus:tracking-wider focus:uppercase focus:outline-none focus:ring-2 focus:ring-white"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-[#FEF5E6] focus:text-[#0F0A09] focus:text-xs focus:font-medium focus:tracking-wider focus:uppercase focus:outline-none focus:ring-2 focus:ring-white"
       >
         Skip to main content
       </a>
 
       {/* Sticky Header */}
-      <header className="border-b border-[#2E1814] bg-[#0F0A09]/95 backdrop-blur-md sticky top-0 z-40">
+      <header className="border-b border-[#2F1C15] bg-[#0F0A09]/95 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          {/* Brand Logo */}
+          {/* Brand Logo: header variant (mark + live text) */}
           <div className="flex items-center">
-            <Logo showTagline={false} />
+            <Logo variant="header" />
           </div>
 
           {/* Desktop Navigation */}
@@ -134,7 +133,7 @@ export const AppShell = ({ children }) => {
               <div className="hidden sm:flex items-center space-x-3">
                 <Link
                   to="/account"
-                  className="text-xs uppercase tracking-widest text-[#CFC9BA] hover:text-white transition-subtle min-h-[44px] inline-flex items-center px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#CFC9BA]"
+                  className="text-xs uppercase tracking-widest text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
                 >
                   Account ({user?.role === 'admin' ? 'Admin' : user?.name?.split(' ')[0] || 'User'})
                 </Link>
@@ -142,7 +141,7 @@ export const AppShell = ({ children }) => {
                   variant="ghost"
                   size="sm"
                   onClick={handleLogout}
-                  className="text-xs uppercase tracking-widest text-[#9E9685] hover:text-[#CFC9BA]"
+                  className="text-xs uppercase tracking-widest text-[#B8AD9A] hover:text-[#FEF5E6]"
                 >
                   Sign Out
                 </Button>
@@ -151,15 +150,15 @@ export const AppShell = ({ children }) => {
               <div className="hidden sm:flex items-center space-x-3">
                 <Link
                   to="/login"
-                  className="text-xs uppercase tracking-widest text-[#CFC9BA] hover:text-white transition-subtle min-h-[44px] inline-flex items-center px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#CFC9BA]"
+                  className="text-xs uppercase tracking-widest text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/signup"
-                  className="text-xs uppercase tracking-widest text-[#0F0A09] bg-[#CFC9BA] hover:bg-[#E5E0D3] transition-subtle min-h-[44px] inline-flex items-center px-4 font-medium outline-none focus-visible:ring-1 focus-visible:ring-white"
+                  className="text-xs uppercase tracking-widest text-[#0F0A09] bg-[#FEF5E6] hover:bg-[#FFFFFF] transition-subtle min-h-[44px] inline-flex items-center px-4 font-medium outline-none focus-visible:ring-1 focus-visible:ring-white"
                 >
-                  Register
+                  Sign Up
                 </Link>
               </div>
             )}
@@ -168,46 +167,44 @@ export const AppShell = ({ children }) => {
             <button
               ref={menuButtonRef}
               type="button"
-              onClick={() => setDrawerOpen(true)}
-              aria-label="Open navigation menu"
-              aria-expanded={drawerOpen}
-              aria-controls="mobile-drawer"
-              className="lg:hidden min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-[#CFC9BA] hover:text-white transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#CFC9BA]"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open mobile navigation"
+              aria-expanded={mobileMenuOpen}
+              className="lg:hidden min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-[#FEF5E6] hover:text-white transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
             >
-              <Menu size={24} />
+              <Menu size={22} />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Mobile Drawer (Opacity-only fade-in, focus trapped, body scroll locked) */}
-      {drawerOpen && (
+      {/* Accessible Mobile Drawer */}
+      {mobileMenuOpen && (
         <div
-          id="mobile-drawer"
           role="dialog"
           aria-modal="true"
-          aria-label="Site Navigation"
+          aria-label="Mobile Navigation Drawer"
           ref={drawerRef}
           className="fixed inset-0 z-50 bg-[#0F0A09] animate-fade-in flex flex-col p-6 sm:p-8 overflow-y-auto"
         >
-          {/* Drawer Top Header */}
-          <div className="flex items-center justify-between pb-6 border-b border-[#2E1814]">
-            <Logo />
+          {/* Drawer Header */}
+          <div className="flex items-center justify-between pb-6 border-b border-[#2F1C15]">
+            <Logo variant="header" />
             <button
               type="button"
               onClick={() => {
-                setDrawerOpen(false);
+                setMobileMenuOpen(false);
                 menuButtonRef.current?.focus();
               }}
-              aria-label="Close navigation menu"
-              className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-[#CFC9BA] hover:text-white transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#CFC9BA]"
+              aria-label="Close navigation drawer"
+              className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-[#FEF5E6] hover:text-white transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
             >
               <X size={24} />
             </button>
           </div>
 
-          {/* Drawer Navigation Links */}
-          <nav aria-label="Mobile navigation" className="py-8 flex flex-col space-y-2">
+          {/* Drawer Nav Links */}
+          <nav aria-label="Mobile Navigation" className="flex-1 py-8 space-y-2">
             {siteConfig.navLinks.map((item) => (
               <NavLink
                 key={item.href}
@@ -220,52 +217,54 @@ export const AppShell = ({ children }) => {
             ))}
           </nav>
 
-          {/* Drawer Auth & Secondary Actions */}
-          <div className="mt-auto pt-6 border-t border-[#2E1814] flex flex-col space-y-4">
+          {/* Drawer Auth & Contact Actions */}
+          <div className="pt-6 border-t border-[#2F1C15] space-y-4">
             {isAuthenticated ? (
-              <div className="flex flex-col space-y-3">
+              <div className="space-y-3">
                 <Link
                   to="/account"
-                  className="min-h-[44px] flex items-center justify-center uppercase tracking-widest text-xs bg-[#181210] border border-[#2E1814] text-[#CFC9BA] hover:bg-[#241B18] transition-subtle"
+                  className="min-h-[44px] flex items-center justify-center uppercase tracking-widest text-xs bg-[#181210] border border-[#2F1C15] text-[#FEF5E6] hover:bg-[#241B18] transition-subtle"
                 >
-                  My Account ({user?.role === 'admin' ? 'Admin' : user?.name || user?.email})
+                  My Account
                 </Link>
                 <Button variant="outline" size="sm" onClick={handleLogout} className="w-full">
                   Sign Out
                 </Button>
               </div>
             ) : (
-              <div className="flex flex-col space-y-3">
+              <div className="grid grid-cols-2 gap-3">
                 <Link
                   to="/login"
-                  className="min-h-[44px] flex items-center justify-center uppercase tracking-widest text-xs bg-[#181210] border border-[#2E1814] text-[#CFC9BA] hover:bg-[#241B18] transition-subtle"
+                  className="min-h-[44px] flex items-center justify-center uppercase tracking-widest text-xs bg-[#181210] border border-[#2F1C15] text-[#FEF5E6] hover:bg-[#241B18] transition-subtle"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/signup"
-                  className="min-h-[44px] flex items-center justify-center uppercase tracking-widest text-xs bg-[#CFC9BA] text-[#0F0A09] hover:bg-[#E5E0D3] font-medium transition-subtle"
+                  className="min-h-[44px] flex items-center justify-center uppercase tracking-widest text-xs bg-[#FEF5E6] text-[#0F0A09] hover:bg-[#FFFFFF] transition-subtle font-medium"
                 >
-                  Create Account
+                  Sign Up
                 </Link>
               </div>
             )}
 
             {/* Quick Contact Links in Drawer */}
-            <div className="pt-4 flex items-center justify-between text-xs text-[#9E9685]">
+            <div className="pt-4 flex items-center justify-between text-xs text-[#B8AD9A]">
               <a
                 href={siteConfig.contact.instagram.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-[#CFC9BA] transition-subtle inline-flex items-center gap-1"
+                className="hover:text-[#FEF5E6] transition-subtle inline-flex items-center gap-1"
               >
                 Instagram <ArrowUpRight size={14} />
               </a>
               <a
-                href={`mailto:${siteConfig.contact.email}`}
-                className="hover:text-[#CFC9BA] transition-subtle"
+                href={siteConfig.contact.whatsapp.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[#FEF5E6] transition-subtle inline-flex items-center gap-1"
               >
-                {siteConfig.contact.email}
+                WhatsApp {siteConfig.contact.whatsapp.label}
               </a>
             </div>
           </div>
@@ -278,33 +277,34 @@ export const AppShell = ({ children }) => {
       </main>
 
       {/* Global Footer */}
-      <footer className="border-t border-[#2E1814] bg-[#0F0A09]">
+      <footer className="border-t border-[#2F1C15] bg-[#0F0A09]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-8">
-            {/* Brand Column */}
+            {/* Brand Column with aurevella-logo-full.png */}
             <div className="lg:col-span-2 space-y-4">
-              <span className="font-serif text-2xl tracking-[0.25em] text-[#CFC9BA] block select-none">
-                {siteConfig.brand}
-              </span>
-              <p className="text-sm text-[#9E9685] tracking-wide max-w-sm">
+              <Logo variant="footer" className="mb-2" />
+              <p className="text-xs uppercase tracking-widest text-[#FEF5E6] font-medium">
+                {siteConfig.descriptor}
+              </p>
+              <p className="text-sm text-[#B8AD9A] tracking-wide max-w-sm">
                 {siteConfig.tagline} {siteConfig.subline}
               </p>
-              <div className="pt-2 text-xs text-[#9E9685] space-y-1">
-                <p>Email: <a href={`mailto:${siteConfig.contact.email}`} className="text-[#CFC9BA] hover:underline transition-subtle">{siteConfig.contact.email}</a></p>
-                <p>Concierge WhatsApp: <a href={siteConfig.contact.whatsapp.url} target="_blank" rel="noopener noreferrer" className="text-[#CFC9BA] hover:underline transition-subtle">{siteConfig.contact.whatsapp.label}</a></p>
-                <p>Instagram: <a href={siteConfig.contact.instagram.url} target="_blank" rel="noopener noreferrer" className="text-[#CFC9BA] hover:underline transition-subtle">{siteConfig.contact.instagram.handle}</a></p>
+              <div className="pt-2 text-xs text-[#B8AD9A] space-y-1">
+                <p>Email: <a href={`mailto:${siteConfig.contact.email}`} className="text-[#FEF5E6] hover:underline transition-subtle">{siteConfig.contact.email}</a></p>
+                <p>Concierge WhatsApp: <a href={siteConfig.contact.whatsapp.url} target="_blank" rel="noopener noreferrer" className="text-[#FEF5E6] hover:underline transition-subtle">{siteConfig.contact.whatsapp.label}</a></p>
+                <p>Instagram: <a href={siteConfig.contact.instagram.url} target="_blank" rel="noopener noreferrer" className="text-[#FEF5E6] hover:underline transition-subtle">{siteConfig.contact.instagram.handle}</a></p>
               </div>
             </div>
 
             {/* Shop Links */}
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-[#CFC9BA] mb-4">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-[#FEF5E6] mb-4">
                 Shop
               </h3>
-              <ul className="space-y-3 text-xs tracking-wider text-[#9E9685]">
+              <ul className="space-y-3 text-xs tracking-wider text-[#B8AD9A]">
                 {siteConfig.footerNav.shop.map((link) => (
                   <li key={link.href}>
-                    <Link to={link.href} className="hover:text-[#CFC9BA] transition-subtle">
+                    <Link to={link.href} className="hover:text-[#FEF5E6] transition-subtle">
                       {link.label}
                     </Link>
                   </li>
@@ -314,13 +314,13 @@ export const AppShell = ({ children }) => {
 
             {/* Company Links */}
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-[#CFC9BA] mb-4">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-[#FEF5E6] mb-4">
                 Company
               </h3>
-              <ul className="space-y-3 text-xs tracking-wider text-[#9E9685]">
+              <ul className="space-y-3 text-xs tracking-wider text-[#B8AD9A]">
                 {siteConfig.footerNav.company.map((link) => (
                   <li key={link.href}>
-                    <Link to={link.href} className="hover:text-[#CFC9BA] transition-subtle">
+                    <Link to={link.href} className="hover:text-[#FEF5E6] transition-subtle">
                       {link.label}
                     </Link>
                   </li>
@@ -330,13 +330,13 @@ export const AppShell = ({ children }) => {
 
             {/* Legal Links */}
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-[#CFC9BA] mb-4">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-[#FEF5E6] mb-4">
                 Legal
               </h3>
-              <ul className="space-y-3 text-xs tracking-wider text-[#9E9685]">
+              <ul className="space-y-3 text-xs tracking-wider text-[#B8AD9A]">
                 {siteConfig.footerNav.legal.map((link) => (
                   <li key={link.href}>
-                    <Link to={link.href} className="hover:text-[#CFC9BA] transition-subtle">
+                    <Link to={link.href} className="hover:text-[#FEF5E6] transition-subtle">
                       {link.label}
                     </Link>
                   </li>
@@ -346,7 +346,7 @@ export const AppShell = ({ children }) => {
           </div>
 
           {/* Bottom Copyright & Origin Strip */}
-          <div className="mt-16 pt-8 border-t border-[#2E1814] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#9E9685] tracking-wider uppercase">
+          <div className="mt-16 pt-8 border-t border-[#2F1C15] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#B8AD9A] tracking-wider uppercase">
             <p>{siteConfig.copyright}</p>
             <div className="flex items-center space-x-6">
               <span>Handcrafted in India</span>

@@ -3,8 +3,8 @@
 > **Purpose**: Establishes the visual identity, typography system, colour palettes, zero-motion standards, and UI component specifications for AUREVELLA.  
 > Directs the aesthetic execution to communicate Italian-inspired luxury, bespoke craftsmanship, and minimalist direct-to-consumer elegance.
 
-- **Last updated**: October 22, 2026  
-- **Status**: Draft v1.3
+- **Last updated**: October 23, 2026  
+- **Status**: Draft v1.4
 
 ---
 
@@ -61,34 +61,37 @@ Codebase grep audits across `frontend/src/` must exclusively reveal the allowed 
 
 ## 2. Color Palette & Theme Tokens
 
-> **Important Note on Brand Colors**: The hexadecimal values listed below are **provisional theme tokens**. Final production hex codes will be extracted and calibrated directly from the client's official vector / high-res logo file `[OPEN]`.
+> **Important Note on Brand Colors**: The color palette is calibrated directly to the official brand assets: Brown `#2F1C15` (matching the circular mark) and Vintage Ivory `#FEF5E6` (matching the logo typography and monogram).
 
 ```css
 @theme {
   --color-background:     #0F0A09;   /* Obsidian Noir: Warm, very dark brown-black base */
   --color-surface:        #181210;   /* Surface Dark: Card and panel elevated background */
-  --color-surface-subtle: #241B18;   /* Surface Borders and dividers */
-  --color-brown:          #2E1814;   /* Espresso Leather: Rich deep brown accent (Logo Circle) */
+  --color-surface-hover:  #241B18;   /* Surface Hover and interactive states */
+  --color-brown:          #2F1C15;   /* Espresso Leather: Rich deep brown accent (Logo Circle) */
   --color-brown-light:    #4A2C26;   /* Burnished Bronze: Hover and focus border states */
-  --color-ivory:          #CFC9BA;   /* Vintage Ivory: Primary text, heading color, brand accent */
-  --color-ivory-muted:    #9E9685;   /* Aged Parchment: Secondary metadata and descriptions */
+  --color-ivory:          #FEF5E6;   /* Vintage Ivory: Primary headings, logo, primary button fill */
+  --color-ivory-muted:    #B8AD9A;   /* Muted Sand: Secondary copy, metadata, and descriptions */
+  --color-border:         #2F1C15;   /* Card, header, and section border lines */
+  --product-ratio:        1 / 1;     /* Single token for product imagery aspect ratio */
 }
 ```
 
 ### Color Specification Table
-| Token Name | Hex Code | Role & Usage | Contrast Ratio on Dark Base |
-| :--- | :--- | :--- | :--- |
-| **Obsidian Base** | `#0F0A09` | Canvas background for the entire application. Warm undertone preserving dark brown logo visibility. | Baseline Canvas |
-| **Surface Dark** | `#181210` | Product cards, modal backdrops, dropdowns, and form containers. | 1.15:1 (Subtle depth separation) |
-| **Espresso Brown** | `#2E1814` | Matches the circular emblem of the AUREVELLA logo. Secondary button accents and luxury cards. | Primary Brand Hue |
-| **Burnished Accent**| `#4A2C26` | Border highlights, active variant swatches, button hover states. | 2.5:1 on Base |
-| **Vintage Ivory** | `#CFC9BA` | Primary headings, logo wordmark, primary button text, key body copy, Limited Edition outline. | **11.2:1 (Exceeds WCAG AAA)** |
-| **Aged Parchment**| `#9E9685` | Subtitles, product specifications, breadcrumbs, footers. | **6.4:1 (Exceeds WCAG AA)** |
+| Token Name | Hex Code | Role & Usage | Contrast Ratio on Base / Surface | WCAG Compliance |
+| :--- | :--- | :--- | :--- | :--- |
+| **Obsidian Base** | `#0F0A09` | Canvas background for the entire application. Warm undertone preserving dark brown logo visibility. | Baseline Canvas | Baseline |
+| **Surface Dark** | `#181210` | Product cards, modal backdrops, dropdowns, and form containers. | 1.15:1 vs Base | Depth separation |
+| **Espresso Brown** | `#2F1C15` | Matches the circular emblem of the AUREVELLA logo. Borders, cards, and secondary accents. | Primary Brand Hue | Brand Accent |
+| **Vintage Ivory** | `#FEF5E6` | Primary headings, logo live text, primary button fill, Limited Edition outline badge. | **17.5:1 on Base**, **16.5:1 on Surface** | **Exceeds WCAG AAA** |
+| **Muted Sand** | `#B8AD9A` | Body copy, subtitles, product specifications, breadcrumbs, footers. | **8.73:1 on Base**, **8.18:1 on Surface** | **Exceeds WCAG AAA** (well above 4.5:1 AA) |
+| **Primary Button**| Fill: `#FEF5E6`, Text: `#0F0A09` | Primary conversion CTAs and form submission buttons. | **17.5:1 text contrast** | **Exceeds WCAG AAA** |
 
 ### Logo Presentation on Dark Background
-The AUREVELLA logo features a dark brown circular seal. If placed on a pure black (`#000000`) background, the circular perimeter disappears into the dark.  
+The AUREVELLA logo features a dark brown circular seal (`#2F1C15`). If placed on a pure black (`#000000`) background, the circular perimeter disappears into the dark.  
 - **Rule**: The site canvas is calibrated to warm Obsidian Noir (`#0F0A09`).
-- **Rule**: On elevated cards (`#181210`), the logo circle is defined with a delicate, hairline border in ivory (`rgba(207, 201, 186, 0.15)`) to maintain crisp silhouette separation.
+- **Rule**: Header uses `aurevella-mark.png` (~40px high, `alt=""`) alongside live serif text "AUREVELLA" in `#FEF5E6`. Link features `aria-label="AUREVELLA home"`.
+- **Rule**: Footer and About hero use `aurevella-logo-full.png` (`alt="AUREVELLA - Luxury Interchangeable Heels"`) with explicit `width` and `height` set.
 
 ---
 
@@ -144,20 +147,20 @@ All fonts must be self-hosted locally using `@fontsource` npm packages to elimin
 - Placeholder: Aged Parchment muted (`#9E9685`).
 - Labels: Always paired with form input via explicit `htmlFor` attribute.
 - Error Messaging: Rendered directly below input with `aria-live="polite"` and role alert.
-- Autofill Styling: Overridden via `:-webkit-autofill` and `:autofill` to retain surface `#181210` and text `#CFC9BA`, preventing browser-default blue/grey tint.
+- Autofill Styling: Overridden via `:-webkit-autofill` and `:autofill` to retain surface `#181210` and text `#FEF5E6`, preventing browser-default blue/grey tint.
 
 ### 4.3 Product Card
-- Container: Surface dark (`#181210`) with subtle border `1px solid rgba(207, 201, 186, 0.08)`.
-- Image Aspect Ratio: Standard **3:4 portrait ratio** (e.g., 600px × 800px).
-- Image Hover: Static (no zoom, no scale transformation).
+- Container: Surface dark (`#181210`) with subtle border `1px solid #2F1C15`. Maximum card width strictly 500 CSS px or less for current client visuals.
+- Image Aspect Ratio: Single token `--product-ratio: 1 / 1` (provisional 1:1 square ratio; final ratio decided when clean high-resolution photos arrive).
+- Image Dimensions & Loading: `width="500" height="500"`, `object-fit: cover`, centered; `loading="lazy"` except images visible on initial load. Opacity fade-in on load allowed (`.img-fade-in` with `--motion-base: 200ms`).
 - Content:
-  - Title: Cormorant Garamond, text-lg, text-ivory.
-  - Category: Uppercase sans, text-xs, tracking-widest, text-ivory-muted.
-  - Price: Sans font, weight 500, text-ivory (formatted in INR from paise).
-  - Variant Indicators: Small static swatches displaying available colourways.
+  - Title: Cormorant Garamond, text-lg, text-[#FEF5E6].
+  - Category: Uppercase sans, text-xs, tracking-widest, text-[#B8AD9A].
+  - Price: Sans font, weight 500, text-[#FEF5E6] (provisional text "Price coming soon").
+  - Inquire CTA: Underlined link to `/shop`.
 
 ### 4.4 Limited Edition Badge
-- Pill badge with ivory outline: `border border-[#CFC9BA] bg-transparent text-[#CFC9BA]`.
+- Pill badge with ivory outline: `border border-[#FEF5E6] bg-transparent text-[#FEF5E6]`.
 - Typography: Uppercase sans, text-xs, `tracking-widest`, font-medium.
 - Icon: None (clean minimalist luxury text).
 
@@ -202,15 +205,28 @@ Every layout must be mobile-first and tested rigorously without horizontal scrol
 
 ## 6. Imagery & Photography Guidelines
 
-1. **Aspect Ratio Consistency**:
-   - Product Grid Listings: **3:4 aspect ratio** (e.g. 750 × 1000 px).
-   - Product Detail Hero Gallery: **3:4 aspect ratio** with 1:1 close-up macro shots.
-   - Editorial Banners: **16:9** desktop, **4:5** mobile.
-2. **Lighting & Background**:
-   - Clean, controlled studio lighting emphasizing leather grain, burnished patina, welt stitching, and natural leather luster.
-   - Neutral dark or warm stone backgrounds that blend harmoniously into the website's dark canvas.
-3. **Format & Delivery**:
-   - Master files served statically or via cloud storage in modern WebP/AVIF formats to maintain sub-2-second page loads.
+1. **Aspect Ratio Consistency & Tokens**:
+   - Product Card Listings: **1:1 square ratio** controlled via CSS token `--product-ratio: 1 / 1` (single place to adjust globally when high-resolution commercial photography arrives).
+   - Card Dimension Limits: Low-resolution client sample visuals must strictly reside in cards of **500 CSS px width or less**.
+   - Hero & Banners: The Hero section is **text-only with brand logo**; no product photography is permitted in hero or full-width banners.
+2. **Sample Visual Assets (Temporary Placeholders)**:
+   - Three initial client visuals are placed in `frontend/public/images/products/`:
+     - `product-01-floral-block-heel-sandal.jpg`
+     - `product-02-blue-floral-slide.jpg`
+     - `product-03-floral-block-heel-mule.jpg`
+   - See `docs/ASSETS_TODO.md` for pre-launch production replacement criteria (min 1500px, neutral studio backgrounds, 5 distinct angles per SKU).
+3. **Loading & Reveal Rules**:
+   - Explicit `width="500"` and `height="500"` attributes set on card images to prevent layout shift.
+   - `loading="lazy"` on below-the-fold assets; `loading="eager"` on initial viewport assets.
+   - Reveal animation: Subtle opacity-only fade-in (`.img-fade-in` at 200ms) upon asset load.
+
+---
+
+## Changelog v1.4
+- **Brand Asset Integration & Calibration**: Calibrated theme tokens directly to official brand assets: Brown `#2F1C15` and Vintage Ivory `#FEF5E6`. Replaced provisional `#CFC9BA` and `#2E1814`. Updated body and muted text to `#B8AD9A` (8.73:1 contrast on Obsidian base, 8.18:1 on surface, exceeding WCAG AAA). Set primary button fill to `#FEF5E6` with `#0F0A09` text.
+- **Logo Hierarchy**: Header uses `aurevella-mark.png` (~40px) with live serif text; footer and about hero use `aurevella-logo-full.png` with explicit dimensions and descriptive alt text.
+- **Imagery Guidelines**: Introduced token `--product-ratio: 1 / 1`. Mandated maximum 500 CSS px card width for temporary sample client visuals. Enforced text-only hero without product photography. Added `docs/ASSETS_TODO.md`.
+- **Favicon & Meta Update**: Configured `favicon.ico`, `favicon-32.png`, and `apple-touch-icon.png`; removed SVG placeholder.
 
 ---
 

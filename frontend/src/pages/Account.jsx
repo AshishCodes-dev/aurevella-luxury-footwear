@@ -69,29 +69,29 @@ export const Account = () => {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-6 border-b border-[#2E1814] text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-6 border-b border-[#2F1C15] text-sm">
             <div>
-              <span className="block text-xs uppercase tracking-wider text-[#9E9685] mb-1">
+              <span className="block text-xs uppercase tracking-wider text-[#B8AD9A] mb-1">
                 Account Status
               </span>
-              <span className="text-[#CFC9BA] font-medium">
+              <span className="text-[#FEF5E6] font-medium">
                 {user?.isActive ? 'Active' : 'Inactive'}
               </span>
             </div>
             <div>
-              <span className="block text-xs uppercase tracking-wider text-[#9E9685] mb-1">
+              <span className="block text-xs uppercase tracking-wider text-[#B8AD9A] mb-1">
                 Account Role
               </span>
-              <span className="text-[#CFC9BA] font-medium capitalize">
+              <span className="text-[#FEF5E6] font-medium capitalize">
                 {user?.role || 'Customer'}
               </span>
             </div>
             <div>
-              <span className="block text-xs uppercase tracking-wider text-[#9E9685] mb-1">
+              <span className="block text-xs uppercase tracking-wider text-[#B8AD9A] mb-1">
                 Email Address
               </span>
               <div className="flex items-center space-x-2">
-                <span className="text-[#CFC9BA]">{user?.email}</span>
+                <span className="text-[#FEF5E6]">{user?.email}</span>
                 {user?.emailVerified ? (
                   <span className="text-[10px] uppercase tracking-wider bg-emerald-950/70 text-emerald-400 px-2 py-0.5 border border-emerald-800">
                     Verified
@@ -104,10 +104,10 @@ export const Account = () => {
               </div>
             </div>
             <div>
-              <span className="block text-xs uppercase tracking-wider text-[#9E9685] mb-1">
+              <span className="block text-xs uppercase tracking-wider text-[#B8AD9A] mb-1">
                 Sign-In Method
               </span>
-              <span className="text-[#CFC9BA]">
+              <span className="text-[#FEF5E6]">
                 {user?.providers && user.providers.length > 0
                   ? user.providers
                       .map((p) => {
@@ -123,7 +123,7 @@ export const Account = () => {
 
           {/* Edit Profile Form */}
           <div>
-            <h3 className="text-base font-serif text-[#CFC9BA] mb-4">Edit Profile Details</h3>
+            <h3 className="text-base font-serif text-[#FEF5E6] mb-4">Edit Profile Details</h3>
 
             {statusMessage && (
               <div className="mb-4" aria-live="polite">

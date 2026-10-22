@@ -6,25 +6,25 @@ import ProductCard from '../components/ProductCard.jsx';
 import useDocumentTitle from '../utils/useDocumentTitle.js';
 
 export const Home = () => {
-  useDocumentTitle('AUREVELLA — Luxury Handcrafted Footwear');
+  useDocumentTitle('AUREVELLA — Luxury Interchangeable Heels');
 
   return (
     <div className="space-y-24 sm:space-y-32 py-4 sm:py-8">
-      {/* 1. HERO SECTION */}
+      {/* 1. HERO SECTION (Text-only with Logo; No product photo in hero) */}
       <section
         aria-labelledby="hero-heading"
-        className="relative flex flex-col items-center justify-center text-center px-4 pt-12 pb-20 sm:pt-20 sm:pb-32 border-b border-[#2E1814]"
+        className="relative flex flex-col items-center justify-center text-center px-4 pt-12 pb-20 sm:pt-20 sm:pb-32 border-b border-[#2F1C15]"
       >
-        <span className="text-xs uppercase tracking-[0.3em] text-[#9E9685] mb-4 block select-none">
-          {siteConfig.hero.eyebrow}
+        <span className="text-xs uppercase tracking-[0.3em] text-[#B8AD9A] mb-4 block select-none">
+          {siteConfig.descriptor}
         </span>
         <h1
           id="hero-heading"
-          className="font-serif text-5xl sm:text-7xl lg:text-8xl font-normal tracking-[0.15em] text-[#CFC9BA] mb-6 leading-tight max-w-4xl select-none"
+          className="font-serif text-5xl sm:text-7xl lg:text-8xl font-normal tracking-[0.15em] text-[#FEF5E6] mb-6 leading-tight max-w-4xl select-none"
         >
           {siteConfig.hero.headline}
         </h1>
-        <p className="text-base sm:text-xl font-light tracking-wide text-[#9E9685] max-w-2xl mb-12 leading-relaxed">
+        <p className="text-base sm:text-xl font-light tracking-wide text-[#B8AD9A] max-w-2xl mb-12 leading-relaxed">
           {siteConfig.hero.subline}
         </p>
 
@@ -32,13 +32,13 @@ export const Home = () => {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto">
           <Link
             to={siteConfig.hero.primaryCta.href}
-            className="w-full sm:w-auto inline-flex items-center justify-center min-h-[44px] px-8 py-3 text-xs uppercase tracking-widest bg-[#CFC9BA] text-[#0F0A09] hover:bg-[#E5E0D3] font-medium transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-white"
+            className="w-full sm:w-auto inline-flex items-center justify-center min-h-[44px] px-8 py-3 text-xs uppercase tracking-widest bg-[#FEF5E6] text-[#0F0A09] hover:bg-[#FFFFFF] font-medium transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-white"
           >
             {siteConfig.hero.primaryCta.label}
           </Link>
           <Link
             to={siteConfig.hero.secondaryCta.href}
-            className="w-full sm:w-auto inline-flex items-center justify-center min-h-[44px] px-8 py-3 text-xs uppercase tracking-widest bg-transparent border border-[#CFC9BA] text-[#CFC9BA] hover:bg-[#CFC9BA] hover:text-[#0F0A09] transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#CFC9BA]"
+            className="w-full sm:w-auto inline-flex items-center justify-center min-h-[44px] px-8 py-3 text-xs uppercase tracking-widest bg-transparent border border-[#FEF5E6] text-[#FEF5E6] hover:bg-[#FEF5E6] hover:text-[#0F0A09] transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
           >
             {siteConfig.hero.secondaryCta.label}
           </Link>
@@ -50,46 +50,46 @@ export const Home = () => {
         aria-labelledby="story-heading"
         className="max-w-4xl mx-auto px-4 sm:px-6 text-center"
       >
-        <span className="text-xs uppercase tracking-[0.3em] text-[#9E9685] block mb-3 select-none">
+        <span className="text-xs uppercase tracking-[0.3em] text-[#B8AD9A] block mb-3 select-none">
           {siteConfig.story.eyebrow}
         </span>
         <h2
           id="story-heading"
-          className="font-serif text-3xl sm:text-4xl lg:text-5xl tracking-wide text-[#CFC9BA] mb-8 leading-snug"
+          className="font-serif text-3xl sm:text-4xl lg:text-5xl tracking-wide text-[#FEF5E6] mb-8 leading-snug"
         >
           {siteConfig.story.heading}
         </h2>
-        <div className="space-y-6 text-sm sm:text-base text-[#9E9685] leading-relaxed max-w-3xl mx-auto">
+        <div className="space-y-6 text-sm sm:text-base text-[#B8AD9A] leading-relaxed max-w-3xl mx-auto">
           {siteConfig.story.paragraphs.map((paragraph, index) => (
             <p key={index}>{paragraph}</p>
           ))}
         </div>
-        <blockquote className="mt-10 pt-8 border-t border-[#2E1814] font-serif italic text-lg sm:text-xl text-[#CFC9BA] max-w-2xl mx-auto">
+        <blockquote className="mt-10 pt-8 border-t border-[#2F1C15] font-serif italic text-lg sm:text-xl text-[#FEF5E6] max-w-2xl mx-auto">
           {siteConfig.story.quote}
         </blockquote>
       </section>
 
-      {/* 3. FEATURED PRODUCTS (4 SAMPLE PRODUCTS VIA PRODUCTCARD) */}
-      <section aria-labelledby="featured-heading" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 pb-4 border-b border-[#2E1814]">
+      {/* 3. FEATURED PRODUCTS (EXACTLY 3 SAMPLE PRODUCTS, 1/2/3 COLUMNS GRID, <=500px WIDTH) */}
+      <section aria-labelledby="featured-heading" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 pb-4 border-b border-[#2F1C15]">
           <div>
-            <span className="text-xs uppercase tracking-[0.3em] text-[#9E9685] block mb-2">
+            <span className="text-xs uppercase tracking-[0.3em] text-[#B8AD9A] block mb-2">
               Curated Selection
             </span>
-            <h2 id="featured-heading" className="font-serif text-3xl sm:text-4xl text-[#CFC9BA]">
+            <h2 id="featured-heading" className="font-serif text-3xl sm:text-4xl text-[#FEF5E6]">
               Featured Footwear
             </h2>
           </div>
           <Link
             to="/shop"
-            className="mt-4 sm:mt-0 text-xs uppercase tracking-widest text-[#CFC9BA] hover:text-white transition-subtle inline-flex items-center gap-1 group outline-none focus-visible:ring-1 focus-visible:ring-[#CFC9BA]"
+            className="mt-4 sm:mt-0 text-xs uppercase tracking-widest text-[#FEF5E6] hover:text-white transition-subtle inline-flex items-center gap-1 group outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
           >
-            View Full Catalogue <ArrowRight size={14} className="group-hover:translate-x-0.5" />
+            View Full Catalogue <ArrowRight size={14} />
           </Link>
         </div>
 
-        {/* 1/2/4 Columns Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+        {/* 1 / 2 / 3 Columns Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 justify-items-center">
           {siteConfig.featuredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
@@ -101,24 +101,24 @@ export const Home = () => {
         aria-labelledby="limited-heading"
         className="max-w-5xl mx-auto px-4 sm:px-6"
       >
-        <div className="bg-[#181210] border border-[#2E1814] p-8 sm:p-14 text-center relative overflow-hidden">
+        <div className="bg-[#181210] border border-[#2F1C15] p-8 sm:p-14 text-center relative overflow-hidden">
           <div className="mb-6">
-            <span className="border border-[#CFC9BA] px-3.5 py-1 text-xs uppercase tracking-[0.25em] text-[#CFC9BA] inline-block font-medium">
+            <span className="border border-[#FEF5E6] px-3.5 py-1 text-xs uppercase tracking-[0.25em] text-[#FEF5E6] inline-block font-medium">
               {siteConfig.limitedEdition.badge}
             </span>
           </div>
           <h2
             id="limited-heading"
-            className="font-serif text-3xl sm:text-5xl tracking-wide text-[#CFC9BA] mb-4"
+            className="font-serif text-3xl sm:text-5xl tracking-wide text-[#FEF5E6] mb-4"
           >
             {siteConfig.limitedEdition.heading}
           </h2>
-          <p className="text-sm sm:text-base text-[#9E9685] max-w-2xl mx-auto mb-8 leading-relaxed">
+          <p className="text-sm sm:text-base text-[#B8AD9A] max-w-2xl mx-auto mb-8 leading-relaxed">
             {siteConfig.limitedEdition.description}
           </p>
           <Link
             to={siteConfig.limitedEdition.cta.href}
-            className="inline-flex items-center justify-center min-h-[44px] px-8 text-xs uppercase tracking-widest bg-transparent border border-[#CFC9BA] text-[#CFC9BA] hover:bg-[#CFC9BA] hover:text-[#0F0A09] transition-subtle font-medium outline-none focus-visible:ring-1 focus-visible:ring-[#CFC9BA]"
+            className="inline-flex items-center justify-center min-h-[44px] px-8 text-xs uppercase tracking-widest bg-transparent border border-[#FEF5E6] text-[#FEF5E6] hover:bg-[#FEF5E6] hover:text-[#0F0A09] transition-subtle font-medium outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
           >
             {siteConfig.limitedEdition.cta.label}
           </Link>
@@ -131,10 +131,10 @@ export const Home = () => {
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       >
         <div className="text-center mb-12">
-          <span className="text-xs uppercase tracking-[0.3em] text-[#9E9685] block mb-2">
+          <span className="text-xs uppercase tracking-[0.3em] text-[#B8AD9A] block mb-2">
             Our Foundation
           </span>
-          <h2 id="values-heading" className="font-serif text-3xl sm:text-4xl text-[#CFC9BA]">
+          <h2 id="values-heading" className="font-serif text-3xl sm:text-4xl text-[#FEF5E6]">
             The Aurevella Standards
           </h2>
         </div>
@@ -143,12 +143,12 @@ export const Home = () => {
           {siteConfig.values.map((val) => (
             <div
               key={val.id}
-              className="bg-[#181210] border border-[#2E1814] p-8 text-center flex flex-col items-center"
+              className="bg-[#181210] border border-[#2F1C15] p-8 text-center flex flex-col items-center"
             >
-              <h3 className="font-serif text-xl sm:text-2xl text-[#CFC9BA] mb-3">
+              <h3 className="font-serif text-xl sm:text-2xl text-[#FEF5E6] mb-3">
                 {val.title}
               </h3>
-              <p className="text-sm text-[#9E9685] leading-relaxed">
+              <p className="text-sm text-[#B8AD9A] leading-relaxed">
                 {val.description}
               </p>
             </div>
@@ -161,15 +161,15 @@ export const Home = () => {
         aria-labelledby="contact-strip-heading"
         className="max-w-4xl mx-auto px-4 sm:px-6 pb-12"
       >
-        <div className="bg-[#181210] border border-[#2E1814] p-8 sm:p-10 text-center">
+        <div className="bg-[#181210] border border-[#2F1C15] p-8 sm:p-10 text-center">
           <h2
             id="contact-strip-heading"
-            className="font-serif text-2xl sm:text-3xl text-[#CFC9BA] mb-2"
+            className="font-serif text-2xl sm:text-3xl text-[#FEF5E6] mb-2"
           >
             Connect with the Atelier
           </h2>
-          <p className="text-xs sm:text-sm text-[#9E9685] mb-8 max-w-md mx-auto">
-            Our bespoke footwear consultants are available for personalized sizing inquiries and order guidance.
+          <p className="text-xs sm:text-sm text-[#B8AD9A] mb-8 max-w-md mx-auto">
+            Our luxury footwear consultants are available for personalized sizing inquiries and order guidance.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4">
@@ -178,9 +178,9 @@ export const Home = () => {
               href={siteConfig.contact.whatsapp.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-6 text-xs uppercase tracking-widest bg-[#0F0A09] border border-[#2E1814] text-[#CFC9BA] hover:bg-[#241B18] transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#CFC9BA]"
+              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-6 text-xs uppercase tracking-widest bg-[#0F0A09] border border-[#2F1C15] text-[#FEF5E6] hover:bg-[#241B18] transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
             >
-              <MessageSquare size={16} /> WhatsApp Concierge
+              <MessageSquare size={16} /> WhatsApp {siteConfig.contact.whatsapp.label}
             </a>
 
             {/* Instagram CTA */}
@@ -188,7 +188,7 @@ export const Home = () => {
               href={siteConfig.contact.instagram.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-6 text-xs uppercase tracking-widest bg-[#0F0A09] border border-[#2E1814] text-[#CFC9BA] hover:bg-[#241B18] transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#CFC9BA]"
+              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-6 text-xs uppercase tracking-widest bg-[#0F0A09] border border-[#2F1C15] text-[#FEF5E6] hover:bg-[#241B18] transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
             >
               <svg
                 className="w-4 h-4 shrink-0"
@@ -210,7 +210,7 @@ export const Home = () => {
             {/* Email CTA */}
             <a
               href={`mailto:${siteConfig.contact.email}`}
-              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-6 text-xs uppercase tracking-widest bg-[#0F0A09] border border-[#2E1814] text-[#CFC9BA] hover:bg-[#241B18] transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#CFC9BA]"
+              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-6 text-xs uppercase tracking-widest bg-[#0F0A09] border border-[#2F1C15] text-[#FEF5E6] hover:bg-[#241B18] transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
             >
               <Mail size={16} /> Email Inquiries
             </a>

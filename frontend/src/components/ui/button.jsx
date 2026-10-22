@@ -16,21 +16,21 @@ export const Button = React.forwardRef(
   ) => {
     // Base styles: Subtle transition (150ms colour/bg/border/opacity/shadow), minimum 44px touch target
     let baseStyles =
-      'inline-flex items-center justify-center font-medium select-none min-h-[44px] px-6 text-sm tracking-wider uppercase transition-subtle disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-[#CFC9BA]';
+      'inline-flex items-center justify-center font-medium select-none min-h-[44px] px-6 text-sm tracking-wider uppercase transition-subtle disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-[#FEF5E6]';
 
     let variantStyles = '';
     if (variant === 'primary') {
       variantStyles =
-        'bg-[#CFC9BA] text-[#0F0A09] hover:bg-[#E5E0D3] active:bg-[#B8B2A4] border border-[#CFC9BA]';
+        'bg-[#FEF5E6] text-[#0F0A09] hover:bg-[#FFFFFF] active:bg-[#EADBCE] border border-[#FEF5E6]';
     } else if (variant === 'secondary') {
       variantStyles =
-        'bg-[#181210] text-[#CFC9BA] hover:bg-[#221A18] active:bg-[#2E1814] border border-[#2E1814]';
+        'bg-[#181210] text-[#FEF5E6] hover:bg-[#241B18] active:bg-[#2F1C15] border border-[#2F1C15]';
     } else if (variant === 'outline') {
       variantStyles =
-        'bg-transparent text-[#CFC9BA] border border-[#CFC9BA] hover:bg-[#CFC9BA] hover:text-[#0F0A09] active:bg-[#B8B2A4] active:text-[#0F0A09]';
+        'bg-transparent text-[#FEF5E6] border border-[#FEF5E6] hover:bg-[#FEF5E6] hover:text-[#0F0A09] active:bg-[#EADBCE] active:text-[#0F0A09]';
     } else if (variant === 'ghost') {
       variantStyles =
-        'bg-transparent text-[#CFC9BA] hover:bg-[#181210] hover:text-[#E5E0D3] active:bg-[#221A18]';
+        'bg-transparent text-[#B8AD9A] hover:bg-[#181210] hover:text-[#FEF5E6] active:bg-[#241B18]';
     } else if (variant === 'destructive') {
       variantStyles =
         'bg-red-950 text-red-200 border border-red-800 hover:bg-red-900 active:bg-red-800';
@@ -65,3 +65,5 @@ export const Button = React.forwardRef(
 );
 
 Button.displayName = 'Button';
+
+export default Button;

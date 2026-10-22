@@ -1,45 +1,84 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-export const ProductCard = ({ product }) => {
+/**
+ * ProductCard Component
+ * Displays a single footwear model within cards strictly 500 CSS px or less.
+ * Aspect ratio is derived dynamically from CSS token `--product-ratio: 1 / 1`.
+ * Supports image load opacity fade-in (.img-fade-in) and lazy/eager loading.
+ */
+export const ProductCard = ({
+  product,
+  image,
+  alt,
+  name,
+  priceText,
+  link = '/shop',
+  priority = false,
+  category,
+}) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Allow passing individual props or a unified product object
+  const resolvedImage = image || product?.image;
+  const resolvedAlt = alt || product?.alt || '';
+  const resolvedName = name || product?.name || '';
+  const resolvedPriceText =
+    priceText || product?.priceText || product?.priceDisplay || 'Price coming soon';
+  const resolvedLink = link || product?.link || '/shop';
+  const resolvedCategory = category || product?.category;
+  const resolvedPriority = priority || Boolean(product?.priority);
+
   return (
-    <article className="group bg-[#181210] border border-[#2E1814] flex flex-col h-full transition-subtle hover:border-[#CFC9BA]/30">
-      {/* 3:4 Aspect Ratio Image Placeholder Block */}
+    <article className="group bg-[#181210] border border-[#2F1C15] flex flex-col h-full w-full max-w-[480px] transition-subtle hover:border-[#FEF5E6]/30">
+      {/* Aspect Ratio Image Container (1:1 from --product-ratio token) */}
       <div
-        className="w-full aspect-[3/4] bg-[#0F0A09] border-b border-[#2E1814] flex flex-col items-center justify-center p-6 text-center relative select-none"
-        aria-label={`Product image slot for ${product.name}`}
+        className="w-full bg-[#0F0A09] border-b border-[#2F1C15] overflow-hidden relative"
+        style={{ aspectRatio: 'var(--product-ratio, 1 / 1)' }}
+        aria-label={`Product image slot for ${resolvedName}`}
       >
-        <span className="text-[10px] uppercase tracking-[0.25em] text-[#9E9685] bg-[#181210] border border-[#2E1814] px-2.5 py-1 mb-2">
-          3:4 Aspect Ratio
-        </span>
-        <p className="text-xs text-[#9E9685] max-w-[200px] leading-relaxed">
-          {product.imageSlotPlaceholder || 'TODO(client): image'}
-        </p>
+        {resolvedImage ? (
+          <img
+            src={resolvedImage}
+            alt={resolvedAlt}
+            width="500"
+            height="500"
+            loading={resolvedPriority ? 'eager' : 'lazy'}
+            onLoad={() => setIsLoaded(true)}
+            className={`w-full h-full object-cover object-center img-fade-in ${
+              isLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center select-none">
+            <span className="text-[10px] uppercase tracking-[0.25em] text-[#B8AD9A] bg-[#181210] border border-[#2F1C15] px-2.5 py-1 mb-2">
+              1:1 Ratio
+            </span>
+            <p className="text-xs text-[#B8AD9A] max-w-[200px] leading-relaxed">
+              TODO(client): image
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Product Information */}
       <div className="p-5 sm:p-6 flex flex-col flex-1">
-        {product.category && (
-          <span className="text-[10px] uppercase tracking-widest text-[#9E9685] mb-1.5 block">
-            {product.category}
+        {resolvedCategory && (
+          <span className="text-[10px] uppercase tracking-widest text-[#B8AD9A] mb-1.5 block">
+            {resolvedCategory}
           </span>
         )}
-        <h3 className="font-serif text-lg sm:text-xl text-[#CFC9BA] group-hover:text-white transition-subtle mb-2">
-          {product.name}
+        <h3 className="font-serif text-lg sm:text-xl text-[#FEF5E6] group-hover:text-white transition-subtle mb-2">
+          {resolvedName}
         </h3>
-        {product.description && (
-          <p className="text-xs text-[#9E9685] line-clamp-2 mb-4 leading-relaxed flex-1">
-            {product.description}
-          </p>
-        )}
-        <div className="mt-auto pt-3 border-t border-[#2E1814] flex items-center justify-between">
-          <span className="text-sm font-medium text-[#CFC9BA] tracking-wider">
-            {product.priceDisplay}
+        <div className="mt-auto pt-3 border-t border-[#2F1C15] flex items-center justify-between">
+          <span className="text-sm font-medium text-[#FEF5E6] tracking-wider">
+            {resolvedPriceText}
           </span>
           <Link
-            to="/shop"
-            className="text-xs uppercase tracking-wider text-[#9E9685] hover:text-[#CFC9BA] transition-subtle underline underline-offset-4 outline-none focus-visible:ring-1 focus-visible:ring-[#CFC9BA]"
-            aria-label={`View details for ${product.name}`}
+            to={resolvedLink}
+            className="text-xs uppercase tracking-wider text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle underline underline-offset-4 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+            aria-label={`View details for ${resolvedName}`}
           >
             Inquire
           </Link>

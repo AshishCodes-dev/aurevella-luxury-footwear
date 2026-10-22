@@ -102,11 +102,11 @@ export const ForgotPassword = () => {
         </CardContent>
 
         <CardFooter>
-          <p className="text-xs text-[#9E9685]">
+          <p className="text-xs text-[#B8AD9A]">
             Remember your credentials?{' '}
             <Link
               to="/login"
-              className="text-[#CFC9BA] hover:text-white transition-subtle uppercase font-medium tracking-wider focus:outline-none focus:ring-1 focus:ring-[#CFC9BA]"
+              className="text-[#FEF5E6] hover:text-white transition-subtle uppercase font-medium tracking-wider focus:outline-none focus:ring-1 focus:ring-[#FEF5E6]"
             >
               Sign In
             </Link>

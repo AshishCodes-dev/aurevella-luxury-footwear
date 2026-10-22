@@ -9,7 +9,7 @@ export const ProtectedRoute = ({ children, requireAdmin = false }) => {
   if (loading) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
-        <p className="text-sm tracking-widest uppercase text-[#9E9685]">Loading...</p>
+        <p className="text-sm tracking-widest uppercase text-[#B8AD9A]">Loading...</p>
       </div>
     );
   }
@@ -22,7 +22,7 @@ export const ProtectedRoute = ({ children, requireAdmin = false }) => {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center text-center px-4">
         <h2 className="font-serif text-2xl text-red-400 mb-2">Access Denied</h2>
-        <p className="text-sm text-[#9E9685] max-w-md">
+        <p className="text-sm text-[#B8AD9A] max-w-md">
           Administrator privileges are required to access this resource.
         </p>
       </div>

@@ -144,7 +144,7 @@ export const Signup = () => {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-0 top-0 h-full w-12 flex items-center justify-center text-[#9E9685] hover:text-[#CFC9BA] transition-subtle focus:outline-none focus:ring-1 focus:ring-[#CFC9BA]"
+                  className="absolute right-0 top-0 h-full w-12 flex items-center justify-center text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle focus:outline-none focus:ring-1 focus:ring-[#FEF5E6]"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -172,7 +172,7 @@ export const Signup = () => {
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-0 top-0 h-full w-12 flex items-center justify-center text-[#9E9685] hover:text-[#CFC9BA] transition-subtle focus:outline-none focus:ring-1 focus:ring-[#CFC9BA]"
+                  className="absolute right-0 top-0 h-full w-12 flex items-center justify-center text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle focus:outline-none focus:ring-1 focus:ring-[#FEF5E6]"
                 >
                   {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -196,10 +196,10 @@ export const Signup = () => {
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[#2E1814]" />
+              <div className="w-full border-t border-[#2F1C15]" />
             </div>
             <div className="relative flex justify-center text-xs uppercase tracking-widest">
-              <span className="bg-[#181210] px-3 text-[#9E9685]">Or continue with</span>
+              <span className="bg-[#181210] px-3 text-[#B8AD9A]">Or continue with</span>
             </div>
           </div>
 
@@ -210,11 +210,11 @@ export const Signup = () => {
         </CardContent>
 
         <CardFooter>
-          <p className="text-xs text-[#9E9685]">
+          <p className="text-xs text-[#B8AD9A]">
             Already have an account?{' '}
             <Link
               to="/login"
-              className="text-[#CFC9BA] hover:text-white transition-subtle uppercase font-medium tracking-wider focus:outline-none focus:ring-1 focus:ring-[#CFC9BA]"
+              className="text-[#FEF5E6] hover:text-white transition-subtle uppercase font-medium tracking-wider focus:outline-none focus:ring-1 focus:ring-[#FEF5E6]"
             >
               Sign In
             </Link>

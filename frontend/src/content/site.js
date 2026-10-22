@@ -1,12 +1,13 @@
 /**
  * AUREVELLA — Content Configuration & Site Copy
- * All textual copy, links, contact data, and placeholder assets are centralized here.
+ * All textual copy, links, contact data, and sample assets are centralized here.
  * Any item requiring official client verification or input is flagged with TODO(client).
  */
 
 export const siteConfig = {
   brand: 'AUREVELLA',
   tagline: 'Luxury, Reimagined.',
+  descriptor: 'Luxury Interchangeable Heels',
   subline: 'Italian-inspired elegance, crafted in India.',
 
   // Contact Information
@@ -16,11 +17,11 @@ export const siteConfig = {
       url: 'https://www.instagram.com/myaurevella',
       handle: '@myaurevella',
     },
-    // TODO(client): Confirm official WhatsApp business number and pre-filled message text
+    // TODO(client): confirm business WhatsApp
     whatsapp: {
-      number: '+91 00000 00000', // TODO(client): Official WhatsApp business number
-      url: 'https://wa.me/910000000000?text=Hello%20Aurevella%2C%20I%20would%20like%20to%20inquire%20about%20your%20footwear.', // TODO(client): WhatsApp link
-      label: '+91 00000 00000',
+      number: '+91 77280 60447',
+      url: 'https://wa.me/917728060447',
+      label: '+91 77280 60447',
     },
     studioAddress: 'TODO(client): Physical studio or registered office location (e.g. Mumbai / Delhi, India)',
     supportHours: 'TODO(client): Concierge support hours (e.g. Monday – Saturday, 10:00 AM – 7:00 PM IST)',
@@ -57,73 +58,67 @@ export const siteConfig = {
     ],
   },
 
-  // Hero Section Copy
+  // Hero Section Copy (Text-only with Logo; no product photo in hero)
   hero: {
     eyebrow: 'Bespoke Footwear Atelier',
     headline: 'Luxury, Reimagined.',
-    subline: 'Italian-inspired elegance, meticulously crafted in India.',
+    subline: 'Italian-inspired elegance, crafted in India.',
     primaryCta: { label: 'Explore the Collection', href: '/shop' },
-    secondaryCta: { label: 'Limited Edition', href: '/limited-edition' },
+    secondaryCta: { label: 'The Limited Edition', href: '/limited-edition' },
   },
 
   // Brand Story Narrative
+  // TODO(client): confirm target customer, brand story and how the interchangeable heels work before publishing.
   story: {
     eyebrow: 'The Atelier Philosophy',
     heading: 'Where Continental Architecture Meets Indian Craftsmanship',
     paragraphs: [
-      'AUREVELLA was conceived with an uncompromising mandate: to unite the refined contours of classic Italian footwear design with the venerable traditions of Indian master shoe artisans.',
-      'Every silhouette is crafted from hand-selected full-grain leathers and hand-finished with bespoke patina dyes. Each pair honors generational shoemaking techniques, delivering structured poise, breathability, and lifelong durability.',
+      'AUREVELLA brings Italian-inspired elegance to footwear, crafted in India and made by hand. Our signature interchangeable heels are designed around one idea: Luxury, Reimagined.',
     ],
-    quote: '"True luxury requires no loud proclamations—it is felt in the weight of the leather, the balance of the arch, and the silence of the stitch."',
+    quote: '"Luxury, Reimagined."',
   },
 
-  // Featured Products (Sample Catalog Showcase)
-  // TODO(client): Replace with verified launch catalog products and photography
+  // Homepage "Featured" Section (Exactly 3 sample products; no 4th placeholder card)
+  // Low-resolution client visuals used strictly in cards of 500 CSS px or less.
   featuredProducts: [
     {
       id: 'prod-01',
-      name: 'The Milano Oxford',
-      category: "Men's Formal", // TODO(client): Confirm category categorization
-      pricePaise: 2499000,
-      priceDisplay: '₹24,990',
-      description: 'Handcrafted wholecut Oxford in burnished espresso calfskin.',
-      imageSlotPlaceholder: 'TODO(client): Image asset for The Milano Oxford (3:4 ratio, min 750x1000px)',
+      name: 'Floral Block Heel Sandal', // TODO(client): Confirm product name
+      category: 'Interchangeable Heel',
+      priceText: 'Price coming soon',
+      link: '/shop',
+      image: '/images/products/product-01-floral-block-heel-sandal.jpg',
+      alt: 'Block heel ankle-strap sandal with red floral print and a pearl embellishment',
+      priority: true,
     },
     {
       id: 'prod-02',
-      name: 'The Florence Monk Strap',
-      category: 'Bespoke Buckle',
-      pricePaise: 2799000,
-      priceDisplay: '₹27,990',
-      description: 'Double monk strap featuring antiqued brass buckles and hand-beveled soles.',
-      imageSlotPlaceholder: 'TODO(client): Image asset for The Florence Monk Strap (3:4 ratio, min 750x1000px)',
+      name: 'Blue Floral Slide', // TODO(client): Confirm product name
+      category: 'Flat Slide',
+      priceText: 'Price coming soon',
+      link: '/shop',
+      image: '/images/products/product-02-blue-floral-slide.jpg',
+      alt: 'Flat slide with a knotted blue floral strap and woven sole',
+      priority: true,
     },
     {
       id: 'prod-03',
-      name: 'The Roma Chelsea',
-      category: 'Ankle Boot',
-      pricePaise: 3199000,
-      priceDisplay: '₹31,990',
-      description: 'Seamless Goodyear-welted Chelsea boot crafted from supple vegetable-tanned leather.',
-      imageSlotPlaceholder: 'TODO(client): Image asset for The Roma Chelsea (3:4 ratio, min 750x1000px)',
-    },
-    {
-      id: 'prod-04',
-      name: 'The Venetian Tassel Loafer',
-      category: 'Casual Elegance',
-      pricePaise: 2299000,
-      priceDisplay: '₹22,990',
-      description: 'Supple hand-sewn apron loafer finished with braided tassel accents.',
-      imageSlotPlaceholder: 'TODO(client): Image asset for The Venetian Tassel Loafer (3:4 ratio, min 750x1000px)',
+      name: 'Floral Block Heel Mule', // TODO(client): Confirm product name
+      category: 'Interchangeable Heel',
+      priceText: 'Price coming soon',
+      link: '/shop',
+      image: '/images/products/product-03-floral-block-heel-mule.jpg',
+      alt: 'Block heel mule with red floral print and a gold buckle',
+      priority: true,
     },
   ],
 
   // Limited Edition Showcase
   limitedEdition: {
     badge: 'Limited Edition',
-    heading: 'The Imperial Series Drop',
+    heading: 'The Atelier Series Drop',
     description:
-      'Individually numbered, small-batch releases handcrafted with rare museum calf leather and solid brass hardware. Strictly capped at 50 pairs worldwide. Once retired, the series is never reproduced.',
+      'Individually numbered, small-batch releases handcrafted with rare leathers and solid brass hardware. Strictly capped at 50 pairs worldwide. Once retired, the series is never reproduced.',
     cta: { label: 'View Limited Edition', href: '/limited-edition' },
   },
 
@@ -132,12 +127,12 @@ export const siteConfig = {
     {
       id: 'handcrafted',
       title: 'Handcrafted Precision',
-      description: 'Lasted by hand and built with traditional Goodyear-welted construction for lasting comfort.',
+      description: 'Lasted by hand and built with bespoke artisan construction for lasting poise.',
     },
     {
       id: 'italian',
       title: 'Italian-Inspired Elegance',
-      description: 'Sculpted contours inspired by classic Florentine and Milanese sartorial traditions.',
+      description: 'Sculpted contours and interchangeable heel engineering inspired by classic sartorial traditions.',
     },
     {
       id: 'india',

@@ -69,7 +69,8 @@ export const App = () => {
                 <PlaceholderPage
                   title="About Aurevella"
                   eyebrow="Heritage & Atelier"
-                  description="Learn about our commitment to traditional Italian lasts and generational Indian leather shoemaking artisans."
+                  showLogo={true}
+                  description="AUREVELLA brings Italian-inspired elegance to footwear, crafted in India and made by hand. Our signature interchangeable heels are designed around one idea: Luxury, Reimagined."
                 />
               }
             />

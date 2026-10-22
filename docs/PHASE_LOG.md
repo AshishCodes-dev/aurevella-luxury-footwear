@@ -351,3 +351,116 @@ git diff --stat phase-0b HEAD -- backend frontend: (empty)
   - `phase-0a-verified` (pointing to `af27ca0`)
   - `phase-0b` (pointing to `e06c5d3`)
   - `phase-0c` (created on final HEAD)
+
+
+---
+
+# Phase 1 Log: Design Foundation & Authentication
+
+## Overview
+Phase 1 establishes the luxury design system foundation (strictly zero-motion, mobile-first, obsidian/ivory/brown theme tokens, self-hosted fonts) and complete identity + authentication architecture across both frontend and backend.
+Firebase Authentication acts purely as the client identity provider (Email/Password & Google OAuth). The Express backend validates Firebase ID tokens via `firebase-admin`, provisions user records in MongoDB, and issues authoritative `httpOnly`, `SameSite=Lax` JWT session cookies (7 days for customers, 24 hours for administrators). Passwords are never transmitted to, received by, or stored in the backend or MongoDB.
+
+---
+
+## a) Packages Installed & Versions
+
+### Frontend (`frontend/package.json`)
+- **Dependencies**:
+  - `react`: `^19.0.0`
+  - `react-dom`: `^19.0.0`
+  - `react-router-dom`: `^7.5.0`
+  - `firebase`: `^11.6.0`
+  - `react-hook-form`: `^7.55.0`
+  - `zod`: `^3.24.2` / `^4.0.0`
+  - `@hookform/resolvers`: `^3.10.0`
+  - `lucide-react`: `^1.16.0`
+  - `@fontsource/cormorant-garamond`: `^5.2.5`
+  - `@fontsource-variable/inter`: `^5.2.5`
+- **DevDependencies**:
+  - `vite`: `^6.2.0`
+  - `@vitejs/plugin-react`: `^4.3.4`
+  - `tailwindcss`: `^4.0.0`
+  - `@tailwindcss/vite`: `^4.0.0`
+
+### Backend (`backend/package.json`)
+- **Dependencies**:
+  - `express`: `^4.21.2`
+  - `mongoose`: `^8.10.1`
+  - `dotenv`: `^16.4.7`
+  - `cors`: `^2.8.5`
+  - `helmet`: `^8.0.0`
+  - `morgan`: `^1.10.0`
+  - `cookie-parser`: `^1.4.7`
+  - `firebase-admin`: `^14.5.0`
+  - `jsonwebtoken`: `^9.0.3`
+  - `zod`: `^4.6.7`
+  - `express-rate-limit`: `^8.7.1`
+- **DevDependencies**:
+  - `nodemon`: `^3.1.9`
+
+---
+
+## b) Architectural & Security Implementation
+
+1. **Zero-Password Backend**:
+   - Backend `User` model contains no `password` or `passwordHash` field.
+   - Authentication flow: Client signs in via Firebase client SDK -> gets Firebase ID token -> sends to `POST /api/auth/session` -> backend verifies via `firebase-admin.auth().verifyIdToken()` -> upserts user in MongoDB -> issues backend `token` cookie -> signs out client from Firebase SDK.
+2. **Account Linking & Hijack Defense**:
+   - Linking accounts with identical emails is only permitted if `decodedToken.email_verified === true`. Unverified linking attempts are rejected with `409 Conflict`.
+3. **Role Segregation**:
+   - Role exists strictly in MongoDB (`role: 'customer' | 'admin'`). Client requests or Firebase custom claims cannot assign or escalate roles.
+   - Initial administrator provisioned via standalone CLI tool: `backend/src/utils/seedAdmin.js`.
+4. **CSRF & Origin Guard**:
+   - Mutating HTTP methods (`POST`, `PUT`, `PATCH`, `DELETE`) require `X-Aurevella-Request: 1` and match `Origin === CLIENT_URL`. External webhooks (`/api/payments/webhook`) are explicitly exempt.
+5. **NoSQL Injection Defense**:
+   - Recursive sanitization middleware (`sanitize.js`) strips keys prefixed with `$` or containing `.`.
+6. **Zero-Motion Global Rule**:
+   - Embedded in `frontend/src/index.css`:
+     ```css
+     *, *::before, *::after {
+       transition: none !important;
+       animation: none !important;
+       scroll-behavior: auto !important;
+     }
+     ```
+   - All interactive elements employ instant hover/focus color and border state updates.
+7. **Mobile-First & Accessibility**:
+   - All inputs and buttons maintain a minimum 44px touch target height.
+   - Inputs declare explicit `id`, `htmlFor`, `autoComplete`, and `aria-live` error announcements.
+
+---
+
+## c) Test Results & Verification
+
+| Test Case | Method / Target | Expected Result | Actual Result | Status |
+| :--- | :--- | :--- | :--- | :---: |
+| Backend Health Check | `GET /api/health` | 200 OK + `{ status: "ok" }` | 200 OK + JSON | **PASS** |
+| Unauthenticated Session Check | `GET /api/auth/me` | 401 Unauthorized | 401 Unauthorized | **PASS** |
+| Unauthenticated Profile Update | `PUT /api/auth/profile` | 401 Unauthorized | 401 Unauthorized | **PASS** |
+| Unauthenticated Admin Ping | `GET /api/admin/ping` | 401 Unauthorized | 401 Unauthorized | **PASS** |
+| Custom CSRF Header Guard | `POST /api/auth/session` without `X-Aurevella-Request` | 403 Forbidden | 403 Forbidden | **PASS** |
+| Request Origin Validation | `POST /api/auth/session` with foreign origin | 403 Forbidden | 403 Forbidden | **PASS** |
+| Request Schema Validation | `POST /api/auth/session` with invalid body `{}` | 400 Bad Request | 400 Bad Request | **PASS** |
+| NoSQL Injection Sanitization | `POST /api/auth/session` with `$gt` / `.` keys | Stripped payload -> 400 Bad Request | 400 Bad Request | **PASS** |
+| Auth Rate Limiting | Rapid bursts to `POST /api/auth/session` | 429 Too Many Requests | 429 Too Many Requests | **PASS** |
+| Live Firebase ID Token Verification | `POST /api/auth/session` with live credentials | Valid token verification | Requires live Firebase API call | **NOT RUN** |
+| Live Admin Seed Script Execution | `node src/utils/seedAdmin.js` | User created in Firebase & MongoDB | Requires live MongoDB & Firebase | **NOT RUN** |
+| Frontend Production Build | `npm run build` | Clean production bundle | 2082 modules bundled in 42.9s | **PASS** |
+| Zero-Motion Codebase Audit | Grep for `transition`, `animate`, `keyframes` in `src/` | No motion animations in source | Only `transition: none !important` | **PASS** |
+| Secret Leak & `.env` Isolation | `git check-ignore` & `git status` | `.env` ignored, zero secrets committed | Clean, `.env` strictly ignored | **PASS** |
+| No Service Account JSON in Repo | Recursive filesystem scan | Zero service-account credentials in git | Verified absent | **PASS** |
+
+---
+
+## d) Audit Reports
+- **Backend (`npm audit`)**: 3 high vulnerabilities located in `nodemon` dev dependency (via `chokidar`/`braces`), with zero impact on production runtime.
+- **Frontend (`npm audit`)**: 4 high vulnerabilities located in `@grpc/grpc-js` pulled in transitively by the unused `@firebase/firestore` component inside the umbrella `firebase` package (AUREVELLA exclusively imports `firebase/auth`).
+
+---
+
+## e) Git Metadata
+- **Phase 1 Implementation Commit**: `a9c2446`
+- **Active Branch**: `main`
+- **Remote Origin**: `https://github.com/AshishCodes-dev/aurevella-luxury-footwear.git`
+- **Target Tag**: `phase-1` (created on final report commit HEAD)

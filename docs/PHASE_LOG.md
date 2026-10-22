@@ -464,3 +464,41 @@ Firebase Authentication acts purely as the client identity provider (Email/Passw
 - **Active Branch**: `main`
 - **Remote Origin**: `https://github.com/AshishCodes-dev/aurevella-luxury-footwear.git`
 - **Target Tag**: `phase-1` (created on final report commit HEAD)
+
+
+---
+
+# Fix Log: Firebase Credential Loading & Environment Check
+
+## 1. Root Cause Analysis
+1. **TypeError on `admin.apps.length`**: In `firebase-admin` v14 (`firebase-admin@14.5.0`), `admin.apps` is undefined on the default export. The modular `getApps()` method from `firebase-admin/app` must be used instead. Calling `admin.apps.length` triggered `TypeError: Cannot read properties of undefined (reading 'length')`.
+2. **Malformed `FIREBASE_PRIVATE_KEY` Formatting**: The environment key copied from service-account JSON contained surrounding quotation marks and a trailing comma (`",`). The standard quote-stripping failed because `endsWith('"')` evaluated false due to the trailing comma. Furthermore, lack of strict PEM boundary extraction allowed extraneous characters to prevent standard OpenSSL/Node crypto PEM parsing.
+
+## 2. Changes Implemented
+- **`backend/src/config/firebase.js`**:
+  - Replaced legacy `admin.apps` with modular `getApps()`, `initializeApp`, `cert` from `firebase-admin/app`, and `getAuth` from `firebase-admin/auth`.
+  - Added support for two credential sources:
+    - **Source 1 (Preferred)**: `FIREBASE_SERVICE_ACCOUNT_PATH` (validates path exists, parses JSON, enforces that the file resides outside the repository directory).
+    - **Source 2 (Fallback)**: `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`.
+  - Implemented `parsePrivateKey`: strips surrounding quotes, converts literal `\n`, isolates exact PEM markers (`-----BEGIN (RSA )?PRIVATE KEY-----` and `-----END (RSA )?PRIVATE KEY-----`), and asserts valid headers.
+  - Replaced unhandled TypeErrors with explicit descriptive errors naming any missing variables.
+- **`backend/scripts/checkEnv.js`**:
+  - Added standalone verification script (`npm run check-env`) that validates `MONGODB_URI`, `CLIENT_URL`, `JWT_SECRET` (length >= 32), Firebase credential sources/parsing, and admin seed variables without leaking any secret values.
+- **`backend/.env.example`**:
+  - Added `FIREBASE_SERVICE_ACCOUNT_PATH` documentation and updated credential source notes.
+- **`.gitignore`**:
+  - Added patterns: `*firebase-adminsdk*.json`, `serviceAccount*.json`, `firebase.json`, `*.serviceAccount.json`.
+
+## 3. Verification & Test Results
+- `npm run check-env`: **PASS** (All critical checks passed; exit code 0).
+- Backend startup and MongoDB connection: **PASS** (Server listening on port 5000; MongoDB Atlas connected).
+- Live Firebase Admin API call (`auth().listUsers(1)`): **PASS** (Authenticated successfully; no user data printed).
+- `GET /api/health`: **PASS** (`200 OK`, `{ status: "ok", service: "aurevella-backend", database: "connected" }`).
+- `GET /api/auth/me` without cookie: **PASS** (`401 Unauthorized`, `{ status: "error", message: "Authentication required" }`).
+- `POST /api/auth/session` without `X-Aurevella-Request`: **PASS** (`403 Forbidden`, `{ status: "error", message: "Forbidden: Missing or invalid X-Aurevella-Request header" }`).
+- Frontend isolation: **PASS** (`git diff --stat -- frontend` is empty).
+
+## 4. Git Metadata
+- Fix Commit: `4650e72`
+- Branch: `main`
+- Remote: `origin/main`

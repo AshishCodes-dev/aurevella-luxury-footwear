@@ -107,8 +107,16 @@ export const Account = () => {
               <span className="block text-xs uppercase tracking-wider text-[#9E9685] mb-1">
                 Sign-In Method
               </span>
-              <span className="text-[#CFC9BA] capitalize">
-                {user?.providers?.join(', ') || 'Email'}
+              <span className="text-[#CFC9BA]">
+                {user?.providers && user.providers.length > 0
+                  ? user.providers
+                      .map((p) => {
+                        if (p === 'google.com' || p === 'google') return 'Google';
+                        if (p === 'password') return 'Email & password';
+                        return p;
+                      })
+                      .join(', ')
+                  : 'Email & password'}
               </span>
             </div>
           </div>

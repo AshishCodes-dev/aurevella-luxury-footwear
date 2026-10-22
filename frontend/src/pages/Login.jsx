@@ -7,6 +7,7 @@ import { Eye, EyeOff } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext.jsx';
 import { Button } from '../components/ui/button.jsx';
+import { GoogleButton } from '../components/ui/GoogleButton.jsx';
 import { Input } from '../components/ui/input.jsx';
 import { Label } from '../components/ui/label.jsx';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card.jsx';
@@ -160,15 +161,10 @@ export const Login = () => {
             </div>
           </div>
 
-          <Button
-            type="button"
-            variant="secondary"
+          <GoogleButton
             onClick={handleGoogleSignIn}
             disabled={isSubmitting}
-            className="w-full"
-          >
-            Google
-          </Button>
+          />
         </CardContent>
 
         <CardFooter>

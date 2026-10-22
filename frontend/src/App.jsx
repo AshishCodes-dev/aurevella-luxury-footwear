@@ -1,89 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext.jsx';
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext.jsx';
 import AppShell from './components/AppShell.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
 import ForgotPassword from './pages/ForgotPassword.jsx';
 import Account from './pages/Account.jsx';
-import { apiFetch } from './utils/api.js';
-
-const HomePagePlaceholder = () => {
-  const { isAuthenticated, user } = useAuth();
-  const [backendStatus, setBackendStatus] = useState('checking...');
-
-  useEffect(() => {
-    let isMounted = true;
-    const checkBackend = async () => {
-      try {
-        const data = await apiFetch('/api/health');
-        if (isMounted) {
-          setBackendStatus(data.status === 'ok' ? 'connected' : 'error');
-        }
-      } catch (err) {
-        if (isMounted) {
-          setBackendStatus('not reachable');
-        }
-      }
-    };
-
-    checkBackend();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-      <h1 className="font-serif text-5xl sm:text-7xl font-normal tracking-[0.2em] text-[#CFC9BA] mb-4 select-none">
-        AUREVELLA
-      </h1>
-      <p className="text-sm sm:text-base font-light tracking-[0.3em] uppercase text-[#9E9685] mb-12 select-none">
-        Luxury, Reimagined. Website coming soon.
-      </p>
-
-      <div className="flex flex-wrap items-center justify-center gap-4 mb-12">
-        {isAuthenticated ? (
-          <Link
-            to="/account"
-            className="inline-flex items-center justify-center min-h-[44px] px-6 text-xs uppercase tracking-widest bg-[#CFC9BA] text-[#0F0A09] hover:bg-[#E5E0D3] transition-subtle font-medium focus:outline-none focus:ring-1 focus:ring-white"
-          >
-            Go to My Account ({user?.name || user?.email})
-          </Link>
-        ) : (
-          <>
-            <Link
-              to="/login"
-              className="inline-flex items-center justify-center min-h-[44px] px-6 text-xs uppercase tracking-widest bg-[#CFC9BA] text-[#0F0A09] hover:bg-[#E5E0D3] transition-subtle font-medium focus:outline-none focus:ring-1 focus:ring-white"
-            >
-              Sign In
-            </Link>
-            <Link
-              to="/signup"
-              className="inline-flex items-center justify-center min-h-[44px] px-6 text-xs uppercase tracking-widest bg-[#181210] text-[#CFC9BA] border border-[#2E1814] hover:bg-[#221A18] transition-subtle font-medium focus:outline-none focus:ring-1 focus:ring-[#CFC9BA]"
-            >
-              Create Account
-            </Link>
-          </>
-        )}
-      </div>
-
-      <div className="text-xs uppercase tracking-widest text-[#9E9685]/70 border-t border-[#2E1814] pt-6">
-        <span>Backend: </span>
-        <span
-          className={
-            backendStatus === 'connected'
-              ? 'text-emerald-400 font-semibold'
-              : 'text-amber-400 font-semibold'
-          }
-        >
-          {backendStatus}
-        </span>
-      </div>
-    </div>
-  );
-};
+import PlaceholderPage from './pages/PlaceholderPage.jsx';
 
 export const App = () => {
   return (
@@ -91,7 +16,10 @@ export const App = () => {
       <AuthProvider>
         <AppShell>
           <Routes>
-            <Route path="/" element={<HomePagePlaceholder />} />
+            {/* Core Homepage */}
+            <Route path="/" element={<Home />} />
+
+            {/* Authentication Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -103,8 +31,114 @@ export const App = () => {
                 </ProtectedRoute>
               }
             />
-            {/* Fallback */}
-            <Route path="*" element={<HomePagePlaceholder />} />
+
+            {/* Primary Navigation & Catalogue Placeholders */}
+            <Route
+              path="/shop"
+              element={
+                <PlaceholderPage
+                  title="Shop Catalogue"
+                  eyebrow="Bespoke Collection"
+                  description="Explore our complete range of handcrafted footwear. Full inventory, leather customizer, and sizing options will launch in the upcoming phase."
+                />
+              }
+            />
+            <Route
+              path="/collections"
+              element={
+                <PlaceholderPage
+                  title="Curated Collections"
+                  eyebrow="Seasonal Releases"
+                  description="Distinct footwear capsule releases, from formal black-tie Oxfords to unlined summer loafers crafted for refined comfort."
+                />
+              }
+            />
+            <Route
+              path="/limited-edition"
+              element={
+                <PlaceholderPage
+                  title="Limited Edition Series"
+                  eyebrow="Numbered Drops"
+                  description="Individually numbered small-batch creations featuring museum calfskin and antique patinas. Limited strictly to 50 pairs per series."
+                />
+              }
+            />
+            <Route
+              path="/about"
+              element={
+                <PlaceholderPage
+                  title="About Aurevella"
+                  eyebrow="Heritage & Atelier"
+                  description="Learn about our commitment to traditional Italian lasts and generational Indian leather shoemaking artisans."
+                />
+              }
+            />
+            <Route
+              path="/contact"
+              element={
+                <PlaceholderPage
+                  title="Contact & Concierge"
+                  eyebrow="Atelier Service"
+                  description="Reach our concierge team via WhatsApp, Instagram, or email for bespoke inquiries, custom fits, and order status updates."
+                />
+              }
+            />
+
+            {/* Legal & Policy Placeholders */}
+            <Route
+              path="/privacy"
+              element={
+                <PlaceholderPage
+                  title="Privacy Policy"
+                  eyebrow="Client Protection"
+                  description="Our comprehensive guidelines on customer data protection, order confidentiality, and secure payment processing."
+                />
+              }
+            />
+            <Route
+              path="/terms"
+              element={
+                <PlaceholderPage
+                  title="Terms & Conditions"
+                  eyebrow="Client Agreement"
+                  description="Official purchasing terms, merchant agreements, warranty terms, and site usage policies."
+                />
+              }
+            />
+            <Route
+              path="/shipping-policy"
+              element={
+                <PlaceholderPage
+                  title="Shipping & Dispatch"
+                  eyebrow="White Glove Delivery"
+                  description="Insured door-to-door courier delivery across India, packaged in bespoke wooden storage boxes with cedar shoe trees."
+                />
+              }
+            />
+            <Route
+              path="/returns-policy"
+              element={
+                <PlaceholderPage
+                  title="Returns & Exchanges"
+                  eyebrow="Client Guarantee"
+                  description="Our seamless 14-day sizing exchange and return policy for unworn handcrafted footwear."
+                />
+              }
+            />
+
+            {/* 404 Fallback */}
+            <Route
+              path="*"
+              element={
+                <PlaceholderPage
+                  title="Page Not Found"
+                  eyebrow="404 Error"
+                  description="The page you requested does not exist or may have been relocated within the atelier."
+                  backLabel="Return to Homepage"
+                  backLink="/"
+                />
+              }
+            />
           </Routes>
         </AppShell>
       </AuthProvider>

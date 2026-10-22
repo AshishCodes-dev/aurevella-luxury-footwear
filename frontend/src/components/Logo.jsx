@@ -7,7 +7,7 @@ export const Logo = ({ className = '', showTagline = false }) => {
       to="/"
       className={`inline-flex flex-col items-center group focus:outline-none focus:ring-1 focus:ring-[#CFC9BA] ${className}`.trim()}
     >
-      <span className="font-serif text-2xl sm:text-3xl tracking-[0.25em] text-[#CFC9BA] group-hover:text-white select-none">
+      <span className="font-serif text-2xl sm:text-3xl tracking-[0.25em] text-[#CFC9BA] group-hover:text-white transition-subtle select-none">
         AUREVELLA
       </span>
       {showTagline && (

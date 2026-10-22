@@ -18,19 +18,15 @@
 
   --font-serif: "Cormorant Garamond", Georgia, Cambria, "Times New Roman", Times, serif;
   --font-sans: "Inter Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --motion-fast: 150ms;
+  --motion-base: 200ms;
 }
 
 :root {
+  --motion-fast: 150ms;
+  --motion-base: 200ms;
   color-scheme: dark;
-}
-
-/* ZERO-MOTION MANDATE: Disable all animations, transitions, and smooth scrolling */
-*,
-*::before,
-*::after {
-  transition: none !important;
-  animation: none !important;
-  scroll-behavior: auto !important;
 }
 
 body {
@@ -43,8 +39,79 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Base focus styles for accessibility without motion */
+/* Base focus styles for accessibility */
 :focus-visible {
   outline: 1px solid #CFC9BA;
   outline-offset: 2px;
+}
+
+/* Allowed subtle transitions (150ms colour/background/border/opacity/box-shadow) */
+.transition-subtle {
+  transition-property: color, background-color, border-color, opacity, box-shadow;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Allowed opacity-only fade-in (200ms for content, alerts, dialogs) */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn var(--motion-base) cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Allowed simple spinner for loading buttons */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+/* PREFERS-REDUCED-MOTION: Strictly disable all transitions and animations when requested */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* AUTOFILL OVERRIDE: Prevent Chrome/Safari/Edge blue-grey background from breaking dark luxury theme */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus,
+select:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #181210 inset !important;
+  -webkit-text-fill-color: #CFC9BA !important;
+  caret-color: #CFC9BA !important;
+  border-color: #2E1814 !important;
+}
+
+input:autofill,
+textarea:autofill,
+select:autofill {
+  box-shadow: 0 0 0 1000px #181210 inset !important;
+  -webkit-text-fill-color: #CFC9BA !important;
+  caret-color: #CFC9BA !important;
+  border-color: #2E1814 !important;
 }

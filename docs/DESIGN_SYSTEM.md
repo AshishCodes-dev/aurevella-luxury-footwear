@@ -4,7 +4,7 @@
 > Directs the aesthetic execution to communicate Italian-inspired luxury, bespoke craftsmanship, and minimalist direct-to-consumer elegance.
 
 - **Last updated**: October 22, 2026  
-- **Status**: Draft v1.2
+- **Status**: Draft v1.3
 
 ---
 
@@ -17,23 +17,45 @@
 - **Minimalist & Architectural**: Generous whitespace, disciplined alignment, and uncrowded layouts.
 - **Product-First Focus**: Footwear photography is the primary visual centerpiece; UI elements exist only to support and elevate the product.
 - **Warm Understated Luxury**: Dark warm tones, bespoke leather browns, and muted ivory/champagne typography.
-- **Tactile & Static Precision**: Instantaneous state responses, zero motion, and razor-sharp typography.
+- **Tactile & Disciplined Precision**: Immediate feedback, subtle luxury easing, and razor-sharp typography.
 
-### What NOT to Do (Anti-Patterns & Zero-Motion Mandate)
-- ❌ **ZERO Motion / Animations**: No CSS transitions, no keyframes, no Tailwind `animate-*` utilities, no smooth scrolling, no carousels, and no parallax effects. Hover and focus states must trigger **instant colour changes only**.
+### What NOT to Do (Anti-Patterns & Motion Restrictions)
+- ❌ **No Distracting or Heavy Motion**: No parallax, scroll-triggered effects, auto carousels, bounce/spring/shake, scale/zoom, or slide-in transitions.
+- ❌ **No Layout Transitions**: Never animate or transition width, height, margin, or layout dimensions.
+- ❌ **No Excessive Durations**: Never use transitions or animations exceeding 250ms; never use `transition: all`.
+- ❌ **No Unbounded Loops**: Infinite loops are strictly forbidden (except the single button loading spinner).
+- ❌ **No Third-Party Animation Libraries**: Do not import or bundle `tw-animate-css` or external animation runtimes.
 - ❌ **No Neon or High-Saturation Colors**: Never use bright blues, harsh reds, or synthetic neon highlights.
 - ❌ **No Gimmicky Badges or Distractions**: Avoid aggressive sales countdown timers, popups, spin-the-wheel discounts, rating stars, or crowded coupon banners.
 - ❌ **No Pure Black `#000000` Backgrounds**: Pure black washes out the subtle warm brown undertones of the brand logo and creates harsh visual contrast with imagery.
 
-### Zero-Motion Global Rule
-All user interfaces must enforce zero animation across all elements:
+### Subtle Motion Policy (Replaces Zero-Motion)
+AUREVELLA adopts a disciplined, high-end motion policy tailored for luxury e-commerce:
+
+#### 1. Motion Tokens
+- `--motion-fast: 150ms`: Used for micro-interactions (hover, focus, active states).
+- `--motion-base: 200ms`: Used for entry appearances (content fade-in, alerts, dialogs).
+
+#### 2. Allowed Motion
+- **Micro-interactions (150ms, `--motion-fast`)**: Smooth transitions strictly limited to `color`, `background-color`, `border-color`, `opacity`, and `box-shadow` on buttons, navigation links, form inputs, and cards (`.transition-subtle`).
+- **Entry Transitions (200ms, `--motion-base`)**: Opacity-only fade-in (`opacity: 0 -> 1`) for new page content, status alerts, mobile drawers, and modal dialogs (`.animate-fade-in`).
+- **Loading State Indicator**: One simple continuous spinner (`.animate-spinner`) on loading buttons.
+- **Image Reveal**: Subtle opacity-only fade-in upon image asset load.
+
+#### 3. Prefers-Reduced-Motion Requirement
+All transitions and animations are strictly disabled whenever the user expresses a preference for reduced motion:
 ```css
-*, *::before, *::after {
-  transition: none !important;
-  animation: none !important;
-  scroll-behavior: auto !important;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
 }
 ```
+
+#### 4. Testing & Verification Rule
+Codebase grep audits across `frontend/src/` must exclusively reveal the allowed tokens (`--motion-fast`, `--motion-base`) and allowed utility classes (`.transition-subtle`, `.animate-fade-in`, `.animate-spinner`). Any generic `transition: all` or unlisted keyframes fail the build audit.
 
 ---
 
@@ -95,32 +117,34 @@ All fonts must be self-hosted locally using `@fontsource` npm packages to elimin
 
 ---
 
-## 4. Component Standards (Zero-Motion)
+## 4. Component Standards
 
 ### 4.1 Buttons & Call to Action (CTA)
 - **Primary Luxury Button**:
   - Background: Vintage Ivory (`#CFC9BA`).
   - Text: Obsidian Noir (`#0F0A09`), font-sans, uppercase, `tracking-widest`, weight 500, text-sm.
   - Padding: `14px 28px` (minimum 44px touch height).
-  - Hover: Instant background shift to `#E5E0D3` (no transition).
-  - Focus-visible: Instant ring `ring-2 ring-ivory ring-offset-2 ring-offset-background`.
+  - Hover: Subtle background shift to `#E5E0D3` (`.transition-subtle`, 150ms).
+  - Focus-visible: Instant ring `ring-1 ring-[#CFC9BA]`.
+  - Loading State: Shows a compact continuous spinner (`.animate-spinner`) and disables interactive clicks.
 - **Secondary / Outline Button**:
   - Background: Transparent.
   - Border: 1px solid Vintage Ivory (`#CFC9BA`).
   - Text: Vintage Ivory (`#CFC9BA`), uppercase, `tracking-widest`.
-  - Hover: Instant background shift to `rgba(207, 201, 186, 0.1)`.
+  - Hover: Subtle background shift (`.transition-subtle`, 150ms).
 - **Text CTA Link**:
-  - Text with underline offset (`underline underline-offset-4 hover:text-white`).
+  - Text with underline offset (`hover:text-white transition-subtle`).
 
 ### 4.2 Form Inputs & Controls
 - Background: Surface dark (`#181210`).
-- Border: 1px solid `rgba(207, 201, 186, 0.2)`.
+- Border: 1px solid `#2E1814`.
 - Text: Vintage Ivory (`#CFC9BA`), font-sans text-sm.
 - Height / Touch Target: Minimum 44px height.
-- Focus-visible: Instant border color shift to `#CFC9BA`, ring-1 ring-ivory, outline none.
-- Placeholder: Aged Parchment muted (`#9E9685/60`).
+- Focus-visible: Subtle border and ring color shift (`.transition-subtle`, 150ms).
+- Placeholder: Aged Parchment muted (`#9E9685`).
 - Labels: Always paired with form input via explicit `htmlFor` attribute.
 - Error Messaging: Rendered directly below input with `aria-live="polite"` and role alert.
+- Autofill Styling: Overridden via `:-webkit-autofill` and `:autofill` to retain surface `#181210` and text `#CFC9BA`, preventing browser-default blue/grey tint.
 
 ### 4.3 Product Card
 - Container: Surface dark (`#181210`) with subtle border `1px solid rgba(207, 201, 186, 0.08)`.
@@ -187,6 +211,13 @@ Every layout must be mobile-first and tested rigorously without horizontal scrol
    - Neutral dark or warm stone backgrounds that blend harmoniously into the website's dark canvas.
 3. **Format & Delivery**:
    - Master files served statically or via cloud storage in modern WebP/AVIF formats to maintain sub-2-second page loads.
+
+---
+
+## Changelog v1.3
+- **Subtle Motion Policy (Replaces Zero-Motion Mandate)**: Removed the global `transition: none / animation: none / scroll-behavior` kill-switch. Introduced tokens `--motion-fast: 150ms` and `--motion-base: 200ms`. Permitted targeted 150ms micro-interactions (colour, background, border, opacity, box-shadow) and 200ms opacity-only entry fade-ins. Allowed continuous spinner on loading buttons. Strictly prohibited layout transitions, parallax, carousels, bounces, zooms, and `transition: all`.
+- **Prefers-Reduced-Motion**: Enforced `@media (prefers-reduced-motion: reduce)` disabling all transitions and animations for users requesting reduced motion.
+- **Autofill Dark Luxury Styling**: Added global CSS overrides for `:-webkit-autofill` and `:autofill` preserving dark surface `#181210` and ivory `#CFC9BA` text.
 
 ---
 

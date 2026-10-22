@@ -93,7 +93,7 @@ export const ForgotPassword = () => {
             <Button
               type="submit"
               variant="primary"
-              disabled={isSubmitting}
+              loading={isSubmitting}
               className="w-full mt-6"
             >
               {isSubmitting ? 'Sending Link...' : 'Send Reset Link'}
@@ -106,7 +106,7 @@ export const ForgotPassword = () => {
             Remember your credentials?{' '}
             <Link
               to="/login"
-              className="text-[#CFC9BA] hover:text-white uppercase font-medium tracking-wider focus:outline-none focus:ring-1 focus:ring-[#CFC9BA]"
+              className="text-[#CFC9BA] hover:text-white transition-subtle uppercase font-medium tracking-wider focus:outline-none focus:ring-1 focus:ring-[#CFC9BA]"
             >
               Sign In
             </Link>

@@ -143,7 +143,7 @@ export const Signup = () => {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-0 top-0 h-full w-12 flex items-center justify-center text-[#9E9685] hover:text-[#CFC9BA] focus:outline-none focus:ring-1 focus:ring-[#CFC9BA]"
+                  className="absolute right-0 top-0 h-full w-12 flex items-center justify-center text-[#9E9685] hover:text-[#CFC9BA] transition-subtle focus:outline-none focus:ring-1 focus:ring-[#CFC9BA]"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -171,7 +171,7 @@ export const Signup = () => {
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-0 top-0 h-full w-12 flex items-center justify-center text-[#9E9685] hover:text-[#CFC9BA] focus:outline-none focus:ring-1 focus:ring-[#CFC9BA]"
+                  className="absolute right-0 top-0 h-full w-12 flex items-center justify-center text-[#9E9685] hover:text-[#CFC9BA] transition-subtle focus:outline-none focus:ring-1 focus:ring-[#CFC9BA]"
                 >
                   {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -186,7 +186,7 @@ export const Signup = () => {
             <Button
               type="submit"
               variant="primary"
-              disabled={isSubmitting}
+              loading={isSubmitting}
               className="w-full mt-6"
             >
               {isSubmitting ? 'Creating account...' : 'Create Account'}
@@ -218,7 +218,7 @@ export const Signup = () => {
             Already have an account?{' '}
             <Link
               to="/login"
-              className="text-[#CFC9BA] hover:text-white uppercase font-medium tracking-wider focus:outline-none focus:ring-1 focus:ring-[#CFC9BA]"
+              className="text-[#CFC9BA] hover:text-white transition-subtle uppercase font-medium tracking-wider focus:outline-none focus:ring-1 focus:ring-[#CFC9BA]"
             >
               Sign In
             </Link>

@@ -14,7 +14,7 @@ export const Alert = ({ children, variant = 'error', className = '', ...props })
   return (
     <div
       role="alert"
-      className={`border p-3 sm:p-4 text-sm ${variantStyles} ${className}`.trim()}
+      className={`border p-3 sm:p-4 text-sm animate-fade-in transition-subtle ${variantStyles} ${className}`.trim()}
       {...props}
     >
       {children}

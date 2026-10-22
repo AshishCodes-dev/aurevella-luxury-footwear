@@ -9,13 +9,14 @@ export const Button = React.forwardRef(
       size = 'default',
       className = '',
       disabled = false,
+      loading = false,
       ...props
     },
     ref
   ) => {
-    // Base styles: Instant hover/focus, no transitions, minimum 44px touch target
+    // Base styles: Subtle transition (150ms colour/bg/border/opacity/shadow), minimum 44px touch target
     let baseStyles =
-      'inline-flex items-center justify-center font-medium select-none min-h-[44px] px-6 text-sm tracking-wider uppercase disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-[#CFC9BA]';
+      'inline-flex items-center justify-center font-medium select-none min-h-[44px] px-6 text-sm tracking-wider uppercase transition-subtle disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-[#CFC9BA]';
 
     let variantStyles = '';
     if (variant === 'primary') {
@@ -46,10 +47,17 @@ export const Button = React.forwardRef(
       <button
         ref={ref}
         type={type}
-        disabled={disabled}
+        disabled={disabled || loading}
         className={`${baseStyles} ${variantStyles} ${sizeStyles} ${className}`.trim()}
         {...props}
       >
+        {loading && (
+          <span
+            className="inline-block w-4 h-4 mr-2.5 border-2 border-current border-t-transparent rounded-full animate-spinner shrink-0"
+            role="status"
+            aria-label="Loading"
+          />
+        )}
         {children}
       </button>
     );

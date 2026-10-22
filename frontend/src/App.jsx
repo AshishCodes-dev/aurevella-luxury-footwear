@@ -47,7 +47,7 @@ const HomePagePlaceholder = () => {
         {isAuthenticated ? (
           <Link
             to="/account"
-            className="inline-flex items-center justify-center min-h-[44px] px-6 text-xs uppercase tracking-widest bg-[#CFC9BA] text-[#0F0A09] hover:bg-[#E5E0D3] font-medium focus:outline-none focus:ring-1 focus:ring-white"
+            className="inline-flex items-center justify-center min-h-[44px] px-6 text-xs uppercase tracking-widest bg-[#CFC9BA] text-[#0F0A09] hover:bg-[#E5E0D3] transition-subtle font-medium focus:outline-none focus:ring-1 focus:ring-white"
           >
             Go to My Account ({user?.name || user?.email})
           </Link>
@@ -55,13 +55,13 @@ const HomePagePlaceholder = () => {
           <>
             <Link
               to="/login"
-              className="inline-flex items-center justify-center min-h-[44px] px-6 text-xs uppercase tracking-widest bg-[#CFC9BA] text-[#0F0A09] hover:bg-[#E5E0D3] font-medium focus:outline-none focus:ring-1 focus:ring-white"
+              className="inline-flex items-center justify-center min-h-[44px] px-6 text-xs uppercase tracking-widest bg-[#CFC9BA] text-[#0F0A09] hover:bg-[#E5E0D3] transition-subtle font-medium focus:outline-none focus:ring-1 focus:ring-white"
             >
               Sign In
             </Link>
             <Link
               to="/signup"
-              className="inline-flex items-center justify-center min-h-[44px] px-6 text-xs uppercase tracking-widest bg-[#181210] text-[#CFC9BA] border border-[#2E1814] hover:bg-[#221A18] font-medium focus:outline-none focus:ring-1 focus:ring-[#CFC9BA]"
+              className="inline-flex items-center justify-center min-h-[44px] px-6 text-xs uppercase tracking-widest bg-[#181210] text-[#CFC9BA] border border-[#2E1814] hover:bg-[#221A18] transition-subtle font-medium focus:outline-none focus:ring-1 focus:ring-[#CFC9BA]"
             >
               Create Account
             </Link>

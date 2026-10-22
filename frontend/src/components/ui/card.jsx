@@ -3,7 +3,7 @@ import React from 'react';
 export const Card = ({ children, className = '', ...props }) => {
   return (
     <div
-      className={`bg-[#181210] border border-[#2E1814] p-6 sm:p-8 ${className}`.trim()}
+      className={`bg-[#181210] border border-[#2E1814] p-6 sm:p-8 animate-fade-in transition-subtle ${className}`.trim()}
       {...props}
     >
       {children}

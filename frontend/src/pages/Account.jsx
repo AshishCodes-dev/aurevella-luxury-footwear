@@ -165,7 +165,8 @@ export const Account = () => {
                 <Button
                   type="submit"
                   variant="primary"
-                  disabled={isUpdating || !isDirty}
+                  loading={isUpdating}
+                  disabled={!isDirty}
                 >
                   {isUpdating ? 'Saving...' : 'Save Changes'}
                 </Button>

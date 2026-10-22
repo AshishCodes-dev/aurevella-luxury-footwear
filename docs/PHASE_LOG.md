@@ -575,3 +575,131 @@ A recursive grep audit across `frontend/src/` confirms 100% compliance with the 
 - **Active Branch**: `main`
 - **Remote Origin**: `https://github.com/AshishCodes-dev/aurevella-luxury-footwear.git`
 - **Target Tag**: `phase-1-1` (created on final report commit HEAD)
+
+
+---
+
+# Phase 2 Log: Auth Polish, App Shell & Homepage
+
+## 1. Overview & Objective
+Phase 2 delivers the full frontend application shell, visual auth polish, centralized content configuration, and the luxury editorial homepage. The backend remained completely untouched (`git diff --stat -- backend` is empty). All additions strictly follow the subtle-motion rules from `docs/DESIGN_SYSTEM.md`, mobile-first responsive guidelines (360px, 768px, 1024px, 1440px), accessible WCAG touch targets (min 44px), and keyboard navigation standards.
+
+---
+
+## 2. Files Changed & Added (14 Files)
+
+### Added:
+1. `frontend/public/favicon.svg`: Minimalist luxury SVG placeholder icon (vintage ivory serif "A" centered on a deep obsidian-brown `#2E1814` circular emblem).
+2. `frontend/src/content/site.js`: Central content registry storing brand identity, tagline, subline, contact channels (`marketing@myaurevella.in`, Instagram, WhatsApp), navigation trees, footer columns, story quotes, value pillars, and initial product catalog data. Every unconfirmed client parameter is explicitly flagged with `TODO(client)`.
+3. `frontend/src/components/ui/GoogleButton.jsx`: Official Google branding dark-theme button component featuring the unaltered inline SVG "G" multi-color emblem, label "Continue with Google", `#131314` fill, 1px `#8E918F` border, `#E3E3E3` typography, min 44px height, and keyboard-focused rings.
+4. `frontend/src/components/ProductCard.jsx`: Luxury catalog card component featuring a 3:4 aspect-ratio dark placeholder block (`#181210`), 1px `#2E1814` border, subtle muted label `TODO(client): image — [description]`, and formatted INR pricing (`₹XX,XXX`).
+5. `frontend/src/pages/Home.jsx`: Editorial luxury homepage structured into 6 semantic sections:
+   - **Hero**: Brand tagline ("Luxury, Reimagined."), Italian-inspired craft subline, primary CTA to `/shop`, and secondary CTA to `/limited-edition`.
+   - **Brand Story**: Heritage narrative and stylized atelier quote.
+   - **Featured Products**: 4 curated footwear models displayed in a responsive 1/2/4-column grid with `ProductCard`.
+   - **Limited Edition Teaser**: Ivory-outlined atelier badge, exclusivity copy, and direct exploration CTA.
+   - **Values & Pillars**: 3-column architectural pillar breakdown (Handcrafted, Italian-inspired, Crafted in India).
+   - **Contact Strip**: Multi-channel luxury concierge access (WhatsApp button, inline Instagram link, direct email).
+6. `frontend/src/pages/PlaceholderPage.jsx`: Reusable editorial placeholder screen with breadcrumb back-navigation, page document title management, and clear "Coming soon in Phase 3/Phase 4" status for unbuilt routes.
+7. `frontend/src/utils/useDocumentTitle.js`: React hook to dynamically maintain document titles across route navigation (`AUREVELLA | <Page>`).
+
+### Modified:
+8. `frontend/index.html`: Linked `favicon.svg`, established brand meta description, and configured the default page title.
+9. `frontend/src/components/Logo.jsx`: Replaced double-box focus outline with a single clean, keyboard-only `:focus-visible:ring-1` focus ring.
+10. `frontend/src/components/AppShell.jsx`: Rewritten into a comprehensive luxury app shell:
+    - Accessible skip-to-content anchor link.
+    - Sticky glassmorphic header with wordmark logo, active desktop navigation indicators (`NavLink`), dynamic Account/Sign In links, and mobile menu toggle.
+    - Responsive mobile drawer with backdrop blur, focus trap, body scroll lock (`overflow: hidden`), `Esc` key listener, and `animate-fade-in` entrance.
+    - Global 5-column footer with brand statement, Shop links, Company links, Legal policies, direct concierge contacts, and copyright statement.
+11. `frontend/src/pages/Login.jsx`: Integrated `GoogleButton`, updated layout hierarchy with subtle transitions.
+12. `frontend/src/pages/Signup.jsx`: Integrated `GoogleButton`, updated form fields and accessible outlines.
+13. `frontend/src/pages/Account.jsx`: Mapped Firebase provider IDs to clean user labels ("Google" or "Email & password").
+14. `frontend/src/App.jsx`: Defined complete client-side routing structure for all active and placeholder routes.
+
+---
+
+## 3. Routes Implemented
+
+| Path | Component | Purpose | Phase Status |
+| :--- | :--- | :--- | :--- |
+| `/` | `pages/Home.jsx` | Editorial luxury homepage (6 semantic sections) | **Active (Phase 2)** |
+| `/login` | `pages/Login.jsx` | Authentication sign-in with Google + email/password | **Active (Phase 1/2)** |
+| `/signup` | `pages/Signup.jsx` | Authentication sign-up with Google + email/password | **Active (Phase 1/2)** |
+| `/forgot-password` | `pages/ForgotPassword.jsx` | Password reset flow via Firebase Auth | **Active (Phase 1)** |
+| `/account` | `pages/Account.jsx` | Protected account & profile dashboard | **Active (Phase 1/2)** |
+| `/shop` | `pages/PlaceholderPage.jsx` | Full footwear catalog placeholder | *Coming Phase 3* |
+| `/collections` | `pages/PlaceholderPage.jsx` | Seasonal & curated collections placeholder | *Coming Phase 3* |
+| `/limited-edition` | `pages/PlaceholderPage.jsx` | Numbered atelier limited editions placeholder | *Coming Phase 3* |
+| `/about` | `pages/PlaceholderPage.jsx` | Brand heritage & artisan story placeholder | *Coming Phase 4* |
+| `/contact` | `pages/PlaceholderPage.jsx` | Client concierge & contact placeholder | *Coming Phase 4* |
+| `/privacy` | `pages/PlaceholderPage.jsx` | Privacy policy legal document placeholder | *Coming Phase 4* |
+| `/terms` | `pages/PlaceholderPage.jsx` | Terms & conditions legal document placeholder | *Coming Phase 4* |
+| `/shipping-policy` | `pages/PlaceholderPage.jsx` | Complimentary white-glove shipping policy | *Coming Phase 4* |
+| `/returns-policy` | `pages/PlaceholderPage.jsx` | Bespoke returns & exchanges policy | *Coming Phase 4* |
+| `*` | `pages/PlaceholderPage.jsx` | 404 Not Found error fallback route | **Active (Catch-all)** |
+
+---
+
+## 4. Transition & Animation Motion Audit (`frontend/src/`)
+
+All animations and transitions across `frontend/src/` strictly conform to the subtle-motion rules in `docs/DESIGN_SYSTEM.md`:
+
+| File | Line | Usage | Allowed Token / Classification |
+| :--- | :--- | :--- | :--- |
+| `frontend/src/index.css` | 49-52 | `.transition-subtle` | Token `--motion-fast` (150ms: color, bg, border, opacity, shadow) |
+| `frontend/src/index.css` | 56-66 | `@keyframes fadeIn` / `.animate-fade-in` | Token `--motion-base` (200ms opacity-only entrance) |
+| `frontend/src/index.css` | 70-77 | `@keyframes spin` / `.animate-spinner` | Allowed continuous button loading indicator |
+| `frontend/src/index.css` | 85-86 | `transition: none !important; animation: none !important;` | `@media (prefers-reduced-motion: reduce)` accessibility override |
+| `components/ui/button.jsx` | 19 | `transition-subtle` | Button hover/focus/active state (150ms) |
+| `components/ui/button.jsx` | 56 | `animate-spinner` | Loading spinner (0.8s linear) |
+| `components/ui/input.jsx` | 11 | `transition-subtle` | Input border & ring transitions (150ms) |
+| `components/ui/card.jsx` | 6 | `animate-fade-in transition-subtle` | Card mount fade-in & hover micro-interaction |
+| `components/ui/alert.jsx` | 17 | `animate-fade-in transition-subtle` | Alert message mount fade-in |
+| `components/ui/GoogleButton.jsx` | 15 | `transition-subtle` | Google button hover/active/focus state (150ms) |
+| `components/Logo.jsx` | 10 | `transition-subtle` | Wordmark hover state |
+| `components/AppShell.jsx` | 88, 95 | `transition-subtle` | Desktop & mobile navigation link hover/active indicators |
+| `components/AppShell.jsx` | 137, 154, 160 | `transition-subtle` | Header action links and buttons |
+| `components/AppShell.jsx` | 175, 203 | `transition-subtle` | Hamburger and drawer close buttons |
+| `components/AppShell.jsx` | 191 | `animate-fade-in` | Mobile drawer backdrop/container entrance |
+| `components/AppShell.jsx` | 229, 241, 247 | `transition-subtle` | Mobile drawer auth action links |
+| `components/AppShell.jsx` | 267, 273, 313, 335 | `transition-subtle` | Footer link and social icon hover transitions |
+| `components/ProductCard.jsx` | 20, 24 | `transition-subtle` | Card border hover & image placeholder border hover |
+| `pages/Home.jsx` | 42, 48 | `transition-subtle` | Hero primary & secondary CTAs |
+| `pages/Home.jsx` | 91, 121 | `transition-subtle` | Section exploration CTAs |
+| `pages/Home.jsx` | 181, 191, 213 | `transition-subtle` | Concierge action buttons (WhatsApp, Instagram, Email) |
+| `pages/PlaceholderPage.jsx` | 15 | `animate-fade-in` | Page container entrance |
+| `pages/PlaceholderPage.jsx` | 28 | `transition-subtle` | Back to home button |
+| `pages/Login.jsx` | 114, 133, 175 | `transition-subtle` | Login links, password toggles, and submit button |
+| `pages/Signup.jsx` | 147, 175, 217 | `transition-subtle` | Signup links, password toggles, and submit button |
+| `pages/ForgotPassword.jsx` | 109 | `transition-subtle` | Back to sign in link |
+
+**Forbidden Motion Verification**: Parallax (0), scroll-driven effects (0), automatic carousels (0), bounce/spring/shake (0), scale/zoom effects (0), slide-in transitions (0), `transition: all` (0), layout width/height transitions (0). **VERIFIED STRICTLY ABSENT (0 occurrences)**.
+
+---
+
+## 5. Verification & Test Results
+
+| Check / Test Target | Verification Details | Result |
+| :--- | :--- | :---: |
+| **Frontend Production Build** | `npm run build` compiled 2,088 modules cleanly in 31.95s (`vite build`) | **PASS** |
+| **Motion Policy Conformance** | Grep scan verifies all transitions match `--motion-fast` (150ms) and `--motion-base` (200ms) | **PASS** |
+| **Reduced Motion Support** | `@media (prefers-reduced-motion: reduce)` globally sets `transition: none !important; animation: none !important;` | **PASS** |
+| **Backend Isolation Check** | `git diff --stat -- backend` produced 0 lines changed (backend untouched) | **PASS** |
+| **Asset & Image Discipline** | No stock/internet images used; pure CSS/SVG placeholders with `TODO(client)` tags | **PASS** |
+| **Google Button Guidelines** | Dark theme, uncorrupted SVG logo, #131314 bg, #8E918F border, min 44px height | **PASS** |
+| **Live Human Visual Check** | Visual verification across browsers and device viewports | **NOT RUN** (CLI/headless environment) |
+
+### Bundle Size Analysis
+- `dist/index.html`: `0.69 kB` (gzip: `0.44 kB`)
+- `dist/assets/index-kDNg5_dI.css`: `42.24 kB` (gzip: `7.74 kB`)
+- `dist/assets/index-C7f1BeuA.js`: `610.73 kB` (gzip: `169.53 kB`)
+- *Note on Vite Chunk Size Warning*: The main bundle exceeds 500 kB uncompressed due to bundling the core dependencies (`firebase`, `@fontsource`, `zod`). Dynamic code-splitting via `React.lazy()` / `manualChunks` will be introduced in subsequent phases.
+
+---
+
+## 6. Git Metadata & Tag Verification
+- **Phase 2 Implementation Commit**: `1fd641d`
+- **Report Commit**: Recorded on main
+- **Branch**: `main`
+- **Remote**: `https://github.com/AshishCodes-dev/aurevella-luxury-footwear.git`
+- **Target Tag**: `phase-2`

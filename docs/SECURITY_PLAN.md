@@ -4,32 +4,40 @@
 > Ensures compliance with industry standards, OWASP top 10 safeguards, and zero-trust transaction validation.
 
 - **Last updated**: October 22, 2026  
-- **Status**: Draft v1.1
+- **Status**: Draft v1.2
 
 ---
 
 ## 1. Authentication & Session Security
 
-### 1.1 Password Hashing with `bcrypt` & Schema Protection
-- Passwords are never stored in plain text.
-- Passwords must be hashed using `bcrypt` with a salt round cost factor of **12** before insertion into MongoDB.
-- In the Mongoose schema, `users.password` must specify `select: false` so hashes are never returned by default queries.
-- Registration and password changes require minimum 8 characters, at least 1 uppercase letter, and 1 numeric digit.
+### 1.1 Firebase Identity Delegation & Zero-Password Backend
+- **Firebase Authentication** serves strictly as the client-side identity provider for customer registration, login (Email/Password and Google OAuth), and password reset.
+- Passwords are never sent to, received by, or stored in the Express backend or MongoDB database. All password hashing and reset link dispatching are handled exclusively by Firebase.
+- In the Mongoose schema, the `users` collection contains **no password field**.
+- On login/signup, the browser receives a Firebase ID token and submits it to `POST /api/auth/session` with the `X-Aurevella-Request: 1` header. The backend validates the token via `firebase-admin.auth().verifyIdToken()`.
 
-### 1.2 Authentication Tokens: `httpOnly` Cookies vs `localStorage`
-AUREVELLA mandates storing JSON Web Tokens (JWT) inside **`httpOnly`, `Secure` cookies**, strictly rejecting `localStorage`.
+### 1.2 Account Linking & Hijack Defense
+- When a user signs in with a Firebase ID token:
+  1. The system checks MongoDB for an existing user matching `firebaseUid`.
+  2. If not found, it checks for a user with the same `email`.
+  3. **Strict Account Linking Rule**: If a user with the same email exists under a different or empty `firebaseUid`, the accounts are linked **only if** `decodedToken.email_verified === true`.
+  4. If `email_verified` is `false`, the request is rejected with `409 Conflict` ("Account with this email already exists. Please verify your email before linking.") to prevent email takeover attacks.
+
+### 1.3 Authentication Tokens: `httpOnly` Cookies vs `localStorage`
+AUREVELLA mandates storing backend session tokens (signed JWT) inside **`httpOnly`, `Secure` (in production) cookies**, strictly rejecting `localStorage`.
 
 | Dimension | `httpOnly`, `Secure` Cookies (Chosen) | `localStorage` (Rejected) |
 | :--- | :--- | :--- |
 | **Cross-Site Scripting (XSS)** | **Immune**: JavaScript running in browser cannot read or extract cookie tokens. | **Vulnerable**: Any malicious injected script or compromised third-party package can steal tokens. |
-| **Cross-Site Request Forgery (CSRF)** | Mitigated via `SameSite=Lax`, strict CORS origin matching, custom request headers, and JSON requests. | Immune to native CSRF, but vulnerable to full token exfiltration via XSS. |
-| **Transmission Security** | Guaranteed: `Secure` flag ensures cookie is transmitted only over encrypted HTTPS. | Can be transmitted over insecure connections if client script lacks guards. |
+| **Cross-Site Request Forgery (CSRF)** | Mitigated via `SameSite=Lax`, strict CORS origin matching, custom `X-Aurevella-Request: 1` headers, and JSON requests. | Immune to native CSRF, but vulnerable to full token exfiltration via XSS. |
+| **Transmission Security** | Guaranteed: `Secure` flag ensures cookie is transmitted only over encrypted HTTPS in production. | Can be transmitted over insecure connections if client script lacks guards. |
 | **Session Expiration** | Enforced by both cookie `maxAge` and JWT payload expiration (`exp`). | Requires custom client code to track expiration and purge keys. |
 
 > **Domain & Subdomain Architecture Rule**: For `httpOnly`, `SameSite=Lax` cookies to work reliably across browser requests, the Express API **must** reside on a subdomain of the client's primary domain (e.g. `api.aurevella.com` where the storefront is `aurevella.com`).
 
-### 1.3 Role-Based Access Control (RBAC) & Dynamic User Refresh
-- All incoming requests to protected routes pass through an `authenticate` middleware that parses the JWT cookie.
+### 1.4 Role-Based Access Control (RBAC) & Dynamic User Refresh
+- **Role Isolation**: User roles (`customer`, `admin`) reside **strictly in MongoDB** and are never accepted from Firebase claims or client request payloads. All session-creation calls default to `role: 'customer'`.
+- All incoming requests to protected routes pass through an `authenticate` middleware that parses the JWT session cookie.
 - **Dynamic Re-Fetch**: The middleware re-queries the user record from MongoDB on every protected request. If an admin modifies a user's role or sets `isActive: false`, access is granted or revoked immediately without waiting for token expiration.
 - **Session Lifetimes `[ASSUMPTION]`**:
   - Customer sessions: 7 days.
@@ -37,13 +45,15 @@ AUREVELLA mandates storing JSON Web Tokens (JWT) inside **`httpOnly`, `Secure` c
 - Admin routes are protected by a dedicated `authorizeAdmin` middleware verifying `req.user.role === 'admin'`.
 - Unauthenticated requests return `401 Unauthorized`; authenticated non-admin requests return `403 Forbidden`.
 
-### 1.4 Admin Account Provisioning (Seed Script Only)
-- Admin accounts **cannot** be registered through public registration forms or APIs (`role` field is stripped from registration bodies).
+### 1.5 Admin Account Provisioning (Seed Script Only)
+- Admin accounts **cannot** be created through public endpoints.
 - Admin credentials must be provisioned solely via a secured, CLI-executed backend seed script:
   ```bash
   node src/utils/seedAdmin.js
   ```
-- `seedAdmin.js` must read credentials exclusively from environment variables (`ADMIN_SEED_EMAIL`, `ADMIN_SEED_PASSWORD`) or an interactive CLI prompt. It must never hardcode or log credentials.
+- `seedAdmin.js` reads credentials exclusively from environment variables (`ADMIN_SEED_EMAIL`, `ADMIN_SEED_PASSWORD`).
+- It provisions the user in Firebase Authentication (`admin.auth().createUser` or `getUserByEmail`) and upserts the user in MongoDB with `role: 'admin'` and `isActive: true`.
+- The seed script never hardcodes or logs secrets.
 
 ---
 
@@ -164,18 +174,22 @@ If local disk uploads or Cloudinary proxy uploads are implemented:
 
 ### 5.1 Environment Isolation Rules
 - Secrets must exist exclusively in `backend/.env` and never be committed to Git.
-- Documented environment variables for implementation phases:
-  - `PORT`, `NODE_ENV`, `MONGODB_URI`, `CLIENT_URL`, `JWT_SECRET`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`
-  - *TODO for Phase 2*: `ADMIN_SEED_EMAIL`, `ADMIN_SEED_PASSWORD`
+- Documented environment variables for Phase 1 and beyond:
+  - `PORT`, `NODE_ENV`, `MONGODB_URI`, `CLIENT_URL`
+  - `JWT_SECRET` (min 32 characters; server refuses to start if missing or under 32 chars)
+  - `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` (Firebase Admin SDK credentials)
+  - `ADMIN_SEED_EMAIL`, `ADMIN_SEED_PASSWORD` (CLI seed script only)
+  - `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`
   - *TODO for Phase 5*: `RAZORPAY_WEBHOOK_SECRET`
-- Frontend environment (`frontend/.env`) must never contain private keys or secrets. Only public identifiers (e.g. `VITE_API_URL`, `VITE_RAZORPAY_KEY_ID`) are permitted.
+- Frontend environment (`frontend/.env`) must never contain private keys or secrets. Only public client identifiers are permitted:
+  - `VITE_API_URL`, `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`, `VITE_RAZORPAY_KEY_ID`
 
 ### 5.2 Dependency Vulnerability Audits
 - Continuous dependency scanning via `npm audit` prior to each phase release.
 - Immediate patching of high or critical severity CVEs.
 
 ### 5.3 Logging & PII Protection
-- Morgan and application loggers must **never** log sensitive customer data, raw authorization tokens, passwords, or full credit card numbers.
+- Morgan and application loggers must **never** log sensitive customer data, raw authorization tokens, Firebase ID tokens, passwords, or full credit card numbers.
 - Razorpay handles raw cardholder data; AUREVELLA never processes or stores card PANs, CVVs, or bank credentials.
 
 ### 5.4 Backups & Hosting Reliability `[OPEN]`
@@ -190,15 +204,25 @@ If local disk uploads or Cloudinary proxy uploads are implemented:
 | **T-1** | **Price Tampering in Checkout** | High | Prices computed server-side in integer paise from MongoDB. Client values ignored. |
 | **T-2** | **Payment Spoofing / Fake Success** | Critical | Server calculates HMAC SHA-256 signature using `RAZORPAY_KEY_SECRET`. Orders fulfill only on cryptographic match. |
 | **T-3** | **Concurrent Callback & Webhook Race** | High | Shared `finalizeOrderPayment` routine with atomic `findOneAndUpdate({ paymentStatus: "pending" })` gate. |
-| **T-4** | **Credential Stuffing / Brute Force** | High | Rate limit auth routes to 5 attempts per 15 min; bcrypt hashing with cost factor 12. |
-| **T-5** | **XSS Token Stealing** | High | Store session JWT in `httpOnly`, `Secure`, `SameSite=Lax` cookies scoped to `api.` subdomain. |
-| **T-6** | **Cross-Site Request Forgery (CSRF)** | Medium | Required custom header (`X-Aurevella-Request: 1`) + Origin/Referer matching. |
-| **T-7** | **NoSQL Injection** | Medium | Mongoose typed schemas and strict sanitization stripping `$` and `.` operators from query payloads. |
-| **T-8** | **Privilege Escalation** | High | Admin accounts created only via backend CLI seed script. `role` field ignored on user registration API. Dynamic re-fetch of user on each request. |
-| **T-9** | **Inventory Race Condition (Overselling)**| High | 15-min atomic stock reservations via MongoDB replica set transactions (`stock - reservedQuantity >= quantity`). |
-| **T-10**| **Late-Payment After Timeout** | Medium | Re-reservation check; if stock exhausted, automatic full refund via Razorpay Refund API and admin notification. |
-| **T-11**| **Webhook Signature Mismatch via JSON Parsing**| High | Webhook route mounted with `express.raw()` before `express.json()`. |
-| **T-12**| **Sensitive Data Leak via Errors** | Medium | Central error handler strips stack traces and internal exceptions in production. |
+| **T-4** | **Credential Stuffing / Password Attacks** | High | Delegated to Firebase Authentication infrastructure; backend maintains zero password hashes. |
+| **T-5** | **Account Linking / Identity Hijack** | High | Link Firebase account to existing email in MongoDB ONLY if `email_verified` is true; otherwise reject with 409. |
+| **T-6** | **XSS Token Stealing** | High | Store session JWT in `httpOnly`, `Secure`, `SameSite=Lax` cookies scoped to `api.` subdomain. |
+| **T-7** | **Cross-Site Request Forgery (CSRF)** | Medium | Required custom header (`X-Aurevella-Request: 1`) + Origin/Referer matching. |
+| **T-8** | **NoSQL Injection** | Medium | Mongoose typed schemas and strict sanitization stripping `$` and `.` operators from query payloads. |
+| **T-9** | **Privilege Escalation** | High | Admin accounts created only via backend CLI seed script. `role` lives strictly in MongoDB; client role ignored. Dynamic re-fetch of user on each request. |
+| **T-10**| **Inventory Race Condition (Overselling)**| High | 15-min atomic stock reservations via MongoDB replica set transactions (`stock - reservedQuantity >= quantity`). |
+| **T-11**| **Late-Payment After Timeout** | Medium | Re-reservation check; if stock exhausted, automatic full refund via Razorpay Refund API and admin notification. |
+| **T-12**| **Webhook Signature Mismatch via JSON Parsing**| High | Webhook route mounted with `express.raw()` before `express.json()`. |
+| **T-13**| **Sensitive Data Leak via Errors** | Medium | Central error handler strips stack traces and internal exceptions in production. |
+
+---
+
+## Changelog v1.2
+- **Zero-Password Backend & Firebase Auth Delegation**: Delegated identity verification to Firebase Auth. Removed bcrypt password hashing from backend. Removed password field from User schema.
+- **Strict Account Linking by Email**: Mandated account linking only if `email_verified` is true on the Firebase ID token; returns 409 Conflict otherwise.
+- **Role Isolation in MongoDB**: Defined that roles are strictly stored in MongoDB and never accepted from Firebase claims or client requests.
+- **Admin Seeding with Firebase Integration**: Updated `seedAdmin.js` to create/link Firebase Auth accounts and set `role: 'admin'` in MongoDB without logging secrets.
+- **Firebase & JWT Environment Variables**: Documented `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, and `JWT_SECRET` (min 32 chars requirement).
 
 ---
 

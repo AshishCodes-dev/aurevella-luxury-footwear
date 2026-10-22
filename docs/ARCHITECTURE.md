@@ -4,20 +4,27 @@
 > Outlines the deployment topology, technology trade-offs, and phased execution roadmap.
 
 - **Last updated**: October 22, 2026  
-- **Status**: Draft v1.1
+- **Status**: Draft v1.2
 
 ---
 
 ## 1. System Overview & Architecture Diagram
 
-AUREVELLA is engineered as a decoupled, modern three-tier client-server web architecture leveraging JavaScript ES modules across the entire stack.
+AUREVELLA is engineered as a decoupled, modern three-tier client-server web architecture leveraging JavaScript ES modules across the entire stack. Identity authentication is delegated to Firebase Authentication (supporting Email/Password and Google OAuth), while authorization roles, sessions, product catalogs, and transactional data reside strictly in MongoDB.
 
 ```mermaid
 flowchart LR
     subgraph Client Tier
         User([Customer / Admin])
-        Browser["React 19 + Vite SPA\n(Tailwind CSS v4)"]
+        Browser["React 19 + Vite SPA\n(Tailwind CSS v4, Zero-Motion)"]
         LocalCart[(Local Storage\nGuest Cart)]
+    end
+
+    subgraph Identity & Third-Party Tier
+        FirebaseAuth["Firebase Authentication\n(Identity Provider: Email/Pass & Google)"]
+        Razorpay["Razorpay Payment Gateway\n(Orders API, Refunds & Webhooks)"]
+        MediaStore["Media Storage\n(Cloudinary / Disk) [OPEN]"]
+        EmailService["Transactional Email\n(Resend/SendGrid/SES) [OPEN]"]
     end
 
     subgraph Application Tier
@@ -26,16 +33,15 @@ flowchart LR
         JSONParser["express.json()\nStandard Routes"]
     end
 
-    subgraph Data & Third-Party Tier
+    subgraph Data Tier
         MongoDB[(MongoDB Atlas Replica Set\nMongoose ODM)]
-        Razorpay["Razorpay Payment Gateway\n(Orders API, Refunds & Webhooks)"]
-        MediaStore["Media Storage\n(Cloudinary / Disk) [OPEN]"]
-        EmailService["Transactional Email\n(Resend/SendGrid/SES) [OPEN]"]
     end
 
     User -->|Interacts| Browser
+    Browser <-->|Sign in / ID Token| FirebaseAuth
     Browser <-->|Guest Cart Sync| LocalCart
-    Browser -->|HTTPS / Custom CSRF Header\n(httpOnly Secure Cookies)| ExpressAPI
+    Browser -->|HTTPS / ID Token to /session\n(httpOnly Secure Cookies)| ExpressAPI
+    ExpressAPI -->|Verify ID Token| FirebaseAuth
     ExpressAPI --> RawWebhook
     ExpressAPI --> JSONParser
     ExpressAPI -->|Transactions / Atomic Updates| MongoDB
@@ -107,16 +113,15 @@ backend/src/
 ### 3.1 Authentication & User Routes (`/api/auth`)
 | Method | Path | Access Level | Purpose |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/register` | Public | Register new customer account and establish session cookie. |
-| `POST` | `/api/auth/login` | Public | Authenticate user credentials and issue secure session cookie. |
-| `POST` | `/api/auth/logout` | Authenticated | Invalidate session and clear authentication cookie. |
-| `GET` | `/api/auth/me` | Authenticated | Retrieve current user profile and role (re-queried from DB). |
-| `PUT` | `/api/auth/profile` | Customer / Admin | Update personal name and contact number. |
-| `POST` | `/api/auth/forgot-password`| Public | Send password reset link to user's email (generic response). |
-| `POST` | `/api/auth/reset-password` | Public | Reset password using verified single-use 30-min token `[ASSUMPTION]`. |
+| `POST` | `/api/auth/session` | Public | Verify Firebase ID token, upsert MongoDB user record, issue backend httpOnly JWT cookie. |
+| `POST` | `/api/auth/logout` | Authenticated | Invalidate session by clearing httpOnly JWT cookie. |
+| `GET` | `/api/auth/me` | Authenticated | Retrieve current user profile and role (re-queried from DB on each request). |
+| `PUT` | `/api/auth/profile` | Customer / Admin | Update personal name and contact phone number. |
 | `POST` | `/api/auth/addresses` | Customer | Add a new shipping address to user profile. |
 | `PUT` | `/api/auth/addresses/:id` | Customer | Update an existing shipping address. |
 | `DELETE`| `/api/auth/addresses/:id` | Customer | Delete a saved shipping address. |
+
+> *Note*: Customer password registration, login, and password reset are handled client-side via Firebase Authentication (email/password & Google). The backend verifies Firebase ID tokens and maintains its own secure session cookies.
 
 ### 3.2 Product & Collection Routes (`/api/products`, `/api/collections`, `/api/categories`)
 | Method | Path | Access Level | Purpose |
@@ -178,6 +183,7 @@ backend/src/
 | `POST` | `/api/admin/orders/:id/refund` | Admin | Issue full or partial refund via Razorpay Refund API. |
 | `GET` | `/api/admin/inquiries`| Admin | List contact submissions for admin concierge response. |
 | `PUT` | `/api/admin/inquiries/:id/status` | Admin | Update status of customer inquiry (`new`, `in_progress`, `resolved`). |
+| `GET` | `/api/admin/ping` | Admin | Health and authorization ping for administrative testing. |
 
 ### 3.7 General & System (`/api/contact`, `/api/health`)
 | Method | Path | Access Level | Purpose |
@@ -189,16 +195,24 @@ backend/src/
 
 ## 4. Key Architectural Flows
 
-### 4.1 Signup, Login & Session Lifetimes
+### 4.1 Firebase Identity, Session Exchange & Lifecycle
 ```text
-1. Customer submits credentials via POST /api/auth/login with custom CSRF header.
-2. Controller verifies email, fetches user with password hash (using explicit select).
-3. Compares password via bcrypt.compare().
-4. Issues JWT session token signed with JWT_SECRET:
+1. User authenticates on frontend via Firebase Authentication (email/password or Google OAuth).
+2. Firebase client returns user credentials; browser calls user.getIdToken().
+3. Frontend dispatches POST /api/auth/session with { idToken } and header X-Aurevella-Request: 1.
+4. Express auth controller verifies ID token via firebase-admin:
+   const decodedToken = await admin.auth().verifyIdToken(idToken);
+5. Controller upserts MongoDB user:
+   a) Matches by firebaseUid, OR matches by email if decodedToken.email_verified === true.
+   b) If email matches existing record with different firebaseUid and email_verified is false:
+      reject with 409 Conflict ("Email exists. Verify email before linking.").
+   c) New users created with role: 'customer' (roles are strictly in MongoDB; client role ignored).
+6. Express signs its own JWT containing { userId: user._id, role: user.role } with JWT_SECRET:
    - Customer Session Lifetime: 7 days [ASSUMPTION].
    - Admin Session Lifetime: 24 hours [ASSUMPTION].
-5. Attaches httpOnly, Secure, SameSite=Lax cookie 'token'.
-6. On every subsequent authenticated request, middleware reads cookie and re-queries DB
+7. Express sets httpOnly, Secure (in production), SameSite=Lax cookie 'token'.
+8. Frontend AuthContext receives user metadata; calls Firebase client signOut() to avoid state drift.
+9. On every subsequent authenticated request, middleware reads cookie and re-queries DB
    user record to guarantee immediate role updates and revocation enforcement.
 ```
 
@@ -313,14 +327,23 @@ Phase 4: Late-Payment Edge Case (Payment Captured After Reservation Expired)
 
 | Phase | Milestone Name | Primary Focus & Deliverable Goal |
 | :--- | :--- | :--- |
-| **Phase 1** | **Design System & Homepage** | Establish brand luxury visual identity (Tailwind v4 tokens, serif typography, dark palette) and complete responsive homepage, hero narrative, craftsmanship showcase, and social concierge links. |
-| **Phase 2** | **Authentication & Accounts** | Implement JWT httpOnly cookie authentication, customer registration, login/logout, profile management, shipping address book, and password reset flow. |
+| **Phase 1** | **Authentication & Design Foundation** | Establish brand luxury design tokens, zero-motion styling, self-hosted fonts, Firebase Auth (email/password + Google) + backend session cookie auth, user profile, and admin ping. |
+| **Phase 2** | **Homepage & App Shell** | Complete responsive homepage, hero showcase, craftsmanship narrative, social concierge links, and full storefront layout. |
 | **Phase 3** | **Product Catalogue & Admin** | Implement product model, variant inventory management, categories, customer-facing catalogue browsing, filtering, and admin product/stock management portal. |
 | **Phase 4** | **Cart & Checkout Architecture** | Build persistent database-backed customer cart, guest cart merging, 15-min stock reservation engine, and multi-step checkout screen. |
 | **Phase 5** | **Razorpay Payments** | Integrate Razorpay Orders API, client modal, shared `finalizeOrderPayment` verification, raw body webhook parser, idempotent order processing, and refund APIs. |
 | **Phase 6** | **Limited Edition & Customization** | Build Limited Edition badges with batch reservation caps, and deploy flexible per-product bespoke customization engine. |
 | **Phase 7** | **Testing & Security Hardening** | Execute full negative testing suite, CSRF header checks, rate limiting, NoSQL injection audit, OWASP security hardening, and performance optimization. |
 | **Phase 8** | **Hostinger Production Deployment** | Configure production environment, build static frontend assets, deploy backend according to agreed deployment architecture on `api.` subdomain, point client domain, verify SSL and live payment processing. |
+
+---
+
+## Changelog v1.2
+- **Firebase Authentication Identity Integration**: Integrated Firebase Authentication as client-side identity provider (Email/Password and Google OAuth). Browser exchanges Firebase ID token for backend `httpOnly` session cookie via `POST /api/auth/session`.
+- **Backend Role Isolation**: Removed backend bcrypt password hashing and public registration/login endpoints; roles (`customer`, `admin`) reside exclusively in MongoDB and are never accepted from Firebase or client payloads.
+- **Account Linking by Email**: Enforced account linking by email only when Firebase ID token indicates `email_verified: true`, returning 409 Conflict otherwise to prevent identity hijack.
+- **Admin Ping Route**: Added `GET /api/admin/ping` for automated testing of admin RBAC guards.
+- **Roadmap Realignment**: Updated Phase 1 scope to Authentication + Design Foundation, and Phase 2 to Homepage + App Shell.
 
 ---
 

@@ -4,7 +4,7 @@
 > Formalizes the business logic rules governing inventory transactions, atomic stock reservations, immutable order snapshots, and bespoke product customizations.
 
 - **Last updated**: October 22, 2026  
-- **Status**: Draft v1.1
+- **Status**: Draft v1.2
 
 ---
 
@@ -25,20 +25,24 @@
 ## 2. Collections & Field Specifications
 
 ### 2.1 `users` Collection
-Stores customer credentials, basic profile data, and role assignments.
+Stores customer credentials, basic profile data, and role assignments. Identity and password credentials are managed exclusively via Firebase Authentication (Email/Password & Google).
 
 | Field Name | Type | Constraints | Default | Description & Indexes |
 | :--- | :--- | :--- | :--- | :--- |
 | `_id` | ObjectId | Auto | Auto | Primary key. |
-| `firstName` | String | Required, Trim | None | Customer's given name. |
-| `lastName` | String | Required, Trim | None | Customer's family name. |
-| `email` | String | Required, Lowercase, Trim | None | **Unique Index**. Customer login identifier. |
-| `password` | String | Required (min 8 chars), `select: false` | None | `bcrypt` hash (never returned in query projections by default). |
-| `phone` | String | Optional, Trim | `""` | Primary contact number for courier notifications. |
-| `role` | String | Required, Enum: `['customer', 'admin']`| `'customer'` | Access control role. |
+| `name` | String | Required, Trim | None | Customer's full display name. |
+| `email` | String | Required, Lowercase, Trim | None | **Unique Index**. Customer email address. |
+| `firebaseUid` | String | Required, Trim | None | **Unique Index**. Firebase Authentication user identifier. |
+| `providers` | [String] | Required | `[]` | Array of sign-in provider IDs (e.g. `['password']`, `['google.com']`). |
+| `emailVerified`| Boolean | Required | `false` | Email verification flag synced from Firebase ID token. |
+| `photoURL` | String | Optional, Trim | `""` | User avatar image URL (e.g., from Google OAuth). |
+| `phone` | String | Optional, Trim | `""` | Primary contact number for shipping/order concierge. |
+| `role` | String | Required, Enum: `['customer', 'admin']`| `'customer'` | Access control role (resides strictly in MongoDB). |
 | `isActive` | Boolean | Required | `true` | Account active flag (checked on every protected request). |
 | `createdAt` | Date | Auto | `now` | Timestamp. |
 | `updatedAt` | Date | Auto | `now` | Timestamp. |
+
+> *Note on Passwords*: Passwords are **never** stored or handled in MongoDB or Express; password hashing and credentials are delegated exclusively to Firebase Authentication.
 
 ---
 
@@ -332,6 +336,12 @@ erDiagram
     Order ||--|{ ProductVariant : "snapshots items"
     Order ||--|| Payment : "settled via"
 ```
+
+---
+
+## Changelog v1.2
+- **Firebase User Schema Refactoring**: Updated `users` collection to store `name`, `email`, `firebaseUid` (unique index), `providers` array, `emailVerified`, `photoURL`, `phone`, `role`, and `isActive`. Completely removed `password`, `firstName`, and `lastName` fields as passwords and credential hashing are delegated entirely to Firebase Authentication.
+- **Role Isolation**: Reinforced that `role` resides strictly in MongoDB and is never accepted from external client or Firebase tokens.
 
 ---
 

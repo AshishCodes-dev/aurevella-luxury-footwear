@@ -2,31 +2,51 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose';
+
+import { csrfGuard } from './middleware/csrfGuard.js';
+import { sanitize } from './middleware/sanitize.js';
+import authRoutes from './routes/auth.routes.js';
+import adminRoutes from './routes/admin.routes.js';
 
 const app = express();
 
-// Security and utility middleware
+// Security headers
 app.use(helmet());
+
+// Logging
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
+// Cookie Parser
+app.use(cookieParser());
+
+// Body Parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// NoSQL Injection Sanitize Middleware
+app.use(sanitize);
 
 // CORS setup: allow ONLY the origin in CLIENT_URL
 const corsOptions = {
   origin: (origin, callback) => {
-    const allowedOrigin = process.env.CLIENT_URL;
-    // Allow non-browser / server-to-server requests (no origin header)
-    // or requests matching CLIENT_URL
+    const allowedOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
+    // Allow non-browser requests (no origin header) or exact match with CLIENT_URL
     if (!origin || origin === allowedOrigin) {
       callback(null, true);
     } else {
-      callback(new Error(`Not allowed by CORS. Origin: ${origin}`));
+      const err = new Error(`Not allowed by CORS. Origin: ${origin}`);
+      err.status = 403;
+      callback(err);
     }
   },
   credentials: true,
 };
 app.use(cors(corsOptions));
+
+// Custom CSRF and Origin Guard on mutating methods
+app.use(csrfGuard);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -39,6 +59,10 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Mount Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+
 // 404 Handler
 app.use((req, res, next) => {
   res.status(404).json({
@@ -49,7 +73,7 @@ app.use((req, res, next) => {
 
 // Central Error Handler (never leaks stack trace in production)
 app.use((err, req, res, next) => {
-  const statusCode = err.status || err.statusCode || 500;
+  const statusCode = err.status || 500;
   const isProduction = process.env.NODE_ENV === 'production';
 
   res.status(statusCode).json({

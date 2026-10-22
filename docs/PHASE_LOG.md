@@ -502,3 +502,76 @@ Firebase Authentication acts purely as the client identity provider (Email/Passw
 - Fix Commit: `4650e72`
 - Branch: `main`
 - Remote: `origin/main`
+
+
+---
+
+# Phase 1.1 Log: Subtle Motion Policy & Autofill Polish
+
+## 1. Overview & Objective
+Phase 1.1 refines the UI motion policy and resolves browser autofill style collisions.
+The previous global "zero-motion" kill-switch was replaced with a disciplined, subtle luxury motion framework defined by `--motion-fast: 150ms` (for interactive hover/focus states) and `--motion-base: 200ms` (for entry appearances). In addition, Chrome/Safari/Edge autofill styling was overridden to preserve the obsidian dark background and vintage ivory typography. No backend or authentication logic was modified.
+
+---
+
+## 2. Files Changed (13 Files)
+- `docs/DESIGN_SYSTEM.md`: Documented new Motion section, tokens, allowed/forbidden motion rules, autofill specification, and Changelog v1.3.
+- `frontend/src/index.css`: Added motion tokens (`--motion-fast: 150ms`, `--motion-base: 200ms`), utility classes (`.transition-subtle`, `.animate-fade-in`, `.animate-spinner`), `@media (prefers-reduced-motion: reduce)`, and autofill dark theme overrides.
+- `frontend/src/components/ui/button.jsx`: Integrated `.transition-subtle` and added support for loading spinner (`.animate-spinner`).
+- `frontend/src/components/ui/input.jsx`: Added `.transition-subtle` on focus/hover states.
+- `frontend/src/components/ui/card.jsx`: Added `.transition-subtle` and `.animate-fade-in`.
+- `frontend/src/components/ui/alert.jsx`: Added `.animate-fade-in` and `.transition-subtle`.
+- `frontend/src/components/Logo.jsx`: Added `.transition-subtle` on wordmark hover.
+- `frontend/src/components/AppShell.jsx`: Added `.transition-subtle` on navigation/header links and `.animate-fade-in` on main content container.
+- `frontend/src/App.jsx`: Added `.transition-subtle` on placeholder action buttons.
+- `frontend/src/pages/Login.jsx`: Added `.transition-subtle` on links and password toggle; connected `loading` prop to submit Button.
+- `frontend/src/pages/Signup.jsx`: Added `.transition-subtle` on links and password toggles; connected `loading` prop to submit Button.
+- `frontend/src/pages/ForgotPassword.jsx`: Added `.transition-subtle` on links; connected `loading` prop to submit Button.
+- `frontend/src/pages/Account.jsx`: Connected `loading` prop to profile save Button.
+
+---
+
+## 3. Transition & Animation Audit (`frontend/src/`)
+
+A recursive grep audit across `frontend/src/` confirms 100% compliance with the allowed motion policy:
+
+| File | Line | Usage | Allowed Classification |
+| :--- | :--- | :--- | :--- |
+| `frontend/src/index.css` | 49-52 | `.transition-subtle` (`color, background-color, border-color, opacity, box-shadow` at 150ms) | Token `--motion-fast` micro-interaction |
+| `frontend/src/index.css` | 56-66 | `@keyframes fadeIn` / `.animate-fade-in` (opacity-only at 200ms) | Token `--motion-base` entry fade-in |
+| `frontend/src/index.css` | 70-77 | `@keyframes spin` / `.animate-spinner` (0.8s linear) | Allowed loading button spinner |
+| `frontend/src/index.css` | 85-86 | `transition: none !important; animation: none !important;` | `@media (prefers-reduced-motion: reduce)` override |
+| `components/ui/button.jsx` | 19 | `transition-subtle` | Micro-interaction on hover/focus |
+| `components/ui/button.jsx` | 56 | `animate-spinner` | Continuous loading spinner |
+| `components/ui/input.jsx` | 11 | `transition-subtle` | Focus ring & border transition |
+| `components/ui/card.jsx` | 6 | `animate-fade-in transition-subtle` | Card content entry & hover |
+| `components/ui/alert.jsx` | 17 | `animate-fade-in transition-subtle` | Alert banner entry fade-in |
+| `components/Logo.jsx` | 10 | `transition-subtle` | Wordmark hover state |
+| `components/AppShell.jsx` | 30, 47, 53 | `transition-subtle` | Navigation link hover states |
+| `components/AppShell.jsx` | 64 | `animate-fade-in` | Page container entrance |
+| `pages/Login.jsx` | 113, 132, 179 | `transition-subtle` | Links and eye toggle button |
+| `pages/Signup.jsx` | 146, 174, 221 | `transition-subtle` | Links and eye toggle buttons |
+| `pages/ForgotPassword.jsx` | 109 | `transition-subtle` | Sign in back link |
+| `App.jsx` | 50, 58, 64 | `transition-subtle` | Action links |
+
+**Forbidden Motion Check**: Parallax (0), scroll-triggered effects (0), auto carousels (0), bounce/spring/shake (0), scale/zoom (0), slide-in (0), `transition: all` (0), layout width/height transitions (0). **VERIFIED ABSENT**.
+
+---
+
+## 4. Test Results & Verification
+
+| Check / Test Target | Verification Details | Result |
+| :--- | :--- | :---: |
+| **Frontend Production Build** | `npm run build` bundled 2082 modules in 30.1s without error | **PASS** |
+| **Codebase Motion Audit** | Grep scan confirms only allowed transitions and tokens exist in `src/` | **PASS** |
+| **Autofill Override** | Declared in `index.css` for `-webkit-autofill` and `:autofill` | **PASS** |
+| **Backend Isolation Check** | `git diff --stat -- backend` confirmed 0 files changed | **PASS** |
+| **Live Human Visual Check** | Visual verification in live browser rendering engine | **NOT RUN** (CLI/headless environment) |
+
+---
+
+## 5. Git Metadata & Tag Verification
+- **Phase 1.1 Implementation Commit**: `2019424`
+- **Active Branch**: `main`
+- **Remote Origin**: `https://github.com/AshishCodes-dev/aurevella-luxury-footwear.git`
+- **Target Tag**: `phase-1-1` (created on final report commit HEAD)

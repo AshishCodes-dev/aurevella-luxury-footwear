@@ -699,7 +699,123 @@ All animations and transitions across `frontend/src/` strictly conform to the su
 
 ## 6. Git Metadata & Tag Verification
 - **Phase 2 Implementation Commit**: `1fd641d`
-- **Report Commit**: Recorded on main
+- **Report Commit**: `98009df`
 - **Branch**: `main`
 - **Remote**: `https://github.com/AshishCodes-dev/aurevella-luxury-footwear.git`
 - **Target Tag**: `phase-2`
+
+
+---
+
+# Phase 2.1 Log: Brand Assets, Color Calibration & Sample Product Imagery
+
+## 1. Overview & Objectives
+Phase 2.1 integrates the official brand identity assets and initial low-resolution sample product photography into the AUREVELLA storefront. All additions strictly enforce backend isolation, WCAG AAA accessible color contrast, subtle luxury motion policies, and responsive constraints.
+
+### Key Achievements:
+1. **Brand Asset Verification & Deployment**:
+   - Verified official brand visual files in `frontend/public/brand/`: `aurevella-mark.png` (466×459), `aurevella-logo-full.png` (818×665), `aurevella-wordmark.png` (810×152), `aurevella-icon-512.png`, `apple-touch-icon.png`, and `favicon-32.png`.
+   - Verified `favicon.ico` in `frontend/public/` and removed temporary `favicon.svg`.
+   - Configured `frontend/index.html` with standard favicons and Apple touch icon.
+2. **Single Swap Point `Logo.jsx`**:
+   - Header variant: Renders `aurevella-mark.png` (40px high, `alt=""`) beside live serif wordmark "AUREVELLA" with `aria-label="AUREVELLA home"`.
+   - Footer & About hero variant: Renders `aurevella-logo-full.png` (`alt="AUREVELLA - Luxury Interchangeable Heels"`) with explicit `width="200"` and `height="163"` attributes.
+3. **Color Token Calibration (Exceeding WCAG AAA)**:
+   - Primary Brand Brown: `#2F1C15` (calibrated to circular logo mark).
+   - Vintage Ivory: `#FEF5E6` (headings, logo text, primary button fill, Limited Edition outline badge).
+   - Muted Sand: `#B8AD9A` (body copy, descriptions, secondary navigation).
+   - Canvas & Surface: Maintained warm Obsidian Noir `#0F0A09` base and Surface Dark `#181210`.
+   - Contrast validation: `#FEF5E6` on Obsidian Base = **17.5:1** (AAA); `#B8AD9A` on Obsidian Base = **8.73:1** (AAA); `#B8AD9A` on Surface Dark = **8.18:1** (AAA).
+   - Primary button: Fill `#FEF5E6`, Text `#0F0A09` (**17.5:1** contrast).
+4. **Imagery Policy & Sample Product Catalog**:
+   - Aspect ratio token `--product-ratio: 1 / 1` defined centrally in CSS theme for all product imagery.
+   - Low-resolution sample visuals placed in `frontend/public/images/products/`: `product-01-floral-block-heel-sandal.jpg`, `product-02-blue-floral-slide.jpg`, `product-03-floral-block-heel-mule.jpg`.
+   - Strict card width limit: All cards constrained to `<= 500 CSS px` (3-column responsive grid on desktop, 2-column on tablet, single column centered max 480px on mobile).
+   - Hero remains strictly **text-only with logo** (no product photography permitted in hero or full-width banners).
+   - Created `docs/ASSETS_TODO.md` outlining pre-launch requirements for high-resolution photography, angles, pricing, and vector SVGs.
+5. **Content Configuration & Copy Updates**:
+   - Descriptor established: "Luxury Interchangeable Heels".
+   - Official WhatsApp concierge link configured: `https://wa.me/917728060447` displaying `+91 77280 60447` (`TODO(client): confirm business WhatsApp`).
+   - About story narrative constrained to authorized claims regarding Italian-inspired elegance, Indian craftsmanship, and interchangeable heel architecture (`TODO(client)` tagged for detailed mechanisms).
+
+---
+
+## 2. Files Changed & Added (33 Files Total)
+
+### Added:
+1. `docs/ASSETS_TODO.md`: Production asset criteria and pre-launch photographic checklist.
+2. `frontend/public/brand/apple-touch-icon.png`: Apple touch icon.
+3. `frontend/public/brand/aurevella-icon-512.png`: High-res 512px brand icon.
+4. `frontend/public/brand/aurevella-logo-full.png`: Full horizontal brand emblem with descriptor.
+5. `frontend/public/brand/aurevella-mark.png`: Circular monogram mark.
+6. `frontend/public/brand/aurevella-wordmark.png`: Stylized brand serif wordmark.
+7. `frontend/public/brand/favicon-32.png`: 32×32 PNG favicon.
+8. `frontend/public/favicon.ico`: Multi-size favicon.
+9. `frontend/public/images/products/product-01-floral-block-heel-sandal.jpg`: Sample product visual 1.
+10. `frontend/public/images/products/product-02-blue-floral-slide.jpg`: Sample product visual 2.
+11. `frontend/public/images/products/product-03-floral-block-heel-mule.jpg`: Sample product visual 3.
+
+### Deleted:
+12. `frontend/public/favicon.svg`: Removed provisional SVG icon.
+
+### Modified:
+13. `docs/DESIGN_SYSTEM.md`: Updated to Draft v1.4 with calibrated color palette, contrast analysis, `--product-ratio: 1 / 1`, card width rules, and Changelog v1.4.
+14. `frontend/index.html`: Linked `favicon.ico`, `favicon-32.png`, and `apple-touch-icon.png`; updated page title and meta description.
+15. `frontend/src/index.css`: Updated color tokens (`--color-brown: #2F1C15`, `--color-ivory: #FEF5E6`, `--color-ivory-muted: #B8AD9A`), added `--product-ratio: 1 / 1`, added `.img-fade-in`, and calibrated autofill overrides.
+16. `frontend/src/content/site.js`: Updated tagline, descriptor ("Luxury Interchangeable Heels"), WhatsApp concierge details, About story copy, and featured products array (exactly 3 items with images and alt texts).
+17. `frontend/src/components/Logo.jsx`: Single swap point supporting header variant (mark + text) and footer/about variant (full emblem).
+18. `frontend/src/components/ProductCard.jsx`: Aspect ratio from `--product-ratio`, width/height attributes, `img-fade-in` on load, <= 500px card constraint, and lazy loading.
+19. `frontend/src/components/AppShell.jsx`: Header mark, full footer logo, WhatsApp links, and updated color tokens.
+20. `frontend/src/components/ui/button.jsx`: Primary fill `#FEF5E6`, text `#0F0A09`, focus ring `#FEF5E6`, exported default Button.
+21. `frontend/src/components/ui/card.jsx`: Updated borders to `#2F1C15` and typography to `#FEF5E6` / `#B8AD9A`.
+22. `frontend/src/components/ui/input.jsx`: Updated borders to `#2F1C15`, placeholder to `#B8AD9A`, focus rings to `#FEF5E6`.
+23. `frontend/src/components/ui/label.jsx`: Updated label text to `#FEF5E6`.
+24. `frontend/src/components/ui/alert.jsx`: Updated border and text tokens.
+25. `frontend/src/components/ProtectedRoute.jsx`: Updated loading and muted text tokens to `#B8AD9A`.
+26. `frontend/src/pages/Home.jsx`: Text-only hero with brand logo, 3-column featured product grid with sample images, updated color tokens.
+27. `frontend/src/pages/PlaceholderPage.jsx`: Added support for `showLogo` (full logo rendering on About page) and updated color tokens.
+28. `frontend/src/pages/Login.jsx`: Updated form dividers, focus rings, and link colors.
+29. `frontend/src/pages/Signup.jsx`: Updated form dividers, focus rings, and link colors.
+30. `frontend/src/pages/ForgotPassword.jsx`: Updated link and text colors.
+31. `frontend/src/pages/Account.jsx`: Updated detail headings, borders, and text tokens.
+32. `frontend/src/App.jsx`: Configured `showLogo={true}` for `/about` route.
+33. `docs/PHASE_LOG.md`: Appended Phase 2.1 verification log.
+
+---
+
+## 3. Transition & Motion Audit (`frontend/src/`)
+
+All transitions and animations strictly match the allowed motion tokens from `DESIGN_SYSTEM.md`:
+- Micro-interactions: `.transition-subtle` (150ms `--motion-fast` on color, bg, border, opacity, box-shadow).
+- Content & Image Reveals: `.img-fade-in` and `.animate-fade-in` (200ms `--motion-base` opacity-only).
+- Loading States: `.animate-spinner` (0.8s linear continuous spin).
+- Reduced Motion: `@media (prefers-reduced-motion: reduce)` globally forces `transition: none !important; animation: none !important;`.
+- Forbidden Motion: Parallax (0), carousels (0), scale/zoom (0), slide-in (0), layout dimensions (0) — **0 occurrences**.
+
+---
+
+## 4. Test Results & Verification
+
+| Target / Check | Verification Command / Method | Result | Notes |
+| :--- | :--- | :---: | :--- |
+| **Frontend Production Build** | `npm run build` (`vite build`) | **PASS** | 2,088 modules compiled in 25.22s with 0 errors |
+| **Motion Policy Conformance** | Grep scan across `frontend/src/` | **PASS** | Exclusively allowed tokens and utilities found |
+| **Backend Isolation Check** | `git diff --stat -- backend` | **PASS** | 0 files changed; backend strictly untouched |
+| **Asset Existence Verification** | Filesystem verification of brand & images | **PASS** | All 10 brand and product assets verified intact |
+| **Card Dimension Constraint** | CSS max-width and grid breakpoints | **PASS** | All cards <= 480px, strictly under 500 CSS px |
+| **WCAG AAA Color Contrast** | Mathematical relative luminance audit | **PASS** | All primary and muted text exceeds AAA requirements |
+| **Live Human Visual Check** | Physical browser rendering at 360 / 1440 px | **NOT RUN** | Headless CLI / sandbox environment |
+
+### Bundle Size Analysis
+- `dist/index.html`: `0.86 kB` (gzip: `0.48 kB`)
+- `dist/assets/index-K9a4xEPB.css`: `42.33 kB` (gzip: `7.75 kB`)
+- `dist/assets/index-CkveGgcl.js`: `611.00 kB` (gzip: `169.49 kB`)
+
+---
+
+## 5. Git Metadata & Tag Verification
+- **Implementation Commit**: `fd64533` — `Phase 2: brand assets and content`
+- **Report Commit**: Recorded on main
+- **Branch**: `main`
+- **Remote**: `https://github.com/AshishCodes-dev/aurevella-luxury-footwear.git`
+- **Tag**: `phase-2-1`

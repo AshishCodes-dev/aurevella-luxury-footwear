@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
  *  - "header" (default): aurevella-mark.png (~40px high, alt="") + live serif text "AUREVELLA".
  *                        Link has aria-label="AUREVELLA home".
  *  - "footer" / "full":  aurevella-logo-full.png (alt="AUREVELLA - Luxury Interchangeable Heels")
- *                        with width and height set.
+ *                        with width, height, and aspect-ratio set to eliminate CLS.
  */
 export const Logo = ({ variant = 'header', className = '', asLink = true }) => {
   if (variant === 'footer' || variant === 'full') {
@@ -18,7 +18,7 @@ export const Logo = ({ variant = 'header', className = '', asLink = true }) => {
         alt="AUREVELLA - Luxury Interchangeable Heels"
         width="200"
         height="163"
-        className={`w-44 sm:w-52 h-auto object-contain select-none ${className}`.trim()}
+        className={`w-44 sm:w-52 h-auto aspect-[200/163] max-w-full object-contain select-none ${className}`.trim()}
       />
     );
 
@@ -39,15 +39,15 @@ export const Logo = ({ variant = 'header', className = '', asLink = true }) => {
 
   // Header / Default variant
   const headerLogo = (
-    <div className={`inline-flex items-center gap-3 select-none ${className}`.trim()}>
+    <div className={`inline-flex items-center gap-2.5 sm:gap-3 select-none min-w-0 ${className}`.trim()}>
       <img
         src="/brand/aurevella-mark.png"
         alt=""
         width="40"
         height="40"
-        className="h-10 w-auto object-contain shrink-0"
+        className="h-9 w-9 sm:h-10 sm:w-10 aspect-square object-contain shrink-0"
       />
-      <span className="font-serif text-xl sm:text-2xl tracking-[0.22em] text-[#FEF5E6] group-hover:text-white transition-subtle">
+      <span className="font-serif text-lg sm:text-2xl tracking-[0.14em] sm:tracking-[0.22em] text-[#FEF5E6] group-hover:text-white transition-subtle truncate">
         AUREVELLA
       </span>
     </div>
@@ -61,7 +61,7 @@ export const Logo = ({ variant = 'header', className = '', asLink = true }) => {
     <Link
       to="/"
       aria-label="AUREVELLA home"
-      className="inline-flex items-center group outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F0A09]"
+      className="inline-flex items-center group outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F0A09] min-w-0"
     >
       {headerLogo}
     </Link>

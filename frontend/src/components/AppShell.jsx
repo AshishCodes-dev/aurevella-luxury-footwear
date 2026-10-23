@@ -98,7 +98,7 @@ export const AppShell = ({ children }) => {
     }`;
 
   return (
-    <div className="min-h-screen bg-[#0F0A09] text-[#B8AD9A] flex flex-col selection:bg-[#2F1C15] selection:text-[#FEF5E6]">
+    <div className="min-h-[100dvh] bg-[#0F0A09] text-[#B8AD9A] flex flex-col selection:bg-[#2F1C15] selection:text-[#FEF5E6]">
       {/* Skip to Content accessible link */}
       <a
         href="#main-content"
@@ -109,9 +109,9 @@ export const AppShell = ({ children }) => {
 
       {/* Sticky Header */}
       <header className="border-b border-[#2F1C15] bg-[#0F0A09]/95 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-2">
           {/* Brand Logo: header variant (mark + live text) */}
-          <div className="flex items-center">
+          <div className="flex items-center min-w-0">
             <Logo variant="header" />
           </div>
 
@@ -128,7 +128,7 @@ export const AppShell = ({ children }) => {
           </nav>
 
           {/* Account / Action Links & Mobile Menu Toggle */}
-          <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4 shrink-0">
             {isAuthenticated ? (
               <div className="hidden sm:flex items-center space-x-3">
                 <Link
@@ -163,7 +163,7 @@ export const AppShell = ({ children }) => {
               </div>
             )}
 
-            {/* Mobile Hamburger Button */}
+            {/* Mobile Hamburger Button (min 44px) */}
             <button
               ref={menuButtonRef}
               type="button"
@@ -248,13 +248,13 @@ export const AppShell = ({ children }) => {
               </div>
             )}
 
-            {/* Quick Contact Links in Drawer */}
-            <div className="pt-4 flex items-center justify-between text-xs text-[#B8AD9A]">
+            {/* Quick Contact Links in Drawer (responsive flex-col on narrow viewports) */}
+            <div className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-[#B8AD9A]">
               <a
                 href={siteConfig.contact.instagram.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-[#FEF5E6] transition-subtle inline-flex items-center gap-1"
+                className="hover:text-[#FEF5E6] transition-subtle inline-flex items-center gap-1 min-h-[44px]"
               >
                 Instagram <ArrowUpRight size={14} />
               </a>
@@ -262,7 +262,7 @@ export const AppShell = ({ children }) => {
                 href={siteConfig.contact.whatsapp.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-[#FEF5E6] transition-subtle inline-flex items-center gap-1"
+                className="hover:text-[#FEF5E6] transition-subtle inline-flex items-center gap-1 min-h-[44px]"
               >
                 WhatsApp {siteConfig.contact.whatsapp.label}
               </a>
@@ -271,16 +271,16 @@ export const AppShell = ({ children }) => {
         </div>
       )}
 
-      {/* Main Content Area */}
-      <main id="main-content" tabIndex="-1" className="flex-1 focus:outline-none">
+      {/* Main Content Area (flex-1 flex flex-col so child pages can stretch or center vertically) */}
+      <main id="main-content" tabIndex="-1" className="flex-1 flex flex-col focus:outline-none w-full">
         {children}
       </main>
 
-      {/* Global Footer */}
-      <footer className="border-t border-[#2F1C15] bg-[#0F0A09]">
+      {/* Global Footer (Anchored cleanly at bottom of viewport on short pages, flows after content on long pages) */}
+      <footer className="border-t border-[#2F1C15] bg-[#0F0A09] w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-8">
-            {/* Brand Column with aurevella-logo-full.png */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8">
+            {/* Brand Column with full logo and aspect-ratio */}
             <div className="lg:col-span-2 space-y-4">
               <Logo variant="footer" className="mb-2" />
               <p className="text-xs uppercase tracking-widest text-[#FEF5E6] font-medium">
@@ -289,7 +289,7 @@ export const AppShell = ({ children }) => {
               <p className="text-sm text-[#B8AD9A] tracking-wide max-w-sm">
                 {siteConfig.tagline} {siteConfig.subline}
               </p>
-              <div className="pt-2 text-xs text-[#B8AD9A] space-y-1">
+              <div className="pt-2 text-xs text-[#B8AD9A] space-y-1.5">
                 <p>Email: <a href={`mailto:${siteConfig.contact.email}`} className="text-[#FEF5E6] hover:underline transition-subtle">{siteConfig.contact.email}</a></p>
                 <p>Concierge WhatsApp: <a href={siteConfig.contact.whatsapp.url} target="_blank" rel="noopener noreferrer" className="text-[#FEF5E6] hover:underline transition-subtle">{siteConfig.contact.whatsapp.label}</a></p>
                 <p>Instagram: <a href={siteConfig.contact.instagram.url} target="_blank" rel="noopener noreferrer" className="text-[#FEF5E6] hover:underline transition-subtle">{siteConfig.contact.instagram.handle}</a></p>
@@ -304,7 +304,7 @@ export const AppShell = ({ children }) => {
               <ul className="space-y-3 text-xs tracking-wider text-[#B8AD9A]">
                 {siteConfig.footerNav.shop.map((link) => (
                   <li key={link.href}>
-                    <Link to={link.href} className="hover:text-[#FEF5E6] transition-subtle">
+                    <Link to={link.href} className="hover:text-[#FEF5E6] transition-subtle inline-block py-0.5">
                       {link.label}
                     </Link>
                   </li>
@@ -320,7 +320,7 @@ export const AppShell = ({ children }) => {
               <ul className="space-y-3 text-xs tracking-wider text-[#B8AD9A]">
                 {siteConfig.footerNav.company.map((link) => (
                   <li key={link.href}>
-                    <Link to={link.href} className="hover:text-[#FEF5E6] transition-subtle">
+                    <Link to={link.href} className="hover:text-[#FEF5E6] transition-subtle inline-block py-0.5">
                       {link.label}
                     </Link>
                   </li>
@@ -336,7 +336,7 @@ export const AppShell = ({ children }) => {
               <ul className="space-y-3 text-xs tracking-wider text-[#B8AD9A]">
                 {siteConfig.footerNav.legal.map((link) => (
                   <li key={link.href}>
-                    <Link to={link.href} className="hover:text-[#FEF5E6] transition-subtle">
+                    <Link to={link.href} className="hover:text-[#FEF5E6] transition-subtle inline-block py-0.5">
                       {link.label}
                     </Link>
                   </li>
@@ -346,10 +346,11 @@ export const AppShell = ({ children }) => {
           </div>
 
           {/* Bottom Copyright & Origin Strip */}
-          <div className="mt-16 pt-8 border-t border-[#2F1C15] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#B8AD9A] tracking-wider uppercase">
+          <div className="mt-16 pt-8 border-t border-[#2F1C15] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#B8AD9A] tracking-wider uppercase text-center sm:text-left">
             <p>{siteConfig.copyright}</p>
-            <div className="flex items-center space-x-6">
+            <div className="flex flex-wrap items-center justify-center sm:justify-end gap-4 sm:gap-6">
               <span>Handcrafted in India</span>
+              <span className="hidden sm:inline">•</span>
               <span>Italian Elegance</span>
             </div>
           </div>

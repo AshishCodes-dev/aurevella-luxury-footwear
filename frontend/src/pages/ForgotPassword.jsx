@@ -50,69 +50,71 @@ export const ForgotPassword = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto py-6 sm:py-12">
-      <Card>
-        <CardHeader>
-          <CardTitle>Reset Password</CardTitle>
-          <CardDescription>
-            Enter your account email to receive instructions to reset your password
-          </CardDescription>
-        </CardHeader>
+    <div className="flex-1 flex flex-col justify-center items-center w-full px-4 py-8 sm:py-16">
+      <div className="w-full max-w-md">
+        <Card>
+          <CardHeader>
+            <CardTitle>Reset Password</CardTitle>
+            <CardDescription>
+              Enter your account email to receive instructions to reset your password
+            </CardDescription>
+          </CardHeader>
 
-        <CardContent>
-          {statusMessage && (
-            <div className="mb-6" aria-live="polite">
-              <Alert variant="success">{statusMessage}</Alert>
-            </div>
-          )}
+          <CardContent>
+            {statusMessage && (
+              <div className="mb-6" aria-live="polite">
+                <Alert variant="success">{statusMessage}</Alert>
+              </div>
+            )}
 
-          {errorMessage && (
-            <div className="mb-6" aria-live="polite">
-              <Alert variant="error">{errorMessage}</Alert>
-            </div>
-          )}
+            {errorMessage && (
+              <div className="mb-6" aria-live="polite">
+                <Alert variant="error">{errorMessage}</Alert>
+              </div>
+            )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-            <div>
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="name@example.com"
-                error={!!errors.email}
-                {...register('email')}
-              />
-              {errors.email && (
-                <p className="mt-1 text-xs text-red-400" role="alert">
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+              <div>
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="username"
+                  placeholder="name@example.com"
+                  error={!!errors.email}
+                  {...register('email')}
+                />
+                {errors.email && (
+                  <p className="mt-1 text-xs text-red-400" role="alert">
+                    {errors.email.message}
+                  </p>
+                )}
+              </div>
 
-            <Button
-              type="submit"
-              variant="primary"
-              loading={isSubmitting}
-              className="w-full mt-6"
-            >
-              {isSubmitting ? 'Sending Link...' : 'Send Reset Link'}
-            </Button>
-          </form>
-        </CardContent>
+              <Button
+                type="submit"
+                variant="primary"
+                loading={isSubmitting}
+                className="w-full mt-6"
+              >
+                {isSubmitting ? 'Sending Link...' : 'Send Reset Link'}
+              </Button>
+            </form>
+          </CardContent>
 
-        <CardFooter>
-          <p className="text-xs text-[#B8AD9A]">
-            Remember your credentials?{' '}
-            <Link
-              to="/login"
-              className="text-[#FEF5E6] hover:text-white transition-subtle uppercase font-medium tracking-wider focus:outline-none focus:ring-1 focus:ring-[#FEF5E6]"
-            >
-              Sign In
-            </Link>
-          </p>
-        </CardFooter>
-      </Card>
+          <CardFooter>
+            <p className="text-xs text-[#B8AD9A]">
+              Remember your credentials?{' '}
+              <Link
+                to="/login"
+                className="text-[#FEF5E6] hover:text-white transition-subtle uppercase font-medium tracking-wider focus:outline-none focus:ring-1 focus:ring-[#FEF5E6] inline-block py-1"
+              >
+                Sign In
+              </Link>
+            </p>
+          </CardFooter>
+        </Card>
+      </div>
     </div>
   );
 };

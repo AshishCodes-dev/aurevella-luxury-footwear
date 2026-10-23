@@ -60,8 +60,9 @@ export const Account = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
-      {/* Account Overview */}
+    <div className="flex-1 flex flex-col justify-center items-center w-full px-4 py-8 sm:py-16">
+      <div className="w-full max-w-2xl space-y-8">
+        {/* Account Overview */}
       <Card>
         <CardHeader className="text-left">
           <CardTitle>My Account</CardTitle>
@@ -190,6 +191,7 @@ export const Account = () => {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };

@@ -9,27 +9,27 @@ export const Home = () => {
   useDocumentTitle('AUREVELLA — Luxury Interchangeable Heels');
 
   return (
-    <div className="space-y-24 sm:space-y-32 py-4 sm:py-8">
+    <div className="space-y-20 sm:space-y-32 py-4 sm:py-8 w-full overflow-hidden">
       {/* 1. HERO SECTION (Text-only with Logo; No product photo in hero) */}
       <section
         aria-labelledby="hero-heading"
-        className="relative flex flex-col items-center justify-center text-center px-4 pt-12 pb-20 sm:pt-20 sm:pb-32 border-b border-[#2F1C15]"
+        className="relative flex flex-col items-center justify-center text-center px-4 pt-8 pb-16 sm:pt-20 sm:pb-32 border-b border-[#2F1C15] w-full"
       >
-        <span className="text-xs uppercase tracking-[0.3em] text-[#B8AD9A] mb-4 block select-none">
+        <span className="text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[#B8AD9A] mb-4 block select-none">
           {siteConfig.descriptor}
         </span>
         <h1
           id="hero-heading"
-          className="font-serif text-5xl sm:text-7xl lg:text-8xl font-normal tracking-[0.15em] text-[#FEF5E6] mb-6 leading-tight max-w-4xl select-none"
+          className="font-serif text-[clamp(2.15rem,6.5vw,5.5rem)] font-normal tracking-[0.06em] sm:tracking-[0.14em] text-[#FEF5E6] mb-6 leading-[1.15] max-w-4xl break-words select-none px-2"
         >
           {siteConfig.hero.headline}
         </h1>
-        <p className="text-base sm:text-xl font-light tracking-wide text-[#B8AD9A] max-w-2xl mb-12 leading-relaxed">
+        <p className="text-sm sm:text-lg lg:text-xl font-light tracking-wide text-[#B8AD9A] max-w-2xl mb-10 sm:mb-12 leading-relaxed px-2">
           {siteConfig.hero.subline}
         </p>
 
         {/* Hero CTAs */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto px-4 max-w-md sm:max-w-none">
           <Link
             to={siteConfig.hero.primaryCta.href}
             className="w-full sm:w-auto inline-flex items-center justify-center min-h-[44px] px-8 py-3 text-xs uppercase tracking-widest bg-[#FEF5E6] text-[#0F0A09] hover:bg-[#FFFFFF] font-medium transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-white"
@@ -48,14 +48,14 @@ export const Home = () => {
       {/* 2. BRAND STORY SECTION */}
       <section
         aria-labelledby="story-heading"
-        className="max-w-4xl mx-auto px-4 sm:px-6 text-center"
+        className="max-w-4xl mx-auto px-4 sm:px-6 text-center w-full"
       >
-        <span className="text-xs uppercase tracking-[0.3em] text-[#B8AD9A] block mb-3 select-none">
+        <span className="text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[#B8AD9A] block mb-3 select-none">
           {siteConfig.story.eyebrow}
         </span>
         <h2
           id="story-heading"
-          className="font-serif text-3xl sm:text-4xl lg:text-5xl tracking-wide text-[#FEF5E6] mb-8 leading-snug"
+          className="font-serif text-[clamp(1.75rem,5vw,3rem)] tracking-wide text-[#FEF5E6] mb-8 leading-snug break-words"
         >
           {siteConfig.story.heading}
         </h2>
@@ -64,32 +64,32 @@ export const Home = () => {
             <p key={index}>{paragraph}</p>
           ))}
         </div>
-        <blockquote className="mt-10 pt-8 border-t border-[#2F1C15] font-serif italic text-lg sm:text-xl text-[#FEF5E6] max-w-2xl mx-auto">
+        <blockquote className="mt-10 pt-8 border-t border-[#2F1C15] font-serif italic text-lg sm:text-xl text-[#FEF5E6] max-w-2xl mx-auto px-2">
           {siteConfig.story.quote}
         </blockquote>
       </section>
 
       {/* 3. FEATURED PRODUCTS (EXACTLY 3 SAMPLE PRODUCTS, 1/2/3 COLUMNS GRID, <=500px WIDTH) */}
-      <section aria-labelledby="featured-heading" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 pb-4 border-b border-[#2F1C15]">
+      <section aria-labelledby="featured-heading" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 pb-4 border-b border-[#2F1C15] gap-4">
           <div>
-            <span className="text-xs uppercase tracking-[0.3em] text-[#B8AD9A] block mb-2">
+            <span className="text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[#B8AD9A] block mb-2">
               Curated Selection
             </span>
-            <h2 id="featured-heading" className="font-serif text-3xl sm:text-4xl text-[#FEF5E6]">
+            <h2 id="featured-heading" className="font-serif text-[clamp(1.75rem,4vw,2.5rem)] text-[#FEF5E6]">
               Featured Footwear
             </h2>
           </div>
           <Link
             to="/shop"
-            className="mt-4 sm:mt-0 text-xs uppercase tracking-widest text-[#FEF5E6] hover:text-white transition-subtle inline-flex items-center gap-1 group outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+            className="text-xs uppercase tracking-widest text-[#FEF5E6] hover:text-white transition-subtle inline-flex items-center gap-1 min-h-[44px] group outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
           >
             View Full Catalogue <ArrowRight size={14} />
           </Link>
         </div>
 
         {/* 1 / 2 / 3 Columns Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 justify-items-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 justify-items-center w-full">
           {siteConfig.featuredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
@@ -99,17 +99,17 @@ export const Home = () => {
       {/* 4. LIMITED EDITION TEASER (WITH IVORY-OUTLINE BADGE) */}
       <section
         aria-labelledby="limited-heading"
-        className="max-w-5xl mx-auto px-4 sm:px-6"
+        className="max-w-5xl mx-auto px-4 sm:px-6 w-full"
       >
-        <div className="bg-[#181210] border border-[#2F1C15] p-8 sm:p-14 text-center relative overflow-hidden">
+        <div className="bg-[#181210] border border-[#2F1C15] p-6 sm:p-14 text-center relative overflow-hidden">
           <div className="mb-6">
-            <span className="border border-[#FEF5E6] px-3.5 py-1 text-xs uppercase tracking-[0.25em] text-[#FEF5E6] inline-block font-medium">
+            <span className="border border-[#FEF5E6] px-3.5 py-1 text-xs uppercase tracking-[0.2em] sm:tracking-[0.25em] text-[#FEF5E6] inline-block font-medium">
               {siteConfig.limitedEdition.badge}
             </span>
           </div>
           <h2
             id="limited-heading"
-            className="font-serif text-3xl sm:text-5xl tracking-wide text-[#FEF5E6] mb-4"
+            className="font-serif text-[clamp(1.75rem,5vw,3rem)] tracking-wide text-[#FEF5E6] mb-4 break-words"
           >
             {siteConfig.limitedEdition.heading}
           </h2>
@@ -128,24 +128,24 @@ export const Home = () => {
       {/* 5. BRAND VALUES (3 PILLARS) */}
       <section
         aria-labelledby="values-heading"
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full"
       >
-        <div className="text-center mb-12">
-          <span className="text-xs uppercase tracking-[0.3em] text-[#B8AD9A] block mb-2">
+        <div className="text-center mb-10 sm:mb-12">
+          <span className="text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[#B8AD9A] block mb-2">
             Our Foundation
           </span>
-          <h2 id="values-heading" className="font-serif text-3xl sm:text-4xl text-[#FEF5E6]">
+          <h2 id="values-heading" className="font-serif text-[clamp(1.75rem,4vw,2.5rem)] text-[#FEF5E6]">
             The Aurevella Standards
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
           {siteConfig.values.map((val) => (
             <div
               key={val.id}
-              className="bg-[#181210] border border-[#2F1C15] p-8 text-center flex flex-col items-center"
+              className="bg-[#181210] border border-[#2F1C15] p-6 sm:p-8 text-center flex flex-col items-center min-w-0"
             >
-              <h3 className="font-serif text-xl sm:text-2xl text-[#FEF5E6] mb-3">
+              <h3 className="font-serif text-xl sm:text-2xl text-[#FEF5E6] mb-3 break-words">
                 {val.title}
               </h3>
               <p className="text-sm text-[#B8AD9A] leading-relaxed">
@@ -159,12 +159,12 @@ export const Home = () => {
       {/* 6. CONTACT STRIP (WHATSAPP, INSTAGRAM, EMAIL) */}
       <section
         aria-labelledby="contact-strip-heading"
-        className="max-w-4xl mx-auto px-4 sm:px-6 pb-12"
+        className="max-w-4xl mx-auto px-4 sm:px-6 pb-12 w-full"
       >
-        <div className="bg-[#181210] border border-[#2F1C15] p-8 sm:p-10 text-center">
+        <div className="bg-[#181210] border border-[#2F1C15] p-6 sm:p-10 text-center">
           <h2
             id="contact-strip-heading"
-            className="font-serif text-2xl sm:text-3xl text-[#FEF5E6] mb-2"
+            className="font-serif text-[clamp(1.5rem,4vw,2rem)] text-[#FEF5E6] mb-2 break-words"
           >
             Connect with the Atelier
           </h2>
@@ -172,7 +172,7 @@ export const Home = () => {
             Our luxury footwear consultants are available for personalized sizing inquiries and order guidance.
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
             {/* WhatsApp CTA */}
             <a
               href={siteConfig.contact.whatsapp.url}

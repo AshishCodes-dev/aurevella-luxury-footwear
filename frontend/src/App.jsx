@@ -19,9 +19,9 @@ export const App = () => {
             {/* Core Homepage */}
             <Route path="/" element={<Home />} />
 
-            {/* Authentication Routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+            {/* Authentication Routes (Keyed to guarantee clean remount & independent form state) */}
+            <Route path="/login" element={<Login key="login-view" />} />
+            <Route path="/signup" element={<Signup key="signup-view" />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route
               path="/account"

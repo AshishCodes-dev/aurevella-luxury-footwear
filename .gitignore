@@ -44,3 +44,7 @@ Thumbs.db
 serviceAccount*.json
 firebase.json
 *.serviceAccount.json
+
+# Test Artifacts & Screenshots
+.layout-shots/
+frontend/.layout-shots/

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -37,19 +37,43 @@ export const Signup = () => {
   const {
     register,
     handleSubmit,
+    reset,
+    setValue,
+    setFocus,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(signupSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
+    mode: 'onSubmit',
   });
+
+  // Ensure form fields are clean whenever this screen mounts or unmounts
+  useEffect(() => {
+    reset({ name: '', email: '', password: '', confirmPassword: '' });
+    return () => {
+      reset({ name: '', email: '', password: '', confirmPassword: '' });
+    };
+  }, [reset]);
 
   const onSubmit = async (data) => {
     setFormError(null);
     setIsSubmitting(true);
     try {
       await signupWithEmail(data.name, data.email, data.password);
+      reset({ name: '', email: '', password: '', confirmPassword: '' });
       navigate('/account', { replace: true });
     } catch (err) {
       console.error('Signup error:', err);
+      // On failed signup: clear both password fields, retain name and email
+      setValue('password', '');
+      setValue('confirmPassword', '');
+      setTimeout(() => setFocus('password'), 0);
+
       let msg = err.message || 'Registration failed. Please check your details.';
       if (err.code === 'auth/email-already-in-use') {
         msg = 'An account with this email address already exists. Please sign in instead.';
@@ -67,6 +91,7 @@ export const Signup = () => {
     setIsSubmitting(true);
     try {
       await loginWithGoogle();
+      reset({ name: '', email: '', password: '', confirmPassword: '' });
       navigate('/account', { replace: true });
     } catch (err) {
       console.error('Google Sign In error:', err);
@@ -79,148 +104,150 @@ export const Signup = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto py-6 sm:py-12">
-      <Card>
-        <CardHeader>
-          <CardTitle>Create Account</CardTitle>
-          <CardDescription>Join Aurevella for an exclusive footwear experience</CardDescription>
-        </CardHeader>
+    <div className="flex-1 flex flex-col justify-center items-center w-full px-4 py-8 sm:py-16">
+      <div className="w-full max-w-md">
+        <Card>
+          <CardHeader>
+            <CardTitle>Create Account</CardTitle>
+            <CardDescription>Join Aurevella for an exclusive footwear experience</CardDescription>
+          </CardHeader>
 
-        <CardContent>
-          {formError && (
-            <div className="mb-6" aria-live="polite">
-              <Alert variant="error">{formError}</Alert>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-            <div>
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                type="text"
-                autoComplete="name"
-                placeholder="Jane Doe"
-                error={!!errors.name}
-                {...register('name')}
-              />
-              {errors.name && (
-                <p className="mt-1 text-xs text-red-400" role="alert">
-                  {errors.name.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="name@example.com"
-                error={!!errors.email}
-                {...register('email')}
-              />
-              {errors.email && (
-                <p className="mt-1 text-xs text-red-400" role="alert">
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  placeholder="••••••••"
-                  error={!!errors.password}
-                  {...register('password')}
-                  className="pr-12"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-0 top-0 h-full w-12 flex items-center justify-center text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle focus:outline-none focus:ring-1 focus:ring-[#FEF5E6]"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
+          <CardContent>
+            {formError && (
+              <div className="mb-6" aria-live="polite">
+                <Alert variant="error">{formError}</Alert>
               </div>
-              {errors.password && (
-                <p className="mt-1 text-xs text-red-400" role="alert">
-                  {errors.password.message}
-                </p>
-              )}
-            </div>
+            )}
 
-            <div>
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <div className="relative">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+              <div>
+                <Label htmlFor="name">Full Name</Label>
                 <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  placeholder="••••••••"
-                  error={!!errors.confirmPassword}
-                  {...register('confirmPassword')}
-                  className="pr-12"
+                  id="name"
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Master Artisan"
+                  error={!!errors.name}
+                  {...register('name')}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-0 top-0 h-full w-12 flex items-center justify-center text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle focus:outline-none focus:ring-1 focus:ring-[#FEF5E6]"
-                >
-                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
+                {errors.name && (
+                  <p className="mt-1 text-xs text-red-400" role="alert">
+                    {errors.name.message}
+                  </p>
+                )}
               </div>
-              {errors.confirmPassword && (
-                <p className="mt-1 text-xs text-red-400" role="alert">
-                  {errors.confirmPassword.message}
-                </p>
-              )}
+
+              <div>
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="username"
+                  placeholder="name@example.com"
+                  error={!!errors.email}
+                  {...register('email')}
+                />
+                {errors.email && (
+                  <p className="mt-1 text-xs text-red-400" role="alert">
+                    {errors.email.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    error={!!errors.password}
+                    {...register('password')}
+                    className="pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-0 top-0 h-full w-12 min-h-[44px] flex items-center justify-center text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle focus:outline-none focus:ring-1 focus:ring-[#FEF5E6]"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="mt-1 text-xs text-red-400" role="alert">
+                    {errors.password.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    error={!!errors.confirmPassword}
+                    {...register('confirmPassword')}
+                    className="pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-0 top-0 h-full w-12 min-h-[44px] flex items-center justify-center text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle focus:outline-none focus:ring-1 focus:ring-[#FEF5E6]"
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p className="mt-1 text-xs text-red-400" role="alert">
+                    {errors.confirmPassword.message}
+                  </p>
+                )}
+              </div>
+
+              <Button
+                type="submit"
+                variant="primary"
+                loading={isSubmitting}
+                className="w-full mt-6"
+              >
+                {isSubmitting ? 'Creating account...' : 'Create Account'}
+              </Button>
+            </form>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-[#2F1C15]" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase tracking-widest">
+                <span className="bg-[#181210] px-3 text-[#B8AD9A]">Or continue with</span>
+              </div>
             </div>
 
-            <Button
-              type="submit"
-              variant="primary"
-              loading={isSubmitting}
-              className="w-full mt-6"
-            >
-              {isSubmitting ? 'Creating account...' : 'Create Account'}
-            </Button>
-          </form>
+            <GoogleButton
+              onClick={handleGoogleSignIn}
+              disabled={isSubmitting}
+            />
+          </CardContent>
 
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[#2F1C15]" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase tracking-widest">
-              <span className="bg-[#181210] px-3 text-[#B8AD9A]">Or continue with</span>
-            </div>
-          </div>
-
-          <GoogleButton
-            onClick={handleGoogleSignIn}
-            disabled={isSubmitting}
-          />
-        </CardContent>
-
-        <CardFooter>
-          <p className="text-xs text-[#B8AD9A]">
-            Already have an account?{' '}
-            <Link
-              to="/login"
-              className="text-[#FEF5E6] hover:text-white transition-subtle uppercase font-medium tracking-wider focus:outline-none focus:ring-1 focus:ring-[#FEF5E6]"
-            >
-              Sign In
-            </Link>
-          </p>
-        </CardFooter>
-      </Card>
+          <CardFooter>
+            <p className="text-xs text-[#B8AD9A]">
+              Already have an account?{' '}
+              <Link
+                to="/login"
+                className="text-[#FEF5E6] hover:text-white transition-subtle uppercase font-medium tracking-wider focus:outline-none focus:ring-1 focus:ring-[#FEF5E6] inline-block py-1"
+              >
+                Sign In
+              </Link>
+            </p>
+          </CardFooter>
+        </Card>
+      </div>
     </div>
   );
 };

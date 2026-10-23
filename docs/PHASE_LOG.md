@@ -1068,3 +1068,66 @@ Phase 2.3 elevated the AUREVELLA storefront from an early functional prototype t
 - **Remote**: `https://github.com/AshishCodes-dev/aurevella-luxury-footwear.git`
 - **Tag**: `phase-2-3`
 
+---
+
+# PHASE 2.3B REPORT: FOOTER & BACKGROUND POLISH
+
+- **Date**: October 23, 2026
+- **Status**: COMPLETE & VERIFIED
+- **Target**: Balanced Luxury Footer Redesign & Editorial Canvas Background Polish
+- **Scope**: Footer column balance & mobile stack, restrained tonal background gradients, section depth transitions. Backend strictly untouched.
+
+---
+
+## 1. Executive Summary & Design Direction
+
+Phase 2.3B resolved the visual unevenness of the previous footer and introduced restrained, organic background depth to the canvas without adding noise, bright colors, or distracting effects.
+
+### Improvements Completed:
+1. **Footer Redesign**:
+   - **Top Brand Tier**: Full logo (`Logo variant="footer"`), descriptor, and brand philosophy statement on the left; bespoke atelier concierge advisory on the right, grounded by a subtle hairline divider.
+   - **4 Balanced Desktop Columns**:
+     - *The Collections*: All Footwear, Curated Collections, Limited Edition Drop, Customization.
+     - *The Atelier*: Our Story, Artisan Craftsmanship, Contact Concierge.
+     - *Client Care*: Privacy Policy, Terms & Conditions, Shipping Policy, Returns & Exchanges.
+     - *Concierge Contact*: WhatsApp concierge (+91 77280 60447), Atelier Email, and Official Instagram with ArrowUpRight indicators.
+   - **Deliberate Mobile Stack**: Clean stacked hierarchy without awkward gaps, comfortable $\ge 44\text{px}$ tap targets, and zero horizontal overflow.
+   - **Connected Bottom Bar**: Copyright notice and origin hallmark (*"Handcrafted in India • Italian Elegance"*) cleanly aligned with a subtle hairline divider.
+2. **Background Refinement**:
+   - Enhanced `body` in `index.css` with a restrained multi-radial espresso warmth vignette (`rgba(47, 28, 21, 0.25)` and `rgba(36, 27, 24, 0.14)`) over the warm Obsidian Noir (`#0F0A09`) canvas.
+   - Grounded `Home.jsx` sections with subtle radial and linear depth highlights on the hero, brand story, limited edition, values, and contact containers.
+   - Preserved $> 16:1$ contrast against Vintage Ivory (`#FEF5E6`) and $> 8:1$ against Muted Sand (`#B8AD9A`), far exceeding WCAG AAA standards.
+3. **Asset & Backend Protection**:
+   - 0 client assets modified (`public/brand/` and `public/images/products/` 100% untouched).
+   - 0 backend files modified (`git diff --stat -- backend` empty).
+   - Text-only hero strictly preserved.
+
+---
+
+## 2. Files Changed (4 Files Total)
+
+1. `frontend/src/components/AppShell.jsx`: Redesigned balanced 2-tier luxury footer with 4 symmetrical columns, subtle vignette, and connected bottom bar.
+2. `frontend/src/index.css`: Added restrained tonal radial gradients to `body` background for subtle canvas depth.
+3. `frontend/src/pages/Home.jsx`: Added restrained depth transitions to hero, brand story, limited edition, values, and contact containers.
+4. `docs/PHASE_LOG.md`: Appended Phase 2.3B verification report.
+
+---
+
+## 3. Verification & Audit Results
+
+| Check / Test Target | Verification Command / Method | Result | Notes |
+| :--- | :--- | :---: | :--- |
+| **Frontend Production Build** | `npm run build` | **PASS** | 2,088 modules compiled in 1m 24s with 0 errors |
+| **Automated Layout Suite** | `npm run check:layout` | **PASS** | 70/70 viewport checks & form tests passed |
+| **Backend Isolation Check** | `git diff --stat -- backend` | **PASS** | 0 files changed (backend strictly untouched) |
+| **Client Asset Integrity Check** | `git diff --stat -- frontend/public/` | **PASS** | 0 files changed (all 10 original assets untouched) |
+| **Motion Policy Conformance** | Grep scan across `src/` | **PASS** | Only allowed `--motion-fast` and `--motion-base` tokens |
+| **Live Visual Inspection** | Playwright Chromium screenshots | **PASS** | Directly verified `home_w1440.png` and `home_w360.png` |
+
+---
+
+## 4. Git Metadata
+- **Commit**: To be recorded on main
+- **Branch**: `main`
+- **Remote**: `https://github.com/AshishCodes-dev/aurevella-luxury-footwear.git`
+

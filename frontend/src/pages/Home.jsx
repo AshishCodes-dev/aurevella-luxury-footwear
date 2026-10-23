@@ -13,7 +13,7 @@ export const Home = () => {
       {/* 1. HERO SECTION (Editorial Text-only with Brand Mark; No product photo in hero) */}
       <section
         aria-labelledby="hero-heading"
-        className="relative flex flex-col items-center justify-center text-center px-4 pt-10 pb-16 sm:pt-24 sm:pb-32 border-b border-[#2F1C15] w-full"
+        className="relative flex flex-col items-center justify-center text-center px-4 pt-10 pb-16 sm:pt-24 sm:pb-32 border-b border-[#2F1C15] w-full bg-[radial-gradient(ellipse_60%_50%_at_50%_25%,rgba(47,28,21,0.28),transparent_70%)]"
       >
         {/* Subtle Brand Crest */}
         <div className="flex justify-center mb-6 select-none">
@@ -72,7 +72,7 @@ export const Home = () => {
         aria-labelledby="story-heading"
         className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 w-full"
       >
-        <div className="bg-[#181210] border border-[#2F1C15] p-8 sm:p-14 lg:p-16 relative">
+        <div className="bg-[#181210] bg-[linear-gradient(180deg,rgba(47,28,21,0.18)_0%,transparent_100%)] border border-[#2F1C15] p-8 sm:p-14 lg:p-16 relative shadow-sm">
           <div className="max-w-3xl mx-auto text-center">
             <span className="text-[11px] sm:text-xs uppercase tracking-[0.28em] text-[#B8AD9A] block mb-3 select-none font-medium">
               {siteConfig.story.eyebrow}
@@ -128,7 +128,7 @@ export const Home = () => {
         aria-labelledby="limited-heading"
         className="max-w-5xl mx-auto px-4 sm:px-6 w-full"
       >
-        <div className="bg-[#181210] border border-[#2F1C15] p-8 sm:p-14 text-center relative overflow-hidden">
+        <div className="bg-[#181210] bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,rgba(47,28,21,0.22),transparent_70%)] border border-[#2F1C15] p-8 sm:p-14 text-center relative overflow-hidden shadow-sm">
           <div className="mb-6">
             <span className="border border-[#FEF5E6] px-4 py-1 text-[11px] uppercase tracking-[0.25em] text-[#FEF5E6] inline-block font-medium">
               {siteConfig.limitedEdition.badge}
@@ -170,7 +170,7 @@ export const Home = () => {
           {siteConfig.values.map((val, idx) => (
             <div
               key={val.id}
-              className="bg-[#181210] border border-[#2F1C15] hover:border-[#4A2C26] p-8 sm:p-10 text-center flex flex-col items-center min-w-0 transition-subtle shadow-sm hover:shadow-md"
+              className="bg-[#181210] bg-[linear-gradient(180deg,rgba(47,28,21,0.12)_0%,transparent_100%)] border border-[#2F1C15] hover:border-[#4A2C26] p-8 sm:p-10 text-center flex flex-col items-center min-w-0 transition-subtle shadow-sm hover:shadow-md"
             >
               <span className="font-serif text-3xl sm:text-4xl text-[#FEF5E6]/30 mb-4 select-none">
                 {`0${idx + 1}`}
@@ -191,7 +191,7 @@ export const Home = () => {
         aria-labelledby="contact-strip-heading"
         className="max-w-4xl mx-auto px-4 sm:px-6 pb-12 w-full"
       >
-        <div className="bg-[#181210] border border-[#2F1C15] p-8 sm:p-12 text-center">
+        <div className="bg-[#181210] bg-[radial-gradient(ellipse_80%_50%_at_50%_0%,rgba(47,28,21,0.2),transparent_70%)] border border-[#2F1C15] p-8 sm:p-12 text-center shadow-sm">
           <span className="text-[11px] sm:text-xs uppercase tracking-[0.25em] text-[#B8AD9A] block mb-2 font-medium">
             Client Concierge
           </span>

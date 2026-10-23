@@ -276,44 +276,52 @@ export const AppShell = ({ children }) => {
         {children}
       </main>
 
-      {/* Global Footer (Editorial Layout anchored cleanly at bottom of viewport) */}
-      <footer className="border-t border-[#2F1C15] bg-[#0F0A09] w-full">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8">
-            {/* Brand Column with full logo and aspect-ratio */}
-            <div className="lg:col-span-2 space-y-4">
-              <Logo variant="footer" className="mb-2" />
-              <p className="text-xs uppercase tracking-[0.22em] text-[#FEF5E6] font-medium">
+      {/* Global Footer (Balanced Editorial Luxury Architecture) */}
+      <footer className="border-t border-[#2F1C15] bg-[#0F0A09] relative w-full overflow-hidden">
+        {/* Subtle Warm Vignette on Footer Canvas */}
+        <div
+          className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_70%_40%_at_50%_0%,rgba(47,28,21,0.22),transparent_70%)]"
+          aria-hidden="true"
+        />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-12 sm:pt-20 sm:pb-16">
+          {/* Top Brand Tier: Logo + Descriptor + Short Statement + Atelier Advisory */}
+          <div className="pb-10 sm:pb-14 border-b border-[#2F1C15] flex flex-col md:flex-row md:items-end justify-between gap-8">
+            <div className="space-y-3 max-w-md">
+              <Logo variant="footer" className="mb-1" />
+              <p className="text-xs uppercase tracking-[0.25em] text-[#FEF5E6] font-medium">
                 {siteConfig.descriptor}
               </p>
-              <p className="text-sm text-[#B8AD9A] tracking-wide max-w-sm leading-relaxed">
+              <p className="text-sm text-[#B8AD9A] tracking-wide leading-relaxed">
                 {siteConfig.tagline} {siteConfig.subline}
               </p>
-              <div className="pt-3 text-xs text-[#B8AD9A] space-y-2">
-                <p>
-                  <span className="text-[#FEF5E6]/60 uppercase tracking-widest text-[10px] block">Inquiries</span>
-                  <a href={`mailto:${siteConfig.contact.email}`} className="text-[#FEF5E6] hover:underline transition-subtle">{siteConfig.contact.email}</a>
-                </p>
-                <p>
-                  <span className="text-[#FEF5E6]/60 uppercase tracking-widest text-[10px] block">Concierge WhatsApp</span>
-                  <a href={siteConfig.contact.whatsapp.url} target="_blank" rel="noopener noreferrer" className="text-[#FEF5E6] hover:underline transition-subtle">{siteConfig.contact.whatsapp.label}</a>
-                </p>
-                <p>
-                  <span className="text-[#FEF5E6]/60 uppercase tracking-widest text-[10px] block">Instagram</span>
-                  <a href={siteConfig.contact.instagram.url} target="_blank" rel="noopener noreferrer" className="text-[#FEF5E6] hover:underline transition-subtle">{siteConfig.contact.instagram.handle}</a>
-                </p>
-              </div>
             </div>
 
-            {/* Shop Links */}
+            {/* Atelier Advisory Note */}
+            <div className="text-left md:text-right max-w-sm">
+              <span className="text-[10px] uppercase tracking-[0.25em] text-[#FEF5E6]/80 block mb-1.5 font-medium">
+                Bespoke Atelier Service
+              </span>
+              <p className="text-xs text-[#B8AD9A] leading-relaxed">
+                Direct artisan inquiries, sizing consultations, and private commissions handled with discreet concierge care.
+              </p>
+            </div>
+          </div>
+
+          {/* 4 Balanced Desktop Columns (Clean Responsive Stack on Mobile) */}
+          <div className="py-12 sm:py-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 sm:gap-8 lg:gap-10">
+            {/* Column 1: The Collections */}
             <div>
               <h3 className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#FEF5E6] mb-5">
-                Shop
+                The Collections
               </h3>
               <ul className="space-y-3 text-xs tracking-wider text-[#B8AD9A]">
                 {siteConfig.footerNav.shop.map((link) => (
                   <li key={link.href}>
-                    <Link to={link.href} className="hover:text-[#FEF5E6] transition-subtle inline-block py-0.5">
+                    <Link
+                      to={link.href}
+                      className="hover:text-[#FEF5E6] transition-subtle inline-block py-0.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                    >
                       {link.label}
                     </Link>
                   </li>
@@ -321,15 +329,18 @@ export const AppShell = ({ children }) => {
               </ul>
             </div>
 
-            {/* Company Links */}
+            {/* Column 2: The Atelier */}
             <div>
               <h3 className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#FEF5E6] mb-5">
-                Company
+                The Atelier
               </h3>
               <ul className="space-y-3 text-xs tracking-wider text-[#B8AD9A]">
                 {siteConfig.footerNav.company.map((link) => (
                   <li key={link.href}>
-                    <Link to={link.href} className="hover:text-[#FEF5E6] transition-subtle inline-block py-0.5">
+                    <Link
+                      to={link.href}
+                      className="hover:text-[#FEF5E6] transition-subtle inline-block py-0.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                    >
                       {link.label}
                     </Link>
                   </li>
@@ -337,27 +348,80 @@ export const AppShell = ({ children }) => {
               </ul>
             </div>
 
-            {/* Legal Links */}
+            {/* Column 3: Client Care */}
             <div>
               <h3 className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#FEF5E6] mb-5">
-                Legal
+                Client Care
               </h3>
               <ul className="space-y-3 text-xs tracking-wider text-[#B8AD9A]">
                 {siteConfig.footerNav.legal.map((link) => (
                   <li key={link.href}>
-                    <Link to={link.href} className="hover:text-[#FEF5E6] transition-subtle inline-block py-0.5">
+                    <Link
+                      to={link.href}
+                      className="hover:text-[#FEF5E6] transition-subtle inline-block py-0.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                    >
                       {link.label}
                     </Link>
                   </li>
                 ))}
               </ul>
             </div>
+
+            {/* Column 4: Concierge Contact */}
+            <div>
+              <h3 className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#FEF5E6] mb-5">
+                Concierge Contact
+              </h3>
+              <div className="space-y-4 text-xs text-[#B8AD9A]">
+                <div>
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-[#FEF5E6]/60 block mb-1">
+                    WhatsApp Concierge
+                  </span>
+                  <a
+                    href={siteConfig.contact.whatsapp.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#FEF5E6] hover:underline transition-subtle inline-flex items-center gap-1.5 py-0.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                  >
+                    <span>{siteConfig.contact.whatsapp.label}</span>
+                    <ArrowUpRight size={13} className="text-[#B8AD9A]" />
+                  </a>
+                </div>
+
+                <div>
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-[#FEF5E6]/60 block mb-1">
+                    Email Inquiries
+                  </span>
+                  <a
+                    href={`mailto:${siteConfig.contact.email}`}
+                    className="text-[#FEF5E6] hover:underline transition-subtle inline-flex items-center gap-1.5 py-0.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                  >
+                    <span>{siteConfig.contact.email}</span>
+                  </a>
+                </div>
+
+                <div>
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-[#FEF5E6]/60 block mb-1">
+                    Official Instagram
+                  </span>
+                  <a
+                    href={siteConfig.contact.instagram.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#FEF5E6] hover:underline transition-subtle inline-flex items-center gap-1.5 py-0.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                  >
+                    <span>{siteConfig.contact.instagram.handle}</span>
+                    <ArrowUpRight size={13} className="text-[#B8AD9A]" />
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Bottom Copyright & Origin Strip */}
-          <div className="mt-16 pt-8 border-t border-[#2F1C15] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#B8AD9A] tracking-wider uppercase text-center sm:text-left">
-            <p>{siteConfig.copyright}</p>
-            <div className="flex flex-wrap items-center justify-center sm:justify-end gap-4 sm:gap-6">
+          {/* Unified Bottom Bar (Copyright & Origin) */}
+          <div className="pt-8 border-t border-[#2F1C15] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#B8AD9A] tracking-wider uppercase text-center sm:text-left">
+            <p className="select-none">{siteConfig.copyright}</p>
+            <div className="flex flex-wrap items-center justify-center sm:justify-end gap-4 sm:gap-6 select-none">
               <span>Handcrafted in India</span>
               <span className="hidden sm:inline text-[#2F1C15]">•</span>
               <span>Italian Elegance</span>

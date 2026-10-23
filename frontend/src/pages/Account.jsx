@@ -56,7 +56,7 @@ export const Account = () => {
 
   const handleSignOut = async () => {
     await logout();
-    navigate('/login');
+    navigate('/login', { replace: true });
   };
 
   return (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -31,7 +31,7 @@ export const Login = () => {
   const from = location.state?.from?.pathname || '/account';
 
   const {
-    register,
+    control,
     handleSubmit,
     reset,
     setValue,
@@ -48,9 +48,9 @@ export const Login = () => {
 
   // Thorough form state & DOM cleanup function
   const clearSensitiveFields = useCallback(() => {
-    setValue('password', '');
-    setValue('email', '');
     reset({ email: '', password: '' });
+    setValue('email', '');
+    setValue('password', '');
     if (formRef.current) {
       formRef.current.reset();
     }
@@ -59,7 +59,17 @@ export const Login = () => {
   // Ensure form fields and native DOM are clean whenever this screen mounts, unmounts, or route changes
   useEffect(() => {
     clearSensitiveFields();
+
+    // Reset when restored from browser back-forward cache (bfcache)
+    const handlePageShow = (event) => {
+      if (event.persisted) {
+        clearSensitiveFields();
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+
     return () => {
+      window.removeEventListener('pageshow', handlePageShow);
       clearSensitiveFields();
     };
   }, [clearSensitiveFields, location.key]);
@@ -142,13 +152,20 @@ export const Login = () => {
             <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate autoComplete="off">
               <div>
                 <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="username"
-                  placeholder="name@example.com"
-                  error={!!errors.email}
-                  {...register('email')}
+                <Controller
+                  name="email"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      id="email"
+                      type="email"
+                      autoComplete="username"
+                      placeholder="name@example.com"
+                      error={!!errors.email}
+                      {...field}
+                      value={field.value ?? ''}
+                    />
+                  )}
                 />
                 {errors.email && (
                   <p className="mt-1 text-xs text-red-400" role="alert">
@@ -168,14 +185,21 @@ export const Login = () => {
                   </Link>
                 </div>
                 <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    placeholder="••••••••"
-                    error={!!errors.password}
-                    {...register('password')}
-                    className="pr-12"
+                  <Controller
+                    name="password"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        placeholder="••••••••"
+                        error={!!errors.password}
+                        className="pr-12"
+                        {...field}
+                        value={field.value ?? ''}
+                      />
+                    )}
                   />
                   <button
                     type="button"

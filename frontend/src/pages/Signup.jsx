@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -37,7 +37,7 @@ export const Signup = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
-    register,
+    control,
     handleSubmit,
     reset,
     setValue,
@@ -56,11 +56,11 @@ export const Signup = () => {
 
   // Thorough form state & DOM cleanup function
   const clearSensitiveFields = useCallback(() => {
+    reset({ name: '', email: '', password: '', confirmPassword: '' });
     setValue('password', '');
     setValue('confirmPassword', '');
     setValue('name', '');
     setValue('email', '');
-    reset({ name: '', email: '', password: '', confirmPassword: '' });
     if (formRef.current) {
       formRef.current.reset();
     }
@@ -69,7 +69,17 @@ export const Signup = () => {
   // Ensure form fields and native DOM are clean whenever this screen mounts, unmounts, or route changes
   useEffect(() => {
     clearSensitiveFields();
+
+    // Reset when restored from browser back-forward cache (bfcache)
+    const handlePageShow = (event) => {
+      if (event.persisted) {
+        clearSensitiveFields();
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+
     return () => {
+      window.removeEventListener('pageshow', handlePageShow);
       clearSensitiveFields();
     };
   }, [clearSensitiveFields, location.key]);
@@ -150,13 +160,20 @@ export const Signup = () => {
             <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate autoComplete="off">
               <div>
                 <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  autoComplete="name"
-                  placeholder="Master Artisan"
-                  error={!!errors.name}
-                  {...register('name')}
+                <Controller
+                  name="name"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      id="name"
+                      type="text"
+                      autoComplete="name"
+                      placeholder="Master Artisan"
+                      error={!!errors.name}
+                      {...field}
+                      value={field.value ?? ''}
+                    />
+                  )}
                 />
                 {errors.name && (
                   <p className="mt-1 text-xs text-red-400" role="alert">
@@ -167,13 +184,20 @@ export const Signup = () => {
 
               <div>
                 <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="username"
-                  placeholder="name@example.com"
-                  error={!!errors.email}
-                  {...register('email')}
+                <Controller
+                  name="email"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      id="email"
+                      type="email"
+                      autoComplete="username"
+                      placeholder="name@example.com"
+                      error={!!errors.email}
+                      {...field}
+                      value={field.value ?? ''}
+                    />
+                  )}
                 />
                 {errors.email && (
                   <p className="mt-1 text-xs text-red-400" role="alert">
@@ -185,14 +209,21 @@ export const Signup = () => {
               <div>
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    placeholder="••••••••"
-                    error={!!errors.password}
-                    {...register('password')}
-                    className="pr-12"
+                  <Controller
+                    name="password"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        placeholder="••••••••"
+                        error={!!errors.password}
+                        className="pr-12"
+                        {...field}
+                        value={field.value ?? ''}
+                      />
+                    )}
                   />
                   <button
                     type="button"
@@ -213,14 +244,21 @@ export const Signup = () => {
               <div>
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <div className="relative">
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    placeholder="••••••••"
-                    error={!!errors.confirmPassword}
-                    {...register('confirmPassword')}
-                    className="pr-12"
+                  <Controller
+                    name="confirmPassword"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        placeholder="••••••••"
+                        error={!!errors.confirmPassword}
+                        className="pr-12"
+                        {...field}
+                        value={field.value ?? ''}
+                      />
+                    )}
                   />
                   <button
                     type="button"

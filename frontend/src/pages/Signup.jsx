@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext.jsx';
@@ -28,6 +28,8 @@ const signupSchema = z
 export const Signup = () => {
   const { signupWithEmail, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const formRef = useRef(null);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -52,26 +54,43 @@ export const Signup = () => {
     mode: 'onSubmit',
   });
 
-  // Ensure form fields are clean whenever this screen mounts or unmounts
-  useEffect(() => {
+  // Thorough form state & DOM cleanup function
+  const clearSensitiveFields = useCallback(() => {
+    setValue('password', '');
+    setValue('confirmPassword', '');
+    setValue('name', '');
+    setValue('email', '');
     reset({ name: '', email: '', password: '', confirmPassword: '' });
+    if (formRef.current) {
+      formRef.current.reset();
+    }
+  }, [reset, setValue]);
+
+  // Ensure form fields and native DOM are clean whenever this screen mounts, unmounts, or route changes
+  useEffect(() => {
+    clearSensitiveFields();
     return () => {
-      reset({ name: '', email: '', password: '', confirmPassword: '' });
+      clearSensitiveFields();
     };
-  }, [reset]);
+  }, [clearSensitiveFields, location.key]);
 
   const onSubmit = async (data) => {
     setFormError(null);
     setIsSubmitting(true);
     try {
       await signupWithEmail(data.name, data.email, data.password);
-      reset({ name: '', email: '', password: '', confirmPassword: '' });
+      // Immediately clear passwords and form state upon successful registration before navigating
+      clearSensitiveFields();
       navigate('/account', { replace: true });
     } catch (err) {
       console.error('Signup error:', err);
       // On failed signup: clear both password fields, retain name and email
       setValue('password', '');
       setValue('confirmPassword', '');
+      const pwdEl = document.getElementById('password');
+      if (pwdEl) pwdEl.value = '';
+      const confirmEl = document.getElementById('confirmPassword');
+      if (confirmEl) confirmEl.value = '';
       setTimeout(() => setFocus('password'), 0);
 
       let msg = err.message || 'Registration failed. Please check your details.';
@@ -91,7 +110,7 @@ export const Signup = () => {
     setIsSubmitting(true);
     try {
       await loginWithGoogle();
-      reset({ name: '', email: '', password: '', confirmPassword: '' });
+      clearSensitiveFields();
       navigate('/account', { replace: true });
     } catch (err) {
       console.error('Google Sign In error:', err);
@@ -128,7 +147,7 @@ export const Signup = () => {
               </div>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+            <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate autoComplete="off">
               <div>
                 <Label htmlFor="name">Full Name</Label>
                 <Input

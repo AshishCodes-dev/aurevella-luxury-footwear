@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Menu, X, ArrowUpRight } from 'lucide-react';
+import { Menu, X, ArrowUpRight, ShoppingBag } from 'lucide-react';
 import Logo from './Logo.jsx';
 import { siteConfig } from '../content/site.js';
 import Button from './ui/button.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useBag } from '../context/BagContext.jsx';
+import BagDrawer from './BagDrawer.jsx';
 
 export const AppShell = ({ children }) => {
   const { user, isAuthenticated, logout } = useAuth();
+  const { totalCount, openBag } = useBag();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -81,6 +84,7 @@ export const AppShell = ({ children }) => {
 
   const handleLogout = async () => {
     await logout();
+    navigate('/login', { replace: true });
   };
 
   const navLinkClasses = ({ isActive }) =>
@@ -127,10 +131,10 @@ export const AppShell = ({ children }) => {
             ))}
           </nav>
 
-          {/* Account / Action Links & Mobile Menu Toggle */}
-          <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
+          {/* Account, Shopping Bag & Mobile Menu Toggle */}
+          <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0">
             {isAuthenticated ? (
-              <div className="hidden sm:flex items-center space-x-3">
+              <div className="hidden sm:flex items-center space-x-2">
                 <Link
                   to="/account"
                   className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
@@ -162,6 +166,20 @@ export const AppShell = ({ children }) => {
                 </Link>
               </div>
             )}
+
+            {/* Shopping Bag Button (Header Desktop & Mobile) */}
+            <button
+              type="button"
+              onClick={openBag}
+              aria-label={`Open shopping bag with ${totalCount} items`}
+              className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs uppercase tracking-[0.18em] text-[#FEF5E6] hover:text-white transition-subtle min-h-[44px] px-2.5 py-1.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] bg-[#181210] border border-[#2F1C15] hover:border-[#FEF5E6]/40 select-none"
+            >
+              <ShoppingBag size={16} />
+              <span className="hidden sm:inline font-medium">Bag</span>
+              <span className="text-[10px] font-semibold bg-[#0F0A09] text-[#FEF5E6] px-1.5 py-0.5 border border-[#2F1C15] min-w-[20px] text-center">
+                {totalCount}
+              </span>
+            </button>
 
             {/* Mobile Hamburger Button (min 44px) */}
             <button
@@ -204,7 +222,7 @@ export const AppShell = ({ children }) => {
           </div>
 
           {/* Drawer Nav Links */}
-          <nav aria-label="Mobile Navigation" className="flex-1 py-8 space-y-2">
+          <nav aria-label="Mobile Navigation" className="flex-1 py-6 space-y-2">
             {siteConfig.navLinks.map((item) => (
               <NavLink
                 key={item.href}
@@ -216,6 +234,25 @@ export const AppShell = ({ children }) => {
               </NavLink>
             ))}
           </nav>
+
+          {/* Mobile Drawer Bag Action */}
+          <div className="pb-4">
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                openBag();
+              }}
+              className="w-full min-h-[44px] flex items-center justify-between px-4 uppercase tracking-[0.2em] text-xs bg-[#181210] border border-[#2F1C15] text-[#FEF5E6] hover:bg-[#241B18] transition-subtle"
+            >
+              <span className="flex items-center gap-2">
+                <ShoppingBag size={16} /> Shopping Bag
+              </span>
+              <span className="font-semibold text-[#FEF5E6] bg-[#0F0A09] border border-[#2F1C15] px-2 py-0.5">
+                {totalCount}
+              </span>
+            </button>
+          </div>
 
           {/* Drawer Auth & Contact Actions */}
           <div className="pt-6 border-t border-[#2F1C15] space-y-4">
@@ -275,6 +312,9 @@ export const AppShell = ({ children }) => {
       <main id="main-content" tabIndex="-1" className="flex-1 flex flex-col focus:outline-none w-full">
         {children}
       </main>
+
+      {/* Global Shopping Bag Slide-Over Drawer */}
+      <BagDrawer />
 
       {/* Global Footer (Balanced Editorial Luxury Architecture) */}
       <footer className="border-t border-[#2F1C15] bg-[#0F0A09] relative w-full overflow-hidden">

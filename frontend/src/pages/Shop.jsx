@@ -1,0 +1,221 @@
+import React, { useState, useMemo } from 'react';
+import { ShoppingBag, MessageSquare, ArrowUpRight, Check, SlidersHorizontal } from 'lucide-react';
+import { PRODUCTS, CATEGORIES } from '../data/products.js';
+import { useBag } from '../context/BagContext.jsx';
+import useDocumentTitle from '../utils/useDocumentTitle.js';
+
+export const Shop = () => {
+  useDocumentTitle('Atelier Footwear Catalogue — AUREVELLA');
+  const { addToBag } = useBag();
+
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [sortBy, setSortBy] = useState('default');
+  const [addedProductId, setAddedProductId] = useState(null);
+
+  // Filter products based on real client data
+  const filteredProducts = useMemo(() => {
+    let list = [...PRODUCTS];
+
+    if (selectedCategory !== 'All') {
+      list = list.filter((p) => p.category === selectedCategory);
+    }
+
+    if (sortBy === 'price-low-high') {
+      list.sort((a, b) => a.price - b.price);
+    } else if (sortBy === 'price-high-low') {
+      list.sort((a, b) => b.price - a.price);
+    } else if (sortBy === 'name-az') {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    return list;
+  }, [selectedCategory, sortBy]);
+
+  const handleAddToBag = (productId) => {
+    const success = addToBag(productId, 1);
+    if (success) {
+      setAddedProductId(productId);
+      setTimeout(() => setAddedProductId(null), 1500);
+    }
+  };
+
+  const getInquireUrl = (product) => {
+    const message = `Hello Aurevella Atelier,\nI would like to inquire regarding the ${product.name} (${product.priceText}, ${product.category}).\n\nPlease share availability and sizing advice.`;
+    return `https://wa.me/917728060447?text=${encodeURIComponent(message)}`;
+  };
+
+  return (
+    <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 space-y-12 animate-fade-in">
+      {/* Catalogue Header */}
+      <div className="text-center max-w-3xl mx-auto space-y-4">
+        <span className="text-[11px] sm:text-xs uppercase tracking-[0.28em] text-[#B8AD9A] block font-medium">
+          Atelier Footwear Collection
+        </span>
+        <h1 className="font-serif text-[clamp(2.25rem,5.5vw,4rem)] text-[#FEF5E6] tracking-wide leading-tight">
+          Handcrafted Launch Silhouettes
+        </h1>
+        <p className="text-sm sm:text-base text-[#B8AD9A] max-w-2xl mx-auto leading-relaxed">
+          Italian-inspired elegance, handcrafted in India. Explore our three launch models engineered with signature interchangeable heel craftsmanship and bespoke artisan construction.
+        </p>
+      </div>
+
+      {/* Filter and Sorting Bar */}
+      <div className="border-y border-[#2F1C15] py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        {/* Category Filter Pills */}
+        <div className="flex flex-wrap items-center gap-2">
+          {CATEGORIES.map((cat) => {
+            const count =
+              cat === 'All'
+                ? PRODUCTS.length
+                : PRODUCTS.filter((p) => p.category === cat).length;
+            const isSelected = selectedCategory === cat;
+
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCategory(cat)}
+                className={`min-h-[40px] px-4 text-xs uppercase tracking-[0.16em] transition-subtle border outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] ${
+                  isSelected
+                    ? 'bg-[#FEF5E6] text-[#0F0A09] border-[#FEF5E6] font-semibold'
+                    : 'bg-[#181210] text-[#B8AD9A] border-[#2F1C15] hover:text-[#FEF5E6] hover:border-[#FEF5E6]/40'
+                }`}
+              >
+                {cat} ({count})
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Sort Select */}
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+          <span className="text-xs uppercase tracking-widest text-[#B8AD9A] flex items-center gap-1.5">
+            <SlidersHorizontal size={14} /> Sort By:
+          </span>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            aria-label="Sort products"
+            className="min-h-[40px] px-3 bg-[#181210] border border-[#2F1C15] text-xs text-[#FEF5E6] uppercase tracking-wider transition-subtle focus:outline-none focus:border-[#FEF5E6] focus:ring-1 focus:ring-[#FEF5E6]"
+          >
+            <option value="default">Featured Silhouettes</option>
+            <option value="price-low-high">Price: Low to High</option>
+            <option value="price-high-low">Price: High to Low</option>
+            <option value="name-az">Model Name (A-Z)</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Results Count */}
+      <div className="text-xs uppercase tracking-widest text-[#B8AD9A] flex items-center justify-between">
+        <span>Showing {filteredProducts.length} handcrafted {filteredProducts.length === 1 ? 'model' : 'models'}</span>
+        {selectedCategory !== 'All' && (
+          <button
+            type="button"
+            onClick={() => setSelectedCategory('All')}
+            className="text-[#FEF5E6] underline underline-offset-4 hover:text-white transition-subtle"
+          >
+            Reset Filters
+          </button>
+        )}
+      </div>
+
+      {/* Product Grid (1 / 2 / 3 Columns Grid, <= 500px card width) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center w-full">
+        {filteredProducts.map((product) => {
+          const isAdded = addedProductId === product.id;
+
+          return (
+            <article
+              key={product.id}
+              className="group bg-[#181210] border border-[#2F1C15] hover:border-[#4A2C26] flex flex-col h-full w-full max-w-[420px] min-w-0 transition-subtle shadow-sm hover:shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
+            >
+              {/* Aspect Ratio Image Slot */}
+              <div
+                className="w-full bg-[#120D0C] border-b border-[#2F1C15] overflow-hidden relative aspect-square"
+                style={{ aspectRatio: 'var(--product-ratio, 1 / 1)' }}
+              >
+                <img
+                  src={product.image}
+                  alt={product.alt}
+                  width="500"
+                  height="500"
+                  loading={product.priority ? 'eager' : 'lazy'}
+                  className="w-full h-full aspect-square max-w-full object-cover object-center img-fade-in"
+                />
+              </div>
+
+              {/* Product Info */}
+              <div className="p-6 sm:p-7 flex flex-col flex-1 min-w-0 justify-between">
+                <div>
+                  <span className="text-[10px] uppercase tracking-[0.25em] text-[#B8AD9A] mb-2 block truncate">
+                    {product.category}
+                  </span>
+                  <h3 className="font-serif text-xl sm:text-2xl text-[#FEF5E6] group-hover:text-white transition-subtle mb-2 break-words leading-snug">
+                    {product.name}
+                  </h3>
+                  <p className="text-xs text-[#B8AD9A] line-clamp-2 leading-relaxed mb-4">
+                    {product.description}
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t border-[#2F1C15] space-y-4">
+                  {/* Price */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase tracking-widest text-[#B8AD9A]">Price</span>
+                    <span className="text-base font-medium text-[#FEF5E6] tracking-wide">
+                      {product.priceText}
+                    </span>
+                  </div>
+
+                  {/* Actions: Add to Bag + Inquire */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleAddToBag(product.id)}
+                      className="w-full inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 text-xs uppercase tracking-[0.16em] bg-[#FEF5E6] text-[#0F0A09] hover:bg-white font-semibold transition-subtle shadow-sm outline-none focus-visible:ring-1 focus-visible:ring-white"
+                    >
+                      {isAdded ? (
+                        <>
+                          <Check size={14} /> Added
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingBag size={14} /> Add to Bag
+                        </>
+                      )}
+                    </button>
+
+                    <a
+                      href={getInquireUrl(product)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 text-xs uppercase tracking-[0.16em] bg-[#0F0A09] border border-[#2F1C15] hover:border-[#FEF5E6]/40 text-[#FEF5E6] hover:bg-[#241B18] transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                      aria-label={`Inquire on WhatsApp about ${product.name}`}
+                    >
+                      <MessageSquare size={13} />
+                      <span>Inquire</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      {/* Atelier Craftsmanship Hallmarks Strip */}
+      <div className="pt-12 border-t border-[#2F1C15] text-center">
+        <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-12 text-[10px] sm:text-xs uppercase tracking-[0.22em] text-[#B8AD9A] select-none">
+          <span>Handcrafted in India</span>
+          <span className="hidden sm:inline text-[#2F1C15]">•</span>
+          <span>Interchangeable Mechanics</span>
+          <span className="hidden sm:inline text-[#2F1C15]">•</span>
+          <span>Zero Mass Production</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Shop;

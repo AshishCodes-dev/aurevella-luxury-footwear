@@ -16,6 +16,7 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authEpoch, setAuthEpoch] = useState(0);
 
   // Synchronize authentication status with backend session on mount
   useEffect(() => {
@@ -130,12 +131,14 @@ export const AuthProvider = ({ children }) => {
         await signOut(auth);
       } catch (_) {}
       setUser(null);
+      setAuthEpoch((prev) => prev + 1);
     }
   };
 
   const value = {
     user,
     loading,
+    authEpoch,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',
     loginWithEmail,

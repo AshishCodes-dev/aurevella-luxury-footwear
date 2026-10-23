@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight } from 'lucide-react';
+import { ShoppingBag, ArrowUpRight, Check } from 'lucide-react';
+import { useBag } from '../context/BagContext.jsx';
 
 /**
  * ProductCard Component
@@ -17,10 +18,20 @@ export const ProductCard = ({
   link = '/shop',
   priority = false,
   category,
+  id,
+  showAddToBag = true,
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
+  const [justAdded, setJustAdded] = useState(false);
+
+  // Safely access bag context
+  let bag = null;
+  try {
+    bag = useBag();
+  } catch (_) {}
 
   // Allow passing individual props or a unified product object
+  const resolvedId = id || product?.id;
   const resolvedImage = image || product?.image;
   const resolvedAlt = alt || product?.alt || '';
   const resolvedName = name || product?.name || '';
@@ -29,6 +40,16 @@ export const ProductCard = ({
   const resolvedLink = link || product?.link || '/shop';
   const resolvedCategory = category || product?.category;
   const resolvedPriority = priority || Boolean(product?.priority);
+
+  const handleAddToBag = () => {
+    if (resolvedId && bag?.addToBag) {
+      const ok = bag.addToBag(resolvedId, 1);
+      if (ok) {
+        setJustAdded(true);
+        setTimeout(() => setJustAdded(false), 1500);
+      }
+    }
+  };
 
   return (
     <article className="group bg-[#181210] border border-[#2F1C15] hover:border-[#4A2C26] flex flex-col h-full w-full max-w-[420px] min-w-0 transition-subtle shadow-sm hover:shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
@@ -75,22 +96,43 @@ export const ProductCard = ({
           </h3>
         </div>
 
-        <div className="mt-6 pt-4 border-t border-[#2F1C15] flex items-center justify-between gap-3">
-          <div className="flex flex-col">
+        <div className="mt-6 pt-4 border-t border-[#2F1C15] space-y-4">
+          <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase tracking-widest text-[#B8AD9A]">Price</span>
             <span className="text-base font-medium text-[#FEF5E6] tracking-wide truncate">
               {resolvedPriceText}
             </span>
           </div>
 
-          <Link
-            to={resolvedLink}
-            className="text-xs uppercase tracking-[0.16em] text-[#FEF5E6] hover:text-white bg-[#0F0A09] hover:bg-[#241B18] border border-[#2F1C15] hover:border-[#FEF5E6]/40 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] min-h-[44px] inline-flex items-center justify-center px-4 shrink-0 gap-1.5"
-            aria-label={`Inquire about ${resolvedName}`}
-          >
-            <span>Inquire</span>
-            <ArrowUpRight size={14} className="text-[#B8AD9A] group-hover:text-[#FEF5E6] transition-subtle" />
-          </Link>
+          <div className="flex items-center gap-2">
+            {showAddToBag && resolvedId ? (
+              <button
+                type="button"
+                onClick={handleAddToBag}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 text-xs uppercase tracking-[0.16em] bg-[#FEF5E6] text-[#0F0A09] hover:bg-white font-semibold transition-subtle shadow-sm outline-none focus-visible:ring-1 focus-visible:ring-white"
+                aria-label={`Add ${resolvedName} to shopping bag`}
+              >
+                {justAdded ? (
+                  <>
+                    <Check size={14} /> Added
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag size={14} /> Add to Bag
+                  </>
+                )}
+              </button>
+            ) : null}
+
+            <Link
+              to={resolvedLink}
+              className="inline-flex items-center justify-center gap-1 min-h-[44px] px-3 text-xs uppercase tracking-[0.16em] text-[#FEF5E6] hover:text-white bg-[#0F0A09] hover:bg-[#241B18] border border-[#2F1C15] hover:border-[#FEF5E6]/40 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] shrink-0"
+              aria-label={`View details for ${resolvedName}`}
+            >
+              <span>Details</span>
+              <ArrowUpRight size={13} className="text-[#B8AD9A]" />
+            </Link>
+          </div>
         </div>
       </div>
     </article>

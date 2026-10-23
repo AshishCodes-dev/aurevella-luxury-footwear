@@ -1,0 +1,58 @@
+/**
+ * AUREVELLA — Trusted Product Registry & Product Data
+ * Single source of truth for footwear models, categories, pricing, and client visuals.
+ * All prices are validated here; client-submitted prices are NEVER trusted.
+ */
+
+export const PRODUCTS = [
+  {
+    id: 'prod-01',
+    name: 'Floral Block Heel Sandal',
+    category: 'Interchangeable Heel',
+    price: 3499,
+    priceText: '₹3,499',
+    link: '/shop',
+    image: '/images/products/product-01-floral-block-heel-sandal.jpg',
+    alt: 'Block heel ankle-strap sandal with red floral print and a pearl embellishment',
+    description: 'Ankle-strap sandal adorned with artisanal red floral print and pearl embellishment, featuring interchangeable heel mechanics.',
+    priority: true,
+  },
+  {
+    id: 'prod-02',
+    name: 'Blue Floral Slide',
+    category: 'Flat Slide',
+    price: 3299,
+    priceText: '₹3,299',
+    link: '/shop',
+    image: '/images/products/product-02-blue-floral-slide.jpg',
+    alt: 'Flat slide with a knotted blue floral strap and woven sole',
+    description: 'Bespoke flat slide handcrafted with a knotted blue floral strap, woven textured footbed, and ergonomic contouring.',
+    priority: true,
+  },
+  {
+    id: 'prod-03',
+    name: 'Floral Block Heel Mule',
+    category: 'Interchangeable Heel',
+    price: 3699,
+    priceText: '₹3,699',
+    link: '/shop',
+    image: '/images/products/product-03-floral-block-heel-mule.jpg',
+    alt: 'Block heel mule with red floral print and a gold buckle',
+    description: 'Sculpted mule silhouette with vibrant red floral leather upper, antiqued gold hardware buckle, and stable block heel.',
+    priority: true,
+  },
+];
+
+export const PRODUCTS_MAP = new Map(PRODUCTS.map((p) => [p.id, p]));
+
+export const getProductById = (id) => {
+  return PRODUCTS_MAP.get(id) || null;
+};
+
+export const CATEGORIES = ['All', 'Interchangeable Heel', 'Flat Slide'];
+
+export const formatPriceINR = (amount) => {
+  return `₹${amount.toLocaleString('en-IN')}`;
+};
+
+export default PRODUCTS;

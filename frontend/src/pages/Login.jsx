@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -22,6 +22,7 @@ export const Login = () => {
   const { loginWithEmail, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const formRef = useRef(null);
 
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState(null);
@@ -45,25 +46,38 @@ export const Login = () => {
     mode: 'onSubmit',
   });
 
-  // Ensure form fields are clean whenever this screen mounts or unmounts
-  useEffect(() => {
+  // Thorough form state & DOM cleanup function
+  const clearSensitiveFields = useCallback(() => {
+    setValue('password', '');
+    setValue('email', '');
     reset({ email: '', password: '' });
+    if (formRef.current) {
+      formRef.current.reset();
+    }
+  }, [reset, setValue]);
+
+  // Ensure form fields and native DOM are clean whenever this screen mounts, unmounts, or route changes
+  useEffect(() => {
+    clearSensitiveFields();
     return () => {
-      reset({ email: '', password: '' });
+      clearSensitiveFields();
     };
-  }, [reset]);
+  }, [clearSensitiveFields, location.key]);
 
   const onSubmit = async (data) => {
     setFormError(null);
     setIsSubmitting(true);
     try {
       await loginWithEmail(data.email, data.password);
-      reset({ email: '', password: '' });
+      // Immediately clear password and form state upon successful auth before navigating
+      clearSensitiveFields();
       navigate(from, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
       // On failed login: clear password field only, retain email, focus password
       setValue('password', '');
+      const pwdEl = document.getElementById('password');
+      if (pwdEl) pwdEl.value = '';
       setTimeout(() => setFocus('password'), 0);
 
       let msg = err.message || 'Authentication failed. Please verify your credentials.';
@@ -88,7 +102,7 @@ export const Login = () => {
     setIsSubmitting(true);
     try {
       await loginWithGoogle();
-      reset({ email: '', password: '' });
+      clearSensitiveFields();
       navigate(from, { replace: true });
     } catch (err) {
       console.error('Google Sign In error:', err);
@@ -125,7 +139,7 @@ export const Login = () => {
               </div>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+            <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate autoComplete="off">
               <div>
                 <Label htmlFor="email">Email Address</Label>
                 <Input

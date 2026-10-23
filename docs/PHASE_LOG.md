@@ -1131,3 +1131,105 @@ Phase 2.3B resolved the visual unevenness of the previous footer and introduced 
 - **Branch**: `main`
 - **Remote**: `https://github.com/AshishCodes-dev/aurevella-luxury-footwear.git`
 
+---
+
+# PHASE 3 REPORT: CATALOGUE, SHOPPING BAG & AUTH FORM RESET
+
+- **Date**: October 23, 2026
+- **Status**: COMPLETE & VERIFIED
+- **Target**: Product Catalogue (`/shop`), Shopping Bag with Slide-Over Drawer (`/bag`), and Auth Form Reset Lifecycle Polish
+- **Scope**:
+  - Live Product Catalogue using the 3 approved launch products and verified pricing.
+  - Category filtering, sort options, and 1:1 ratio image slots with zero invented specifications.
+  - Shopping Bag state management (`BagContext`), slide-over drawer (`BagDrawer`), and dedicated `/bag` view.
+  - Secure LocalStorage persistence storing only validated product IDs and quantities; prices derived exclusively from trusted product data.
+  - Transparent concierge order reservation via WhatsApp (no fake checkout or simulated live payment).
+  - Auth Form Reset Fix: Form fields pristine on visit; password wiped on success and failure; email preserved on failure; logout cleanly unmounts/resets forms via `authEpoch`; standard autocomplete tokens; zero credentials in storage/logs/URLs.
+  - Backend strictly untouched (`git diff --stat -- backend` empty).
+  - Client brand and product assets 100% untouched (`git diff --stat -- frontend/public/brand frontend/public/images/products` empty).
+
+---
+
+## 1. Executive Summary & Implementation Details
+
+### A. Product Catalogue (`/shop`)
+- **Launch Product Silhouettes**:
+  1. *Floral Block Heel Sandal* — ₹3,499 (`Interchangeable Heel`, ID: `prod-floral-block-heel-sandal`)
+  2. *Blue Floral Slide* — ₹3,299 (`Flat Slide`, ID: `prod-blue-floral-slide`)
+  3. *Floral Block Heel Mule* — ₹3,699 (`Interchangeable Heel`, ID: `prod-floral-block-heel-mule`)
+- **Catalogue Features**:
+  - Filter pills dynamically displaying counts: `All (3)`, `Interchangeable Heel (2)`, `Flat Slide (1)`.
+  - Sort selector supporting Featured (default), Price: Low to High, Price: High to Low, and Silhouette: A–Z.
+  - Strict 1:1 image slots respecting `--product-ratio: 1 / 1` and card widths $\le 500\text{px}$.
+  - Primary "Add to Bag" action with instant feedback indicator, plus direct "Concierge Inquire" link via WhatsApp.
+
+### B. Shopping Bag & Concierge Reservation
+- **Bag Architecture (`BagContext.jsx` & `BagDrawer.jsx`)**:
+  - Storage key: `aurevella_bag`. Stores strictly `[{ id, quantity }]`.
+  - Product IDs and quantities are validated on hydration against `PRODUCTS_MAP`. Unknown or corrupted entries are cleanly stripped.
+  - Prices, titles, categories, and images are derived strictly from trusted data in `src/data/products.js`; never trusts client-supplied price figures.
+  - Methods: `addToBag`, `removeFromBag`, `updateQuantity` (clamped 1–10), `clearBag`, `openBag`, `closeBag`.
+  - Accessible slide-over drawer with backdrop blur, item thumbnails, quantity controls, line items, and dynamic subtotal.
+  - Dedicated `/bag` page (`BagPage.jsx`) for standalone review.
+  - **Transparent Concierge Advisory**: Prominently notes that online payment gateway is currently in staging and provides a pre-formatted WhatsApp link itemizing selections for direct concierge reservation and sizing guidance.
+
+### C. Auth Form Reset & Lifecycle Isolation
+- **Root Cause Resolution**:
+  - Addressed React Hook Form field caching and native browser DOM input value retention on route transitions.
+  - Connected `formRef = useRef(null)` to native DOM forms on both `/login` and `/signup`.
+  - Implemented `clearSensitiveFields()` calling `formRef.current?.reset()` alongside `setValue('password', '')`.
+  - Bound cleanup to component mount, unmount, route navigation (`location.key`), and successful submit.
+  - On failed login submit: password field is immediately cleared and re-focused, while email remains preserved.
+  - On logout: `logout()` increments `authEpoch` in `AuthContext`, dynamically keying `<Login key={`login-${authEpoch}`} />` and `<Signup key={`signup-${authEpoch}`} />` to guarantee complete React Fiber unmount and pristine DOM initialization.
+  - Form inputs equipped with standard autocomplete attributes (`autoComplete="username"`, `autoComplete="current-password"`, `autoComplete="new-password"`).
+  - Validated that `localStorage` and `sessionStorage` contain zero passwords, tokens, or sensitive credentials.
+
+---
+
+## 2. Files Changed & Created
+
+### New Files Created:
+1. `frontend/src/data/products.js` — Single source of truth for launch silhouettes, category lists, and INR price formatting.
+2. `frontend/src/context/BagContext.jsx` — Shopping bag state, LocalStorage hydration, trusted price derivation, and drawer visibility.
+3. `frontend/src/components/BagDrawer.jsx` — Slide-over drawer with itemized summary, quantity controls, and WhatsApp concierge link.
+4. `frontend/src/pages/BagPage.jsx` — Dedicated full-page shopping bag route (`/bag`).
+5. `frontend/src/pages/Shop.jsx` — Real product catalogue with launch silhouettes, category filtering, and sorting.
+
+### Existing Files Refined:
+6. `frontend/src/App.jsx` — Wrapped root tree with `BagProvider`, registered `/shop` and `/bag` routes, dynamic `authEpoch` route keying.
+7. `frontend/src/components/AppShell.jsx` — Added bag trigger button with dynamic item badge in header and mobile navigation; rendered `BagDrawer`.
+8. `frontend/src/components/ProductCard.jsx` — Connected "Add to Bag" action with instant feedback indicator.
+9. `frontend/src/context/AuthContext.jsx` — Added `authEpoch` state incremented on `logout()`.
+10. `frontend/src/pages/Login.jsx` — Form ref DOM reset, credential clearing lifecycle, error password wipe with email preservation.
+11. `frontend/src/pages/Signup.jsx` — Form ref DOM reset, credential clearing lifecycle, clean unmount behavior.
+12. `frontend/scripts/layout-check.mjs` — Extended headless test suite to audit catalogue filtering, shopping bag operations, autocomplete attributes, and auth logout reset lifecycle.
+13. `docs/PHASE_LOG.md` — Appended Phase 3 documentation and audit results.
+
+---
+
+## 3. Comprehensive Test & Audit Results
+
+| Check / Test Target | Verification Command / Method | Result | Notes |
+| :--- | :--- | :---: | :--- |
+| **Frontend Production Build** | `npm run build` | **PASS** | 2,093 modules bundled with 0 errors in 1m 56s |
+| **Headless Layout Matrix** | `npm run check:layout` | **PASS** | 75/75 viewports across 15 routes: 0 overflow, all footers anchored, CLS < 0.1, 0 console errors |
+| **Catalogue Filter Test** | Playwright automated test | **PASS** | Default 3, "Flat Slide" = 1, "Interchangeable Heel" = 2, "All" = 3 |
+| **Shopping Bag Drawer & State** | Playwright automated test | **PASS** | Auto-opens on Add to Bag, increments/decrements quantity, calculates subtotal |
+| **LocalStorage Persistence** | Playwright automated test | **PASS** | Persists valid ID and quantity across reload; cleared on remove item |
+| **Form Autocomplete Check** | Playwright automated test | **PASS** | Standard `username`, `current-password`, `new-password` tokens verified |
+| **Failed Login Password Wipe** | Playwright automated test | **PASS** | Password wiped while email remains preserved |
+| **Auth Logout Form Reset** | Playwright automated test | **PASS** | Form fields completely pristine on logout; state unmounted via `authEpoch` |
+| **Storage Credential Audit** | Playwright automated test | **PASS** | 0 tokens, passwords, or secret keys found in `localStorage` or `sessionStorage` |
+| **Backend Isolation Check** | `git diff --stat -- backend` | **PASS** | 0 files changed (backend strictly untouched) |
+| **Client Asset Integrity Check** | `git diff --stat -- frontend/public/brand frontend/public/images/products` | **PASS** | 0 files changed (client assets strictly untouched) |
+| **Motion Policy Conformance** | Grep scan across `src/` | **PASS** | Only allowed `--motion-fast` and `--motion-base` tokens |
+
+---
+
+## 4. Git Metadata & Tag Verification
+- **Implementation Commit**: `2612938` — `Phase 3: product catalogue, shopping bag and auth form reset`
+- **Branch**: `main`
+- **Remote**: `https://github.com/AshishCodes-dev/aurevella-luxury-footwear.git`
+- **Tag**: `phase-3`
+
+

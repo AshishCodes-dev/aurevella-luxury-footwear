@@ -16,7 +16,8 @@ if (!fs.existsSync(shotsDir)) {
 
 const ROUTES = [
   { path: '/', name: 'home', isShort: false },
-  { path: '/shop', name: 'shop', isShort: true },
+  { path: '/shop', name: 'shop', isShort: false },
+  { path: '/bag', name: 'bag', isShort: true },
   { path: '/collections', name: 'collections', isShort: true },
   { path: '/limited-edition', name: 'limited-edition', isShort: true },
   { path: '/about', name: 'about', isShort: true },
@@ -258,7 +259,270 @@ async function runLayoutChecks() {
       console.log('✔ PASS: password field was cleared while email remained preserved after failed login.');
     }
 
+    // Test 2C: Form Autocomplete Attributes
+    await formPage.goto(`${baseUrl}/login`, { waitUntil: 'networkidle' });
+    const loginEmailAuto = await formPage.getAttribute('#email', 'autocomplete');
+    const loginPassAuto = await formPage.getAttribute('#password', 'autocomplete');
+    if (loginEmailAuto !== 'username') {
+      formErrors.push(`FAIL: /login #email missing autocomplete="username" (got "${loginEmailAuto}")`);
+    } else if (loginPassAuto !== 'current-password') {
+      formErrors.push(`FAIL: /login #password missing autocomplete="current-password" (got "${loginPassAuto}")`);
+    } else {
+      console.log('✔ PASS: /login fields contain standard autocomplete tokens (username, current-password).');
+    }
+
+    await formPage.goto(`${baseUrl}/signup`, { waitUntil: 'networkidle' });
+    const signupEmailAuto = await formPage.getAttribute('#email', 'autocomplete');
+    const signupPassAuto = await formPage.getAttribute('#password', 'autocomplete');
+    if (signupEmailAuto !== 'username') {
+      formErrors.push(`FAIL: /signup #email missing autocomplete="username" (got "${signupEmailAuto}")`);
+    } else if (signupPassAuto !== 'new-password') {
+      formErrors.push(`FAIL: /signup #password missing autocomplete="new-password" (got "${signupPassAuto}")`);
+    } else {
+      console.log('✔ PASS: /signup fields contain standard autocomplete tokens (username, new-password).');
+    }
+
     await formPage.close();
+
+    // Test 2D: Logout reset lifecycle test
+    console.log('\n--- Running Auth Logout Reset Lifecycle Test ---');
+    const authContext = await browser.newContext({ viewport: { width: 1024, height: 800 } });
+    const authPage = await authContext.newPage();
+    let mockLoggedIn = true;
+    await authPage.route('**/api/auth/me', (route) => {
+      if (mockLoggedIn) {
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            user: {
+              uid: 'test-user-123',
+              email: 'vip@aurevella.com',
+              name: 'Elena Rossi',
+              role: 'customer',
+              isActive: true,
+              emailVerified: true,
+              providers: ['password'],
+            },
+          }),
+        });
+      } else {
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ user: null }),
+        });
+      }
+    });
+
+    await authPage.route('**/api/auth/logout', (route) => {
+      mockLoggedIn = false;
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Logged out successfully' }),
+      });
+    });
+
+    await authPage.goto(`${baseUrl}/account`, { waitUntil: 'networkidle' });
+    await authPage.waitForTimeout(100);
+
+    const signOutBtn = authPage.locator('button:has-text("Sign Out")').first();
+    await signOutBtn.click();
+    await authPage.waitForURL(`${baseUrl}/login`);
+    await authPage.waitForTimeout(200);
+
+    const emailAfterLogout = await authPage.inputValue('#email');
+    const passAfterLogout = await authPage.inputValue('#password');
+
+    if (emailAfterLogout !== '' || passAfterLogout !== '') {
+      formErrors.push(
+        `FAIL: credentials retained after logout (email="${emailAfterLogout}", pass="${passAfterLogout}")`
+      );
+    } else {
+      console.log('✔ PASS: Logout cleanly cleared all form fields and unmounted state.');
+    }
+
+    // Verify localStorage & sessionStorage contain zero tokens or sensitive auth state
+    const storageCheck = await authPage.evaluate(() => {
+      const keys = Object.keys(localStorage).concat(Object.keys(sessionStorage));
+      const forbidden = keys.filter((k) => /token|pass|auth_user|secret/i.test(k));
+      return { keys, forbidden };
+    });
+
+    if (storageCheck.forbidden.length > 0) {
+      formErrors.push(`FAIL: sensitive keys found in storage: ${storageCheck.forbidden.join(', ')}`);
+    } else {
+      console.log('✔ PASS: Storage contains zero credentials or auth tokens.');
+    }
+
+    await authPage.close();
+    await authContext.close();
+
+    // 3. Catalogue & Shopping Bag Tests
+    console.log('\n--- Running Catalogue & Shopping Bag Tests ---');
+    const shopPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await shopPage.route('**/api/auth/me', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ user: null }),
+      });
+    });
+
+    const shopErrors = [];
+
+    // Navigate to /shop
+    await shopPage.goto(`${baseUrl}/shop`, { waitUntil: 'networkidle' });
+    await shopPage.waitForTimeout(150);
+
+    // Check all 3 products rendered
+    let cards = await shopPage.$$('article');
+    if (cards.length !== 3) {
+      shopErrors.push(`FAIL: Expected 3 launch products on /shop, found ${cards.length}`);
+    } else {
+      console.log('✔ PASS: All 3 launch products correctly displayed in catalogue.');
+    }
+
+    // Filter by "Flat Slide (1)"
+    await shopPage.click('button:has-text("Flat Slide")');
+    await shopPage.waitForTimeout(100);
+    cards = await shopPage.$$('article');
+    const flatSlideTitle = await shopPage.locator('article h3').textContent();
+    if (cards.length !== 1 || !flatSlideTitle.includes('Blue Floral Slide')) {
+      shopErrors.push(`FAIL: Filter "Flat Slide" expected 1 card ("Blue Floral Slide"), got ${cards.length}`);
+    } else {
+      console.log('✔ PASS: "Flat Slide" filter correctly isolates Blue Floral Slide.');
+    }
+
+    // Filter by "Interchangeable Heel (2)"
+    await shopPage.click('button:has-text("Interchangeable Heel")');
+    await shopPage.waitForTimeout(100);
+    cards = await shopPage.$$('article');
+    if (cards.length !== 2) {
+      shopErrors.push(`FAIL: Filter "Interchangeable Heel" expected 2 cards, got ${cards.length}`);
+    } else {
+      console.log('✔ PASS: "Interchangeable Heel" filter correctly isolates 2 heel models.');
+    }
+
+    // Filter back to "All (3)"
+    await shopPage.click('button:has-text("All")');
+    await shopPage.waitForTimeout(100);
+    cards = await shopPage.$$('article');
+    if (cards.length !== 3) {
+      shopErrors.push(`FAIL: Filter "All" expected 3 cards, got ${cards.length}`);
+    } else {
+      console.log('✔ PASS: "All" filter restores full launch collection of 3 models.');
+    }
+
+    // Test Shopping Bag Flow
+    // Click "Add to Bag" on first product
+    const addToBagBtn = shopPage.locator('button:has-text("Add to Bag")').first();
+    await addToBagBtn.click();
+    await shopPage.waitForTimeout(200);
+
+    // Verify Drawer opens
+    const drawer = shopPage.locator('[role="dialog"][aria-label="Shopping Bag Drawer"]');
+    const isDrawerVisible = await drawer.isVisible();
+    if (!isDrawerVisible) {
+      shopErrors.push('FAIL: Shopping Bag Drawer did not open after clicking "Add to Bag"');
+    } else {
+      console.log('✔ PASS: Shopping Bag Drawer opened automatically on Add to Bag.');
+    }
+
+    // Verify localStorage persistence
+    const bagInStorage = await shopPage.evaluate(() => {
+      return JSON.parse(localStorage.getItem('aurevella_bag') || '[]');
+    });
+    if (!Array.isArray(bagInStorage) || bagInStorage.length !== 1 || bagInStorage[0].quantity !== 1) {
+      shopErrors.push(`FAIL: localStorage 'aurevella_bag' unexpected: ${JSON.stringify(bagInStorage)}`);
+    } else {
+      console.log('✔ PASS: Bag item persisted in localStorage with valid ID and quantity: 1.');
+    }
+
+    // Test Quantity Increment
+    const increaseBtn = drawer.locator('button[aria-label^="Increase quantity"]').first();
+    await increaseBtn.click();
+    await shopPage.waitForTimeout(100);
+
+    const updatedQty = await shopPage.evaluate(() => {
+      const bag = JSON.parse(localStorage.getItem('aurevella_bag') || '[]');
+      return bag[0]?.quantity;
+    });
+    if (updatedQty !== 2) {
+      shopErrors.push(`FAIL: Quantity did not increment to 2, got ${updatedQty}`);
+    } else {
+      console.log('✔ PASS: Quantity successfully incremented to 2.');
+    }
+
+    // Test Quantity Decrement
+    const decreaseBtn = drawer.locator('button[aria-label^="Decrease quantity"]').first();
+    await decreaseBtn.click();
+    await shopPage.waitForTimeout(100);
+
+    const decrementedQty = await shopPage.evaluate(() => {
+      const bag = JSON.parse(localStorage.getItem('aurevella_bag') || '[]');
+      return bag[0]?.quantity;
+    });
+    if (decrementedQty !== 1) {
+      shopErrors.push(`FAIL: Quantity did not decrement back to 1, got ${decrementedQty}`);
+    } else {
+      console.log('✔ PASS: Quantity successfully decremented back to 1.');
+    }
+
+    // Test Page Reload & Persistence
+    await shopPage.reload({ waitUntil: 'networkidle' });
+    await shopPage.waitForTimeout(150);
+
+    // Check header bag badge count is 1
+    const bagBadge = await shopPage.locator('button[aria-label^="Open shopping bag"]').textContent();
+    if (!bagBadge.includes('1')) {
+      shopErrors.push(`FAIL: Header bag badge did not display count 1 after reload (text="${bagBadge}")`);
+    } else {
+      console.log('✔ PASS: Bag count 1 persisted in header badge across page reload.');
+    }
+
+    // Open bag drawer from header
+    await shopPage.click('button[aria-label^="Open shopping bag"]');
+    await shopPage.waitForTimeout(150);
+
+    // Remove item from bag
+    const removeBtn = shopPage.locator('button[aria-label^="Remove"]').first();
+    await removeBtn.click();
+    await shopPage.waitForTimeout(150);
+
+    // Verify empty state
+    const emptyStateText = await shopPage.locator('[role="dialog"]').textContent();
+    if (!emptyStateText.includes('Your Bag is Empty')) {
+      shopErrors.push('FAIL: Bag did not transition to empty state after item removal.');
+    } else {
+      console.log('✔ PASS: Bag empty state verified after removing item.');
+    }
+
+    // Check localStorage is empty array
+    const bagAfterRemove = await shopPage.evaluate(() => {
+      return JSON.parse(localStorage.getItem('aurevella_bag') || '[]');
+    });
+    if (bagAfterRemove.length !== 0) {
+      shopErrors.push(`FAIL: localStorage not empty after removal: ${JSON.stringify(bagAfterRemove)}`);
+    } else {
+      console.log('✔ PASS: localStorage correctly cleared to empty array after item removal.');
+    }
+
+    // Close drawer
+    const closeDrawerBtn = shopPage.locator('button[aria-label="Close shopping bag"]');
+    await closeDrawerBtn.click();
+    await shopPage.waitForTimeout(100);
+
+    await shopPage.close();
+
+    if (shopErrors.length > 0) {
+      console.error('\n[Catalogue/Bag Test Failures]:');
+      shopErrors.forEach((e) => console.error(`  - ${e}`));
+      allPassed = false;
+    } else {
+      console.log('\n✔ ALL Catalogue & Shopping Bag tests passed.');
+    }
 
     // Print Results Summary Table
     console.log('\n======================================================');

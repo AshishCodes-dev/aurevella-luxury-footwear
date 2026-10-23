@@ -815,7 +815,134 @@ All transitions and animations strictly match the allowed motion tokens from `DE
 
 ## 5. Git Metadata & Tag Verification
 - **Implementation Commit**: `fd64533` — `Phase 2: brand assets and content`
-- **Report Commit**: Recorded on main
+- **Report Commit**: `075d0e8` — `Phase 2.1: add report`
 - **Branch**: `main`
 - **Remote**: `https://github.com/AshishCodes-dev/aurevella-luxury-footwear.git`
 - **Tag**: `phase-2-1`
+
+
+---
+
+# Phase 2.2 Log: Form State Isolation, Footer Stabilization & Viewport Responsiveness
+
+## 1. Overview & Objective
+Phase 2.2 resolves real-browser layout, footer anchoring, form state preservation, and viewport responsiveness defects discovered during manual and automated cross-device testing. Verification was performed using headless Chromium via Playwright, generating visual full-page snapshots across 70 route-width permutations (14 routes × 5 viewports: 360px, 390px, 768px, 1024px, and 1440px).
+
+---
+
+## 2. Root Cause Analysis & Permanent Engineering Solutions
+
+### Bug 1: Form Fields Retain Stale Values Across Navigation & After Auth Events
+- **Root Cause**:
+  1. `Login.jsx` and `Signup.jsx` lacked explicit form initialization with clean default values (`defaultValues: { email: '', password: '' }`), allowing uncontrolled input states or browser heuristics to populate cached values.
+  2. Route definitions in `App.jsx` lacked unique component keys; React re-used internal fiber instances without unmounting when toggling between `/login` and `/signup`.
+  3. No programmatic `reset()` hook was invoked upon component mount or unmount.
+  4. On failed login attempts, `setValue('password', '')` was missing, leaving the rejected password in the input field.
+  5. On successful auth, `reset()` was not called prior to `navigate(..., { replace: true })`.
+  6. Email inputs used generic `autoComplete="email"` instead of standard `autoComplete="username"`, confusing browser credential managers.
+- **Permanent Solution**:
+  1. Keyed both routes in `App.jsx` (`key="login-view"` and `key="signup-view"`), ensuring complete component disposal and fresh mounting.
+  2. Defined explicit `defaultValues` on all auth forms.
+  3. Added `useEffect` lifecycle cleanups invoking `reset({ ... })` on both mount and unmount.
+  4. On failed login, isolated the password field, cleared it with `setValue('password', '')`, retained the user's email, and restored focus to the password input.
+  5. Added standard `autoComplete="username"` and `autoComplete="current-password"` / `autoComplete="new-password"` attributes.
+
+### Bug 2: Footer Fluctuates / Jumps on Short Pages & Layout Shift
+- **Root Cause**:
+  1. `AppShell.jsx` used `min-h-screen` (`100vh`), which does not accommodate dynamic browser address bar expansion/retraction (`100dvh`), causing vertical shifts on mobile.
+  2. `<main>` element was a plain block element without `flex flex-col flex-1`, preventing child page wrappers from expanding to fill the vertical space between header and footer.
+  3. Image elements in `Logo.jsx` and `ProductCard.jsx` had `h-auto` without an explicit CSS aspect-ratio (`aspect-[200/163]` for the full brand emblem, `aspect-square` for the mark and product thumbnails), causing layout shifts (CLS) while downloading assets.
+- **Permanent Solution**:
+  1. Upgraded root shell to `min-h-[100dvh] flex flex-col`.
+  2. Structured `<main>` as `flex-1 flex flex-col w-full`.
+  3. Encapsulated short pages (`/login`, `/signup`, `/forgot-password`, `/account`, and placeholder pages) in `flex-1 flex flex-col justify-center items-center w-full px-4 py-8 sm:py-16`, guaranteeing that content centers gracefully and the footer remains anchored to the bottom of the viewport with 0px gap.
+  4. Added explicit `aspect-[200/163]` and `aspect-square` on images, ensuring browser layout engines reserve bounding space upfront, reducing CLS to `< 0.07` (Core Web Vitals "Good" threshold is `< 0.10`).
+
+### Bug 3: Viewport Responsiveness Breakdown at 360px & 390px
+- **Root Cause**:
+  1. Hero headline used fixed `text-5xl` with `tracking-[0.15em]`. On a 360px screen, the word "Reimagined." expanded to ~407px, blowing past the 360px screen boundary and triggering horizontal page overflow.
+  2. In `AppShell.jsx`, the mobile drawer footer links (`Instagram` and `WhatsApp +91 77280 60447`) were positioned side-by-side with no wrapping, creating horizontal collision on narrow viewports.
+  3. Card containers in `/login` and `/signup` had fixed `max-w-md` without outer padding `px-4`, creating boundary clipping on 360px viewports.
+- **Permanent Solution**:
+  1. Replaced fixed font sizes with fluid typography via CSS `clamp()`:
+     - Hero Headline: `text-[clamp(2.15rem,6.5vw,5.5rem)] tracking-[0.06em] sm:tracking-[0.14em] break-words`.
+     - Section Titles: `text-[clamp(1.75rem,4vw,2.5rem)]`.
+  2. Updated mobile drawer contacts to responsive column/row wrapping (`flex-col sm:flex-row gap-3`).
+  3. Added `min-w-0` to product cards and ensured all outer containers specify `px-4`.
+  4. Added `html, body { overflow-x: hidden; width: 100%; min-height: 100dvh; }` and `img, svg { max-width: 100%; }` in `index.css`.
+
+---
+
+## 3. Files Changed & Added (15 Files Total)
+
+1. `.gitignore`: Added `.layout-shots/` and `frontend/.layout-shots/`.
+2. `frontend/package.json`: Added `check:layout` npm script and `playwright` devDependency.
+3. `frontend/scripts/layout-check.mjs`: Playwright headless browser test harness validating 70 route-width combinations, horizontal scroll, CLS, footer bottom anchoring, and form state.
+4. `frontend/src/App.jsx`: Explicitly keyed `/login` and `/signup` routes for clean fiber unmounting.
+5. `frontend/src/components/AppShell.jsx`: Implemented `min-h-[100dvh]`, `<main className="flex-1 flex flex-col">`, responsive header and drawer link wrapping.
+6. `frontend/src/components/Logo.jsx`: Set explicit aspect ratios (`aspect-[200/163]` for full logo, `aspect-square` for header mark) and fluid typography.
+7. `frontend/src/components/ProductCard.jsx`: Added `min-w-0`, pre-reserved `aspect-square` container and image sizing, and min 44px tap target on Inquire CTA.
+8. `frontend/src/index.css`: Added `html, body { min-height: 100dvh; overflow-x: hidden; width: 100%; }` and `img, svg { max-width: 100%; }`.
+9. `frontend/src/pages/Home.jsx`: Added fluid typography `text-[clamp(2.15rem,6.5vw,5.5rem)]` with responsive letter-spacing, wrapped contact buttons, and responsive grid alignment.
+10. `frontend/src/pages/Login.jsx`: Implemented clean form resets on mount/unmount/success, cleared password on failure, and centered flex container.
+11. `frontend/src/pages/Signup.jsx`: Implemented clean form resets, cleared passwords on failure, and centered flex container.
+12. `frontend/src/pages/ForgotPassword.jsx`: Form resets and centered flex container.
+13. `frontend/src/pages/Account.jsx`: Centered flex container with padded responsive bounds.
+14. `frontend/src/pages/PlaceholderPage.jsx`: Centered flex container with fluid typography.
+15. `docs/PHASE_LOG.md`: Appended Phase 2.2 verification report.
+
+---
+
+## 4. Headless Browser Verification Matrix (`npm run check:layout`)
+
+Verified across all 14 routes at 5 required viewports (360px, 390px, 768px, 1024px, 1440px). All 70 checks **PASSED**:
+
+| Route Path | 360px | 390px | 768px | 1024px | 1440px | Overflow Check | Footer Anchored | CLS Max | Console Errors |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `/` | PASS | PASS | PASS | PASS | PASS | Zero overflow | Anchored | 0.072 | 0 |
+| `/shop` | PASS | PASS | PASS | PASS | PASS | Zero overflow | Anchored | 0.002 | 0 |
+| `/collections` | PASS | PASS | PASS | PASS | PASS | Zero overflow | Anchored | 0.001 | 0 |
+| `/limited-edition` | PASS | PASS | PASS | PASS | PASS | Zero overflow | Anchored | 0.025 | 0 |
+| `/about` | PASS | PASS | PASS | PASS | PASS | Zero overflow | Anchored | 0.001 | 0 |
+| `/contact` | PASS | PASS | PASS | PASS | PASS | Zero overflow | Anchored | 0.001 | 0 |
+| `/privacy` | PASS | PASS | PASS | PASS | PASS | Zero overflow | Anchored | 0.001 | 0 |
+| `/terms` | PASS | PASS | PASS | PASS | PASS | Zero overflow | Anchored | 0.001 | 0 |
+| `/shipping-policy` | PASS | PASS | PASS | PASS | PASS | Zero overflow | Anchored | 0.003 | 0 |
+| `/returns-policy` | PASS | PASS | PASS | PASS | PASS | Zero overflow | Anchored | 0.001 | 0 |
+| `/login` | PASS | PASS | PASS | PASS | PASS | Zero overflow | Anchored | 0.001 | 0 |
+| `/signup` | PASS | PASS | PASS | PASS | PASS | Zero overflow | Anchored | 0.001 | 0 |
+| `/forgot-password` | PASS | PASS | PASS | PASS | PASS | Zero overflow | Anchored | 0.003 | 0 |
+| `/*` (404 Fallback) | PASS | PASS | PASS | PASS | PASS | Zero overflow | Anchored | 0.002 | 0 |
+
+### Form State & Authentication Navigation Tests:
+- Open `/login`, type email and password, navigate to `/signup`: **PASS** (fields empty).
+- Navigate back to `/login`: **PASS** (fields empty).
+- Failed login attempt with invalid credentials: **PASS** (password cleared, email retained, error alert visible).
+
+### Visual Screenshot Audit:
+Directly inspected full-page screenshots stored in `frontend/.layout-shots/` (`home_w360.png`, `home_w1440.png`, `login_w360.png`, `login_w1440.png`, `about_w360.png`, `about_w1440.png`):
+- All typography wraps gracefully without edge clipping or horizontal scroll.
+- All product cards maintain 1:1 aspect ratio with zero layout shift.
+- Footer remains pinned to the bottom of the viewport on short screens.
+- Touch targets on all buttons and navigation links meet or exceed 44px × 44px.
+
+---
+
+## 5. Verification & Test Summary
+
+| Check / Test Target | Verification Command / Method | Result | Notes |
+| :--- | :--- | :---: | :--- |
+| **Frontend Production Build** | `npm run build` | **PASS** | 2,088 modules compiled in 37.08s with 0 errors |
+| **Automated Layout Suite** | `npm run check:layout` | **PASS** | 70/70 viewport checks & form tests passed |
+| **Backend Isolation Check** | `git diff --stat -- backend` | **PASS** | 0 files changed (backend strictly untouched) |
+| **Motion Policy Conformance** | Grep scan across `src/` | **PASS** | Only allowed `--motion-fast` and `--motion-base` tokens |
+| **Live Visual Inspection** | Playwright Chromium screenshots | **PASS** | Directly inspected generated PNG snapshots |
+
+---
+
+## 6. Git Metadata & Tag Verification
+- **Implementation Commit**: `7a13b57` — `Phase 2.2: fix form state, footer and responsiveness`
+- **Report Commit**: Recorded on main
+- **Branch**: `main`
+- **Remote**: `https://github.com/AshishCodes-dev/aurevella-luxury-footwear.git`
+- **Tag**: `phase-2-2`

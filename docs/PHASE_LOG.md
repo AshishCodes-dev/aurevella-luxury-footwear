@@ -1127,7 +1127,7 @@ Phase 2.3B resolved the visual unevenness of the previous footer and introduced 
 ---
 
 ## 4. Git Metadata
-- **Commit**: To be recorded on main
+- **Commit**: `6f90bbb` — `Phase 2.3B: footer redesign and background depth polish`
 - **Branch**: `main`
 - **Remote**: `https://github.com/AshishCodes-dev/aurevella-luxury-footwear.git`
 

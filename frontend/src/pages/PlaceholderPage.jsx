@@ -16,12 +16,22 @@ export const PlaceholderPage = ({
   return (
     <div className="flex-1 flex flex-col justify-center items-center w-full px-4 py-16 sm:py-24 animate-fade-in">
       <div className="max-w-4xl mx-auto text-center w-full">
-        {showLogo && (
+        {showLogo ? (
           <div className="flex justify-center mb-8">
             <Logo variant="full" asLink={false} />
           </div>
+        ) : (
+          <div className="flex justify-center mb-6 select-none">
+            <img
+              src="/brand/aurevella-mark.png"
+              alt=""
+              width="40"
+              height="40"
+              className="h-10 w-10 aspect-square object-contain opacity-80"
+            />
+          </div>
         )}
-        <span className="text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[#B8AD9A] block mb-3">
+        <span className="text-[11px] sm:text-xs uppercase tracking-[0.25em] text-[#B8AD9A] block mb-3 font-medium">
           {eyebrow}
         </span>
         <h1 className="font-serif text-[clamp(2rem,5vw,3.75rem)] tracking-wide text-[#FEF5E6] mb-6">
@@ -33,7 +43,7 @@ export const PlaceholderPage = ({
         <div className="pt-4 border-t border-[#2F1C15] inline-block">
           <Link
             to={backLink}
-            className="inline-flex items-center justify-center min-h-[44px] px-8 text-xs uppercase tracking-widest bg-[#181210] border border-[#2F1C15] text-[#FEF5E6] hover:bg-[#241B18] transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+            className="inline-flex items-center justify-center min-h-[44px] px-8 text-xs uppercase tracking-[0.2em] bg-[#181210] border border-[#2F1C15] text-[#FEF5E6] hover:bg-[#241B18] hover:border-[#FEF5E6]/40 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
           >
             {backLabel}
           </Link>

@@ -84,14 +84,14 @@ export const AppShell = ({ children }) => {
   };
 
   const navLinkClasses = ({ isActive }) =>
-    `text-xs uppercase tracking-widest min-h-[44px] inline-flex items-center px-3 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] ${
+    `text-[11px] sm:text-xs uppercase tracking-[0.22em] font-medium min-h-[44px] inline-flex items-center px-3.5 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] ${
       isActive
         ? 'text-[#FEF5E6] font-semibold border-b border-[#FEF5E6]'
         : 'text-[#B8AD9A] hover:text-[#FEF5E6]'
     }`;
 
   const mobileNavLinkClasses = ({ isActive }) =>
-    `text-lg font-serif tracking-widest min-h-[48px] flex items-center px-4 py-2 border-l-2 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] ${
+    `text-xl font-serif tracking-[0.14em] min-h-[48px] flex items-center px-4 py-2 border-l-2 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] ${
       isActive
         ? 'text-[#FEF5E6] border-[#FEF5E6] bg-[#181210]'
         : 'text-[#B8AD9A] border-transparent hover:text-[#FEF5E6] hover:bg-[#181210]/60'
@@ -107,9 +107,9 @@ export const AppShell = ({ children }) => {
         Skip to main content
       </a>
 
-      {/* Sticky Header */}
+      {/* Sleek Sticky Header */}
       <header className="border-b border-[#2F1C15] bg-[#0F0A09]/95 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-2">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] sm:h-20 flex items-center justify-between gap-4">
           {/* Brand Logo: header variant (mark + live text) */}
           <div className="flex items-center min-w-0">
             <Logo variant="header" />
@@ -118,7 +118,7 @@ export const AppShell = ({ children }) => {
           {/* Desktop Navigation */}
           <nav
             aria-label="Primary navigation"
-            className="hidden lg:flex items-center space-x-1 xl:space-x-4"
+            className="hidden lg:flex items-center space-x-1 xl:space-x-2"
           >
             {siteConfig.navLinks.map((item) => (
               <NavLink key={item.href} to={item.href} className={navLinkClasses} end={item.href === '/'}>
@@ -128,12 +128,12 @@ export const AppShell = ({ children }) => {
           </nav>
 
           {/* Account / Action Links & Mobile Menu Toggle */}
-          <div className="flex items-center space-x-2 sm:space-x-4 shrink-0">
+          <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
             {isAuthenticated ? (
               <div className="hidden sm:flex items-center space-x-3">
                 <Link
                   to="/account"
-                  className="text-xs uppercase tracking-widest text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                  className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
                 >
                   Account ({user?.role === 'admin' ? 'Admin' : user?.name?.split(' ')[0] || 'User'})
                 </Link>
@@ -141,22 +141,22 @@ export const AppShell = ({ children }) => {
                   variant="ghost"
                   size="sm"
                   onClick={handleLogout}
-                  className="text-xs uppercase tracking-widest text-[#B8AD9A] hover:text-[#FEF5E6]"
+                  className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6]"
                 >
                   Sign Out
                 </Button>
               </div>
             ) : (
-              <div className="hidden sm:flex items-center space-x-3">
+              <div className="hidden sm:flex items-center space-x-2">
                 <Link
                   to="/login"
-                  className="text-xs uppercase tracking-widest text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                  className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-3 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/signup"
-                  className="text-xs uppercase tracking-widest text-[#0F0A09] bg-[#FEF5E6] hover:bg-[#FFFFFF] transition-subtle min-h-[44px] inline-flex items-center px-4 font-medium outline-none focus-visible:ring-1 focus-visible:ring-white"
+                  className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-[#0F0A09] bg-[#FEF5E6] hover:bg-[#FFFFFF] transition-subtle min-h-[38px] inline-flex items-center px-4 font-semibold outline-none focus-visible:ring-1 focus-visible:ring-white shadow-sm"
                 >
                   Sign Up
                 </Link>
@@ -223,7 +223,7 @@ export const AppShell = ({ children }) => {
               <div className="space-y-3">
                 <Link
                   to="/account"
-                  className="min-h-[44px] flex items-center justify-center uppercase tracking-widest text-xs bg-[#181210] border border-[#2F1C15] text-[#FEF5E6] hover:bg-[#241B18] transition-subtle"
+                  className="min-h-[44px] flex items-center justify-center uppercase tracking-[0.2em] text-xs bg-[#181210] border border-[#2F1C15] text-[#FEF5E6] hover:bg-[#241B18] transition-subtle"
                 >
                   My Account
                 </Link>
@@ -235,20 +235,20 @@ export const AppShell = ({ children }) => {
               <div className="grid grid-cols-2 gap-3">
                 <Link
                   to="/login"
-                  className="min-h-[44px] flex items-center justify-center uppercase tracking-widest text-xs bg-[#181210] border border-[#2F1C15] text-[#FEF5E6] hover:bg-[#241B18] transition-subtle"
+                  className="min-h-[44px] flex items-center justify-center uppercase tracking-[0.2em] text-xs bg-[#181210] border border-[#2F1C15] text-[#FEF5E6] hover:bg-[#241B18] transition-subtle"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/signup"
-                  className="min-h-[44px] flex items-center justify-center uppercase tracking-widest text-xs bg-[#FEF5E6] text-[#0F0A09] hover:bg-[#FFFFFF] transition-subtle font-medium"
+                  className="min-h-[44px] flex items-center justify-center uppercase tracking-[0.2em] text-xs bg-[#FEF5E6] text-[#0F0A09] hover:bg-[#FFFFFF] transition-subtle font-semibold"
                 >
                   Sign Up
                 </Link>
               </div>
             )}
 
-            {/* Quick Contact Links in Drawer (responsive flex-col on narrow viewports) */}
+            {/* Quick Contact Links in Drawer */}
             <div className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-[#B8AD9A]">
               <a
                 href={siteConfig.contact.instagram.url}
@@ -271,34 +271,43 @@ export const AppShell = ({ children }) => {
         </div>
       )}
 
-      {/* Main Content Area (flex-1 flex flex-col so child pages can stretch or center vertically) */}
+      {/* Main Content Area */}
       <main id="main-content" tabIndex="-1" className="flex-1 flex flex-col focus:outline-none w-full">
         {children}
       </main>
 
-      {/* Global Footer (Anchored cleanly at bottom of viewport on short pages, flows after content on long pages) */}
+      {/* Global Footer (Editorial Layout anchored cleanly at bottom of viewport) */}
       <footer className="border-t border-[#2F1C15] bg-[#0F0A09] w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8">
             {/* Brand Column with full logo and aspect-ratio */}
             <div className="lg:col-span-2 space-y-4">
               <Logo variant="footer" className="mb-2" />
-              <p className="text-xs uppercase tracking-widest text-[#FEF5E6] font-medium">
+              <p className="text-xs uppercase tracking-[0.22em] text-[#FEF5E6] font-medium">
                 {siteConfig.descriptor}
               </p>
-              <p className="text-sm text-[#B8AD9A] tracking-wide max-w-sm">
+              <p className="text-sm text-[#B8AD9A] tracking-wide max-w-sm leading-relaxed">
                 {siteConfig.tagline} {siteConfig.subline}
               </p>
-              <div className="pt-2 text-xs text-[#B8AD9A] space-y-1.5">
-                <p>Email: <a href={`mailto:${siteConfig.contact.email}`} className="text-[#FEF5E6] hover:underline transition-subtle">{siteConfig.contact.email}</a></p>
-                <p>Concierge WhatsApp: <a href={siteConfig.contact.whatsapp.url} target="_blank" rel="noopener noreferrer" className="text-[#FEF5E6] hover:underline transition-subtle">{siteConfig.contact.whatsapp.label}</a></p>
-                <p>Instagram: <a href={siteConfig.contact.instagram.url} target="_blank" rel="noopener noreferrer" className="text-[#FEF5E6] hover:underline transition-subtle">{siteConfig.contact.instagram.handle}</a></p>
+              <div className="pt-3 text-xs text-[#B8AD9A] space-y-2">
+                <p>
+                  <span className="text-[#FEF5E6]/60 uppercase tracking-widest text-[10px] block">Inquiries</span>
+                  <a href={`mailto:${siteConfig.contact.email}`} className="text-[#FEF5E6] hover:underline transition-subtle">{siteConfig.contact.email}</a>
+                </p>
+                <p>
+                  <span className="text-[#FEF5E6]/60 uppercase tracking-widest text-[10px] block">Concierge WhatsApp</span>
+                  <a href={siteConfig.contact.whatsapp.url} target="_blank" rel="noopener noreferrer" className="text-[#FEF5E6] hover:underline transition-subtle">{siteConfig.contact.whatsapp.label}</a>
+                </p>
+                <p>
+                  <span className="text-[#FEF5E6]/60 uppercase tracking-widest text-[10px] block">Instagram</span>
+                  <a href={siteConfig.contact.instagram.url} target="_blank" rel="noopener noreferrer" className="text-[#FEF5E6] hover:underline transition-subtle">{siteConfig.contact.instagram.handle}</a>
+                </p>
               </div>
             </div>
 
             {/* Shop Links */}
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-[#FEF5E6] mb-4">
+              <h3 className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#FEF5E6] mb-5">
                 Shop
               </h3>
               <ul className="space-y-3 text-xs tracking-wider text-[#B8AD9A]">
@@ -314,7 +323,7 @@ export const AppShell = ({ children }) => {
 
             {/* Company Links */}
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-[#FEF5E6] mb-4">
+              <h3 className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#FEF5E6] mb-5">
                 Company
               </h3>
               <ul className="space-y-3 text-xs tracking-wider text-[#B8AD9A]">
@@ -330,7 +339,7 @@ export const AppShell = ({ children }) => {
 
             {/* Legal Links */}
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-[#FEF5E6] mb-4">
+              <h3 className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#FEF5E6] mb-5">
                 Legal
               </h3>
               <ul className="space-y-3 text-xs tracking-wider text-[#B8AD9A]">
@@ -350,7 +359,7 @@ export const AppShell = ({ children }) => {
             <p>{siteConfig.copyright}</p>
             <div className="flex flex-wrap items-center justify-center sm:justify-end gap-4 sm:gap-6">
               <span>Handcrafted in India</span>
-              <span className="hidden sm:inline">•</span>
+              <span className="hidden sm:inline text-[#2F1C15]">•</span>
               <span>Italian Elegance</span>
             </div>
           </div>

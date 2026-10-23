@@ -85,7 +85,8 @@ export const siteConfig = {
       id: 'prod-01',
       name: 'Floral Block Heel Sandal', // TODO(client): Confirm product name
       category: 'Interchangeable Heel',
-      priceText: 'Price coming soon',
+      price: 3499,
+      priceText: '₹3,499',
       link: '/shop',
       image: '/images/products/product-01-floral-block-heel-sandal.jpg',
       alt: 'Block heel ankle-strap sandal with red floral print and a pearl embellishment',
@@ -95,7 +96,8 @@ export const siteConfig = {
       id: 'prod-02',
       name: 'Blue Floral Slide', // TODO(client): Confirm product name
       category: 'Flat Slide',
-      priceText: 'Price coming soon',
+      price: 3299,
+      priceText: '₹3,299',
       link: '/shop',
       image: '/images/products/product-02-blue-floral-slide.jpg',
       alt: 'Flat slide with a knotted blue floral strap and woven sole',
@@ -105,7 +107,8 @@ export const siteConfig = {
       id: 'prod-03',
       name: 'Floral Block Heel Mule', // TODO(client): Confirm product name
       category: 'Interchangeable Heel',
-      priceText: 'Price coming soon',
+      price: 3699,
+      priceText: '₹3,699',
       link: '/shop',
       image: '/images/products/product-03-floral-block-heel-mule.jpg',
       alt: 'Block heel mule with red floral print and a gold buckle',

@@ -108,8 +108,17 @@ export const Signup = () => {
       <div className="w-full max-w-md">
         <Card>
           <CardHeader>
+            <div className="flex justify-center mb-4 select-none">
+              <img
+                src="/brand/aurevella-mark.png"
+                alt=""
+                width="40"
+                height="40"
+                className="h-10 w-10 aspect-square object-contain opacity-85"
+              />
+            </div>
             <CardTitle>Create Account</CardTitle>
-            <CardDescription>Join Aurevella for an exclusive footwear experience</CardDescription>
+            <CardDescription>Join Aurevella for bespoke orders and exclusive releases</CardDescription>
           </CardHeader>
 
           <CardContent>

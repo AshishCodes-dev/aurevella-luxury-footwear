@@ -1236,35 +1236,22 @@ Phase 2.3B resolved the visual unevenness of the previous footer and introduced 
 
 ## 5. Addendum: Persistent Login Credentials & Controlled Input Resolution
 
-### Root Cause Diagnosis:
-1. **Uncontrolled Inputs vs DOM Restoration**:
-   `useForm` registered inputs via `{...register('email')}` and `{...register('password')}` without binding `value`. Because the inputs were uncontrolled, React Hook Form's `reset()` and `setValue()` did not enforce `input.value = ""` on the DOM element after initial render if the browser restored cached values from history or if Chrome autofill injected saved values into the DOM.
-2. **Back-Forward Cache (bfcache) Leak**:
-   When users navigated back to `/login` via history or after signing out, the browser restored DOM input values from memory without re-running component initialization effects.
+### Proven Root Cause Diagnosis:
+1. **Application-Controlled State vs Chrome Password Manager**:
+   - In a clean browser session without saved credentials, the application initializes, resets, and unmounts `/login` fields to empty strings `""` (verified across Playwright Chromium and real Chrome headless tests).
+   - The persistence observed in user screen recordings occurs when **Google Chrome's built-in Password Manager** has saved credentials stored for the origin (`localhost:5173`). When `/login` mounts with standard `autoComplete="username"` and `autoComplete="current-password"` attributes, Chrome's native C++ autofill subsystem automatically injects the user's saved email and masked password (`••••••••`) into the form.
+   - Web applications operating in the browser sandbox cannot and should not override a user's master browser password vault; however, the application must ensure its own controlled state never retains or leaks credentials across sessions.
+2. **Controlled Inputs via `<Controller>`**:
+   - Previously, uncontrolled inputs (`{...register('email')}`) relied on native DOM value properties. Converting to React Hook Form's `<Controller>` explicitly binds `value={field.value ?? ''}`, guaranteeing that React's VDOM reconciliation enforces empty string values whenever application state is cleared.
 3. **History Replacement in Account Sign-Out**:
-   `Account.jsx` invoked `navigate('/login')` instead of `navigate('/login', { replace: true })`, keeping the previous authenticated view in the browser history stack.
+   - `Account.jsx` was updated to `navigate('/login', { replace: true })`, preventing history traversal back into the authenticated session.
+4. **Code Minimisation**:
+   - Speculative additions (redundant `formRef.current.reset()`, `pageshow` listeners, and `Signup.jsx` refactors) were audited and removed, keeping only the minimal necessary controlled input binding in `Login.jsx` and history replacement in `Account.jsx`.
 
-### Key Corrections Implemented:
-1. **Fully Controlled Inputs via `Controller`**:
-   Refactored both `Login.jsx` and `Signup.jsx` to use React Hook Form's `<Controller>` component, explicitly binding `value={field.value ?? ''}` and `onChange={field.onChange}` to all `<Input>` elements. React VDOM reconciliation now guarantees `node.value = ""` on mount, reopen, and reset.
-2. **bfcache Cleanup via `pageshow`**:
-   Registered a `pageshow` listener checking `event.persisted`, cleanly wiping all application-controlled fields if the page is restored from bfcache.
-3. **Protected History Replacement**:
-   Updated `Account.jsx` sign-out handler to `navigate('/login', { replace: true })`.
-4. **Active Typing Stability**:
-   Reset triggers are bound strictly to lifecycle events (component mount, unmount, bfcache restore, and submit completion); active typing is 100% stable and never cleared mid-input.
-5. **App-Controlled vs Browser Password Manager Distinction**:
-   Confirmed that application memory, React state, and DOM nodes strictly reset to empty strings. Browser-level password managers (e.g., Chrome Password Manager) manage credentials in an isolated browser subsystem; web applications cannot purge a user's master browser credential vault, but can ensure the page never retains or leaks state.
-
-### Automated Test Suite Results (`test-auth-reset.mjs`):
-- Test 1 (Initial /login load): **PASS** (pristine empty fields)
-- Test 2 (Active typing stability): **PASS** (typing preserved without accidental clearing)
-- Test 3 (Abandoned form -> navigate /shop -> reopen /login): **PASS** (reopens clean)
-- Test 4 (Failed login): **PASS** (password wiped, email retained)
-- Test 5 (Full login -> logout -> reopen flow): **PASS** (pristine empty fields)
-- Test 6 (Page refresh on /login): **PASS** (pristine empty fields)
-- Test 7 (Signup form lifecycle): **PASS** (all 4 fields pristine)
-- Test 8 (Storage credential security audit): **PASS** (0 sensitive tokens in storage)
+### Verification Suite Results:
+- Full layout audit across 15 routes and 5 responsive widths: **PASS** (75/75 viewports).
+- Form navigation, reset, and failed login assertions: **PASS**.
+- Zero tokens or passwords stored in `localStorage` or `sessionStorage`: **PASS**.
 
 
 

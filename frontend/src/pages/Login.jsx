@@ -22,7 +22,6 @@ export const Login = () => {
   const { loginWithEmail, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const formRef = useRef(null);
 
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState(null);
@@ -46,30 +45,15 @@ export const Login = () => {
     mode: 'onSubmit',
   });
 
-  // Thorough form state & DOM cleanup function
+  // Thorough form state cleanup function
   const clearSensitiveFields = useCallback(() => {
     reset({ email: '', password: '' });
-    setValue('email', '');
-    setValue('password', '');
-    if (formRef.current) {
-      formRef.current.reset();
-    }
-  }, [reset, setValue]);
+  }, [reset]);
 
-  // Ensure form fields and native DOM are clean whenever this screen mounts, unmounts, or route changes
+  // Ensure form fields are clean whenever this screen mounts, unmounts, or route changes
   useEffect(() => {
     clearSensitiveFields();
-
-    // Reset when restored from browser back-forward cache (bfcache)
-    const handlePageShow = (event) => {
-      if (event.persisted) {
-        clearSensitiveFields();
-      }
-    };
-    window.addEventListener('pageshow', handlePageShow);
-
     return () => {
-      window.removeEventListener('pageshow', handlePageShow);
       clearSensitiveFields();
     };
   }, [clearSensitiveFields, location.key]);
@@ -86,8 +70,6 @@ export const Login = () => {
       console.error('Login error:', err);
       // On failed login: clear password field only, retain email, focus password
       setValue('password', '');
-      const pwdEl = document.getElementById('password');
-      if (pwdEl) pwdEl.value = '';
       setTimeout(() => setFocus('password'), 0);
 
       let msg = err.message || 'Authentication failed. Please verify your credentials.';
@@ -149,7 +131,7 @@ export const Login = () => {
               </div>
             )}
 
-            <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate autoComplete="off">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate autoComplete="off">
               <div>
                 <Label htmlFor="email">Email Address</Label>
                 <Controller

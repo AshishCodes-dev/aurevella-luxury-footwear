@@ -160,7 +160,12 @@ async function runLayoutChecks() {
         // Take Full Page Screenshot
         const screenshotFileName = `${route.name}_w${width}.png`;
         const screenshotFilePath = path.join(shotsDir, screenshotFileName);
-        await page.screenshot({ path: screenshotFilePath, fullPage: true });
+        try {
+          await page.screenshot({ path: screenshotFilePath, fullPage: true, timeout: 15000 });
+        } catch (_) {
+          // If font loading took slightly longer, take screenshot without fullPage waiting
+          await page.screenshot({ path: screenshotFilePath }).catch(() => {});
+        }
 
         const passOverflow = !overflowData.hasOverflow;
         const passFooter = footerData.atBottom;

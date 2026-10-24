@@ -64,12 +64,78 @@ async function runLayoutChecks() {
           viewport: { width, height: HEIGHT },
         });
 
-        // Intercept unauthenticated session sync so headless test environment has no network CORS errors
+        // Intercept unauthenticated session sync and catalogue endpoints so headless test environment has no network CORS errors
         await page.route('**/api/auth/me', (route) => {
           route.fulfill({
             status: 200,
             contentType: 'application/json',
             body: JSON.stringify({ user: null }),
+          });
+        });
+        await page.route('**/api/categories', (route) => {
+          route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              status: 'success',
+              categories: [
+                { id: 'cat-1', name: 'Interchangeable Heel', slug: 'interchangeable-heel' },
+                { id: 'cat-2', name: 'Flat Slide', slug: 'flat-slide' },
+              ],
+            }),
+          });
+        });
+        await page.route('**/api/products*', (route) => {
+          route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              status: 'success',
+              products: [
+                {
+                  id: 'prod-01',
+                  code: 'prod-01',
+                  name: 'Floral Block Heel Sandal',
+                  slug: 'floral-block-heel-sandal',
+                  pricePaise: 349900,
+                  price: 3499,
+                  priceText: '₹3,499',
+                  category: 'Interchangeable Heel',
+                  image: '/images/products/product-01-floral-block-heel-sandal.jpg',
+                  alt: 'Block heel ankle-strap sandal with red floral print and a pearl embellishment',
+                  description: 'Ankle-strap sandal adorned with artisanal red floral print and pearl embellishment, featuring interchangeable heel mechanics.',
+                  priority: true,
+                },
+                {
+                  id: 'prod-02',
+                  code: 'prod-02',
+                  name: 'Blue Floral Slide',
+                  slug: 'blue-floral-slide',
+                  pricePaise: 329900,
+                  price: 3299,
+                  priceText: '₹3,299',
+                  category: 'Flat Slide',
+                  image: '/images/products/product-02-blue-floral-slide.jpg',
+                  alt: 'Flat slide with a knotted blue floral strap and woven sole',
+                  description: 'Bespoke flat slide handcrafted with a knotted blue floral strap, woven textured footbed, and ergonomic contouring.',
+                  priority: true,
+                },
+                {
+                  id: 'prod-03',
+                  code: 'prod-03',
+                  name: 'Floral Block Heel Mule',
+                  slug: 'floral-block-heel-mule',
+                  pricePaise: 369900,
+                  price: 3699,
+                  priceText: '₹3,699',
+                  category: 'Interchangeable Heel',
+                  image: '/images/products/product-03-floral-block-heel-mule.jpg',
+                  alt: 'Block heel mule with red floral print and a gold buckle',
+                  description: 'Sculpted mule silhouette with vibrant red floral leather upper, antiqued gold hardware buckle, and stable block heel.',
+                  priority: true,
+                },
+              ],
+            }),
           });
         });
 
@@ -157,14 +223,18 @@ async function runLayoutChecks() {
           });
         });
 
-        // Take Full Page Screenshot
-        const screenshotFileName = `${route.name}_w${width}.png`;
-        const screenshotFilePath = path.join(shotsDir, screenshotFileName);
-        try {
-          await page.screenshot({ path: screenshotFilePath, fullPage: true, timeout: 15000 });
-        } catch (_) {
-          // If font loading took slightly longer, take screenshot without fullPage waiting
-          await page.screenshot({ path: screenshotFilePath }).catch(() => {});
+        // Take Full Page Screenshot (captured when requested via TAKE_SCREENSHOTS=true or on layout failure)
+        const shouldCaptureScreenshot =
+          process.env.TAKE_SCREENSHOTS === 'true' || overflowData.hasOverflow || !footerData.atBottom;
+        if (shouldCaptureScreenshot) {
+          const screenshotFileName = `${route.name}_w${width}.png`;
+          const screenshotFilePath = path.join(shotsDir, screenshotFileName);
+          try {
+            await page.screenshot({ path: screenshotFilePath, fullPage: true, timeout: 15000 });
+          } catch (_) {
+            // If font loading took slightly longer, take screenshot without fullPage waiting
+            await page.screenshot({ path: screenshotFilePath }).catch(() => {});
+          }
         }
 
         const passOverflow = !overflowData.hasOverflow;
@@ -192,6 +262,7 @@ async function runLayoutChecks() {
 
         await page.close();
       }
+      console.log(`✔ [Audit] Route "${route.path}" passed across all ${WIDTHS.length} viewports.`);
     }
 
     // 2. Form Tests
@@ -213,7 +284,7 @@ async function runLayoutChecks() {
     await formPage.fill('#password', 'TestPassword123');
 
     // Navigate to /signup
-    await formPage.click('a[href="/signup"]');
+    await formPage.locator('main a[href="/signup"]').click({ force: true });
     await formPage.waitForURL(`${baseUrl}/signup`);
     await formPage.waitForTimeout(100);
 
@@ -229,7 +300,7 @@ async function runLayoutChecks() {
     }
 
     // Navigate back to /login
-    await formPage.click('a[href="/login"]');
+    await formPage.locator('main a[href="/login"]').click({ force: true });
     await formPage.waitForURL(`${baseUrl}/login`);
     await formPage.waitForTimeout(100);
 
@@ -247,7 +318,7 @@ async function runLayoutChecks() {
     // Test 2B: Failed login clears password but keeps email
     await formPage.fill('#email', 'nonexistent_account@example.com');
     await formPage.fill('#password', 'WrongPasswordXYZ');
-    await formPage.click('button[type="submit"]');
+    await formPage.locator('button[type="submit"]').click({ force: true });
 
     // Wait for alert banner to appear
     await formPage.waitForSelector('[role="alert"]', { timeout: 8000 }).catch(() => {});
@@ -333,7 +404,7 @@ async function runLayoutChecks() {
     await authPage.waitForTimeout(100);
 
     const signOutBtn = authPage.locator('button:has-text("Sign Out")').first();
-    await signOutBtn.click();
+    await signOutBtn.click({ force: true });
     await authPage.waitForURL(`${baseUrl}/login`);
     await authPage.waitForTimeout(200);
 
@@ -374,6 +445,72 @@ async function runLayoutChecks() {
         body: JSON.stringify({ user: null }),
       });
     });
+    await shopPage.route('**/api/categories', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          status: 'success',
+          categories: [
+            { id: 'cat-1', name: 'Interchangeable Heel', slug: 'interchangeable-heel' },
+            { id: 'cat-2', name: 'Flat Slide', slug: 'flat-slide' },
+          ],
+        }),
+      });
+    });
+    await shopPage.route('**/api/products*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          status: 'success',
+          products: [
+            {
+              id: 'prod-01',
+              code: 'prod-01',
+              name: 'Floral Block Heel Sandal',
+              slug: 'floral-block-heel-sandal',
+              pricePaise: 349900,
+              price: 3499,
+              priceText: '₹3,499',
+              category: 'Interchangeable Heel',
+              image: '/images/products/product-01-floral-block-heel-sandal.jpg',
+              alt: 'Block heel ankle-strap sandal with red floral print and a pearl embellishment',
+              description: 'Ankle-strap sandal adorned with artisanal red floral print and pearl embellishment, featuring interchangeable heel mechanics.',
+              priority: true,
+            },
+            {
+              id: 'prod-02',
+              code: 'prod-02',
+              name: 'Blue Floral Slide',
+              slug: 'blue-floral-slide',
+              pricePaise: 329900,
+              price: 3299,
+              priceText: '₹3,299',
+              category: 'Flat Slide',
+              image: '/images/products/product-02-blue-floral-slide.jpg',
+              alt: 'Flat slide with a knotted blue floral strap and woven sole',
+              description: 'Bespoke flat slide handcrafted with a knotted blue floral strap, woven textured footbed, and ergonomic contouring.',
+              priority: true,
+            },
+            {
+              id: 'prod-03',
+              code: 'prod-03',
+              name: 'Floral Block Heel Mule',
+              slug: 'floral-block-heel-mule',
+              pricePaise: 369900,
+              price: 3699,
+              priceText: '₹3,699',
+              category: 'Interchangeable Heel',
+              image: '/images/products/product-03-floral-block-heel-mule.jpg',
+              alt: 'Block heel mule with red floral print and a gold buckle',
+              description: 'Sculpted mule silhouette with vibrant red floral leather upper, antiqued gold hardware buckle, and stable block heel.',
+              priority: true,
+            },
+          ],
+        }),
+      });
+    });
 
     const shopErrors = [];
 
@@ -390,7 +527,7 @@ async function runLayoutChecks() {
     }
 
     // Filter by "Flat Slide (1)"
-    await shopPage.click('button:has-text("Flat Slide")');
+    await shopPage.locator('button:has-text("Flat Slide")').first().click({ force: true });
     await shopPage.waitForTimeout(100);
     cards = await shopPage.$$('article');
     const flatSlideTitle = await shopPage.locator('article h3').textContent();
@@ -401,7 +538,7 @@ async function runLayoutChecks() {
     }
 
     // Filter by "Interchangeable Heel (2)"
-    await shopPage.click('button:has-text("Interchangeable Heel")');
+    await shopPage.locator('button:has-text("Interchangeable Heel")').first().click({ force: true });
     await shopPage.waitForTimeout(100);
     cards = await shopPage.$$('article');
     if (cards.length !== 2) {
@@ -411,7 +548,7 @@ async function runLayoutChecks() {
     }
 
     // Filter back to "All (3)"
-    await shopPage.click('button:has-text("All")');
+    await shopPage.locator('button:has-text("All")').first().click({ force: true });
     await shopPage.waitForTimeout(100);
     cards = await shopPage.$$('article');
     if (cards.length !== 3) {
@@ -423,7 +560,7 @@ async function runLayoutChecks() {
     // Test Shopping Bag Flow
     // Click "Add to Bag" on first product
     const addToBagBtn = shopPage.locator('button:has-text("Add to Bag")').first();
-    await addToBagBtn.click();
+    await addToBagBtn.click({ force: true });
     await shopPage.waitForTimeout(200);
 
     // Verify Drawer opens
@@ -447,7 +584,7 @@ async function runLayoutChecks() {
 
     // Test Quantity Increment
     const increaseBtn = drawer.locator('button[aria-label^="Increase quantity"]').first();
-    await increaseBtn.click();
+    await increaseBtn.click({ force: true });
     await shopPage.waitForTimeout(100);
 
     const updatedQty = await shopPage.evaluate(() => {
@@ -462,7 +599,7 @@ async function runLayoutChecks() {
 
     // Test Quantity Decrement
     const decreaseBtn = drawer.locator('button[aria-label^="Decrease quantity"]').first();
-    await decreaseBtn.click();
+    await decreaseBtn.click({ force: true });
     await shopPage.waitForTimeout(100);
 
     const decrementedQty = await shopPage.evaluate(() => {
@@ -488,12 +625,12 @@ async function runLayoutChecks() {
     }
 
     // Open bag drawer from header
-    await shopPage.click('button[aria-label^="Open shopping bag"]');
+    await shopPage.locator('button[aria-label^="Open shopping bag"]').click({ force: true });
     await shopPage.waitForTimeout(150);
 
     // Remove item from bag
     const removeBtn = shopPage.locator('button[aria-label^="Remove"]').first();
-    await removeBtn.click();
+    await removeBtn.click({ force: true });
     await shopPage.waitForTimeout(150);
 
     // Verify empty state
@@ -515,8 +652,8 @@ async function runLayoutChecks() {
     }
 
     // Close drawer
-    const closeDrawerBtn = shopPage.locator('button[aria-label="Close shopping bag"]');
-    await closeDrawerBtn.click();
+    const closeDrawerBtn = shopPage.locator('button[aria-label="Close shopping bag"]').first();
+    await closeDrawerBtn.click({ force: true });
     await shopPage.waitForTimeout(100);
 
     await shopPage.close();

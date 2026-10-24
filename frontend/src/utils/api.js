@@ -55,3 +55,37 @@ export const apiFetch = async (endpoint, options = {}) => {
 
   return data;
 };
+
+// Catalogue API Helpers
+export const fetchProducts = async (params = {}) => {
+  const query = new URLSearchParams();
+  if (params.category && params.category !== 'All') {
+    query.set('category', params.category);
+  }
+  if (params.sort) {
+    query.set('sort', params.sort);
+  }
+  const queryString = query.toString();
+  const endpoint = queryString ? `/api/products?${queryString}` : '/api/products';
+  return apiFetch(endpoint);
+};
+
+export const fetchCategories = async () => {
+  return apiFetch('/api/categories');
+};
+
+export const fetchProductByIdOrSlug = async (idOrSlug) => {
+  return apiFetch(`/api/products/${idOrSlug}`);
+};
+
+// Customer Address API Helpers
+export const fetchUserAddresses = async () => {
+  return apiFetch('/api/users/addresses');
+};
+
+export const createUserAddress = async (addressData) => {
+  return apiFetch('/api/users/addresses', {
+    method: 'POST',
+    body: addressData,
+  });
+};

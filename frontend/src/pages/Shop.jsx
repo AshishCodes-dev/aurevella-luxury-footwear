@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ShoppingBag, MessageSquare, ArrowUpRight, Check, SlidersHorizontal } from 'lucide-react';
 import { PRODUCTS, CATEGORIES } from '../data/products.js';
+import { fetchProducts, fetchCategories } from '../utils/api.js';
 import { useBag } from '../context/BagContext.jsx';
 import useDocumentTitle from '../utils/useDocumentTitle.js';
 
@@ -8,13 +9,47 @@ export const Shop = () => {
   useDocumentTitle('Atelier Footwear Catalogue — AUREVELLA');
   const { addToBag } = useBag();
 
+  const [products, setProducts] = useState(PRODUCTS);
+  const [categories, setCategories] = useState(CATEGORIES);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('default');
   const [addedProductId, setAddedProductId] = useState(null);
 
-  // Filter products based on real client data
+  // Sync with backend API while retaining graceful client-side fallback
+  useEffect(() => {
+    let isMounted = true;
+    const loadCatalogue = async () => {
+      try {
+        const [catData, prodData] = await Promise.all([
+          fetchCategories().catch(() => null),
+          fetchProducts().catch(() => null),
+        ]);
+
+        if (!isMounted) return;
+
+        if (catData && Array.isArray(catData.categories) && catData.categories.length > 0) {
+          const catNames = ['All', ...catData.categories.map((c) => c.name)];
+          setCategories(catNames);
+        }
+
+        if (prodData && Array.isArray(prodData.products) && prodData.products.length > 0) {
+          setProducts(prodData.products);
+        }
+      } catch (err) {
+        console.warn('Catalogue API unavailable; using local fallback catalogue:', err);
+      }
+    };
+
+    loadCatalogue();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Filter products based on active category and sorting
   const filteredProducts = useMemo(() => {
-    let list = [...PRODUCTS];
+    let list = [...products];
 
     if (selectedCategory !== 'All') {
       list = list.filter((p) => p.category === selectedCategory);
@@ -29,7 +64,7 @@ export const Shop = () => {
     }
 
     return list;
-  }, [selectedCategory, sortBy]);
+  }, [products, selectedCategory, sortBy]);
 
   const handleAddToBag = (productId) => {
     const success = addToBag(productId, 1);
@@ -63,11 +98,11 @@ export const Shop = () => {
       <div className="border-y border-[#2F1C15] py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Category Filter Pills */}
         <div className="flex flex-wrap items-center gap-2">
-          {CATEGORIES.map((cat) => {
+          {categories.map((cat) => {
             const count =
               cat === 'All'
-                ? PRODUCTS.length
-                : PRODUCTS.filter((p) => p.category === cat).length;
+                ? products.length
+                : products.filter((p) => p.category === cat).length;
             const isSelected = selectedCategory === cat;
 
             return (

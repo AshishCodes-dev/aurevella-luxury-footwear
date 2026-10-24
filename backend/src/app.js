@@ -9,6 +9,8 @@ import { csrfGuard } from './middleware/csrfGuard.js';
 import { sanitize } from './middleware/sanitize.js';
 import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import productRoutes, { getCategories } from './routes/product.routes.js';
+import userRoutes from './routes/user.routes.js';
 
 const app = express();
 
@@ -62,6 +64,9 @@ app.get('/api/health', (req, res) => {
 // Mount Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/products', productRoutes);
+app.get('/api/categories', getCategories);
+app.use('/api/users', userRoutes);
 
 // 404 Handler
 app.use((req, res, next) => {

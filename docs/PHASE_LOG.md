@@ -1273,6 +1273,83 @@ Phase 2.3B resolved the visual unevenness of the previous footer and introduced 
    - Automated headless tests confirm fields are empty during submission and empty on reopening after logout.
    - All 75 viewports and form checks continue to pass with 0 errors.
 
+---
+
+# Phase 5 Log: Product & Address Backend Foundation
+
+## 1. Executive Summary & Architecture Overview
+
+Phase 5 establishes the production-grade MongoDB schema, public catalogue API, customer address book, and idempotent database seeding for the Aurevella luxury footwear platform, bridging backend state with frontend UI while strictly honoring zero client price trust and data ownership boundaries.
+
+### Key Pillars:
+1. **Product & Category Data Foundation (`Category.js`, `Product.js`)**:
+   - Category hierarchy with normalized kebab-case slugs, display ordering, and active flags.
+   - Integer paise pricing (`pricePaise`), eliminating JavaScript floating-point rounding errors. Client-submitted prices are never trusted.
+   - Multi-asset image support preserving existing client assets (`/images/products/...`).
+   - Unified identification: `toSafeJSON()` returns both `code` (`prod-01`, `prod-02`, `prod-03`), `slug`, and MongoDB `_id` for backward compatibility with frontend cart storage.
+2. **Customer Address Book & Ownership Isolation (`Address.js`, `address.controller.js`)**:
+   - Authenticated endpoints (`GET /api/users/addresses`, `POST /api/users/addresses`) requiring valid session cookies and custom CSRF header (`X-Aurevella-Request: 1`).
+   - Strict Indian postal PIN validation (`/^[1-9][0-9]{5}$/` — 6 digits, non-zero first digit) enforced at both Mongoose schema and Zod request validation layers.
+   - Absolute multi-tenant isolation: address queries and creations are bound strictly to `req.user._id`, preventing cross-customer data leakage.
+3. **Idempotent Seeder (`seedProducts.js`)**:
+   - Safely upserts 2 launch categories (*Interchangeable Heel*, *Flat Slide*) and 3 approved launch silhouettes (*Floral Block Heel Sandal* ₹3,499 / 349900 paise, *Blue Floral Slide* ₹3,299 / 329900 paise, *Floral Block Heel Mule* ₹3,699 / 369900 paise).
+   - Executable via `npm run seed:products` in `backend/`.
+4. **Public Catalogue API (`product.controller.js`, `product.routes.js`)**:
+   - `GET /api/categories`: Returns active launch categories ordered by display hierarchy.
+   - `GET /api/products`: Supports category filtering by slug or name, and allowlisted sorting (`featured`, `price-asc`, `price-desc`, `name-asc`, `name-desc`).
+   - `GET /api/products/:idOrSlug`: Resolves silhouettes via slug, product code (`prod-01`), or Mongo ObjectId with robust 404 handling.
+5. **Resilient Frontend Connection (`Shop.jsx`, `api.js`)**:
+   - `Shop.jsx` fetches catalogue categories and products on mount.
+   - Instant hydration with local `PRODUCTS` fallback guarantees zero CLS, zero layout shift, and immediate rendering during network latency or offline testing.
+
+---
+
+## 2. Files Changed & Created
+
+### Backend Files:
+1. `backend/src/models/Category.js` — Mongoose schema for product categories.
+2. `backend/src/models/Product.js` — Mongoose schema with integer paise pricing and multi-asset support.
+3. `backend/src/models/Address.js` — Mongoose schema for customer addresses with Indian PIN code validation.
+4. `backend/src/controllers/product.controller.js` — Controller for categories, products catalogue, and product detail lookup.
+5. `backend/src/routes/product.routes.js` — Express router mounting `/api/products` and `/api/categories`.
+6. `backend/src/controllers/address.controller.js` — Controller for authenticated address retrieval and creation.
+7. `backend/src/routes/user.routes.js` — Express router mounting `/api/users/addresses` with Zod validation.
+8. `backend/src/utils/seedProducts.js` — Idempotent seeding script for launch categories and products.
+9. `backend/src/app.js` — Mounted product, category, and user address route handlers.
+10. `backend/package.json` — Registered `seed:products` and `test:phase5` npm scripts.
+11. `backend/scripts/testPhase5.js` — Automated test suite covering model validation, catalogue APIs, 404s, address auth, and ownership isolation.
+
+### Frontend Files:
+12. `frontend/src/utils/api.js` — Added helpers `fetchProducts`, `fetchCategories`, `fetchProductByIdOrSlug`, `fetchUserAddresses`, and `createUserAddress`.
+13. `frontend/src/pages/Shop.jsx` — Connected catalogue and category filter counts to live API with fallback.
+14. `frontend/scripts/layout-check.mjs` — Added catalogue route mock interceptors for headless test stability.
+
+---
+
+## 3. Test & Verification Matrix
+
+| Check / Test Target | Verification Command / Suite | Result | Notes |
+| :--- | :--- | :---: | :--- |
+| **Product Model: Float Price Rejection** | `npm run test:phase5` (Suite 1) | **PASS** | Rejected fractional paise `3499.5` |
+| **Product Model: Negative Price Rejection** | `npm run test:phase5` (Suite 1) | **PASS** | Rejected negative price `-500` |
+| **Address Model: Indian PIN Format** | `npm run test:phase5` (Suite 1) | **PASS** | Rejected invalid PIN `012345` via regex `/^[1-9][0-9]{5}$/` |
+| **GET /api/categories** | `npm run test:phase5` (Suite 2) | **PASS** | Returns active categories (count: 2) |
+| **GET /api/products** | `npm run test:phase5` (Suite 2) | **PASS** | Returns all 3 launch silhouettes |
+| **GET /api/products?category=...** | `npm run test:phase5` (Suite 2) | **PASS** | `interchangeable-heel` = 2, `flat-slide` = 1 |
+| **GET /api/products?sort=price-asc** | `npm run test:phase5` (Suite 2) | **PASS** | Verified ascending order: 329900, 349900, 369900 paise |
+| **GET /api/products/:slug** | `npm run test:phase5` (Suite 2) | **PASS** | Resolves `blue-floral-slide` |
+| **GET /api/products/:id** | `npm run test:phase5` (Suite 2) | **PASS** | Resolves by both Code (`prod-01`) and Mongo `_id` |
+| **GET /api/products/:missing (404)** | `npm run test:phase5` (Suite 2) | **PASS** | Returns clean 404 status and error payload |
+| **GET /api/users/addresses (Unauth)** | `npm run test:phase5` (Suite 3) | **PASS** | Rejects unauthenticated request with 401 |
+| **POST /api/users/addresses (Unauth)** | `npm run test:phase5` (Suite 3) | **PASS** | Rejects unauthenticated request with 401 |
+| **POST /api/users/addresses (Validation)** | `npm run test:phase5` (Suite 3) | **PASS** | Zod caught 4 validation errors on invalid payload |
+| **POST /api/users/addresses (Creation)** | `npm run test:phase5` (Suite 3) | **PASS** | Successfully created address attached to authenticated user |
+| **GET /api/users/addresses (Ownership)** | `npm run test:phase5` (Suite 3) | **PASS** | User A retrieves own address (count: 1) |
+| **Cross-Tenant Isolation** | `npm run test:phase5` (Suite 3) | **PASS** | User B retrieves 0 addresses (0 cross-tenant leakage) |
+| **Frontend Production Build** | `npm run build` (frontend) | **PASS** | 2,093 modules bundled with 0 errors |
+| **Headless Layout Audit** | `npm run check:layout` (frontend) | **PASS** | 75/75 viewports, catalogue filter, and bag operations verified |
+
+
 
 
 

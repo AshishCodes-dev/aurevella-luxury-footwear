@@ -22,6 +22,7 @@ export const Login = () => {
   const { loginWithEmail, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const formRef = useRef(null);
 
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState(null);
@@ -48,27 +49,53 @@ export const Login = () => {
   // Thorough form state cleanup function
   const clearSensitiveFields = useCallback(() => {
     reset({ email: '', password: '' });
+    if (formRef.current) {
+      formRef.current.reset();
+    }
+    const emailEl = document.getElementById('email');
+    const passEl = document.getElementById('password');
+    if (emailEl) emailEl.value = '';
+    if (passEl) passEl.value = '';
   }, [reset]);
 
   // Ensure form fields are clean whenever this screen mounts, unmounts, or route changes
   useEffect(() => {
     clearSensitiveFields();
+
+    // Delayed cleanup to prevent browser password manager / autofill heuristics from prefilling on mount
+    const timer = setTimeout(() => {
+      const emailEl = document.getElementById('email');
+      const passEl = document.getElementById('password');
+      const activeEl = document.activeElement;
+      if (activeEl !== emailEl && activeEl !== passEl) {
+        clearSensitiveFields();
+      }
+    }, 100);
+
     return () => {
+      clearTimeout(timer);
       clearSensitiveFields();
     };
   }, [clearSensitiveFields, location.key]);
 
   const onSubmit = async (data) => {
+    const emailToSubmit = data.email;
+    const passwordToSubmit = data.password;
+
+    // Immediately clear both input fields so the box is empty the moment login is clicked
+    clearSensitiveFields();
     setFormError(null);
     setIsSubmitting(true);
+
     try {
-      await loginWithEmail(data.email, data.password);
-      // Immediately clear password and form state upon successful auth before navigating
+      await loginWithEmail(emailToSubmit, passwordToSubmit);
+      // Ensure form state remains completely clear before navigating
       clearSensitiveFields();
       navigate(from, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
-      // On failed login: clear password field only, retain email, focus password
+      // On failed login: restore email only, keep password empty
+      setValue('email', emailToSubmit);
       setValue('password', '');
       setTimeout(() => setFocus('password'), 0);
 
@@ -90,6 +117,7 @@ export const Login = () => {
   };
 
   const handleGoogleSignIn = async () => {
+    clearSensitiveFields();
     setFormError(null);
     setIsSubmitting(true);
     try {
@@ -131,7 +159,26 @@ export const Login = () => {
               </div>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate autoComplete="off">
+            <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate autoComplete="off">
+              {/* Hidden dummy fields to consume automatic browser password manager autofill on load */}
+              <input
+                type="text"
+                name="prevent_autofill_email"
+                tabIndex={-1}
+                aria-hidden="true"
+                autoComplete="username"
+                className="sr-only"
+                style={{ position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1, pointerEvents: 'none' }}
+              />
+              <input
+                type="password"
+                name="prevent_autofill_pwd"
+                tabIndex={-1}
+                aria-hidden="true"
+                autoComplete="current-password"
+                className="sr-only"
+                style={{ position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1, pointerEvents: 'none' }}
+              />
               <div>
                 <Label htmlFor="email">Email Address</Label>
                 <Controller

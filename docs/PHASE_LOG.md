@@ -1253,5 +1253,26 @@ Phase 2.3B resolved the visual unevenness of the previous footer and introduced 
 - Form navigation, reset, and failed login assertions: **PASS**.
 - Zero tokens or passwords stored in `localStorage` or `sessionStorage`: **PASS**.
 
+---
+
+## 6. Addendum: SiginFix-Video Reproduction & Instant Submission Clearing
+
+### Video Evidence Analysis (`SiginFix-Video.mp4`):
+1. **At 00:01 - 00:03 (Sign In Click)**: User enters credentials and clicks `SIGN IN`. The button enters `Signing in...` loading state, but the email and password fields remained visually populated with text and password dots for the entire ~2.5 second duration of the Firebase + backend session authentication round-trip.
+2. **At 00:12 - 00:14 (Logout Return to `/login`)**: After clicking `SIGN OUT` on `/account`, user was redirected to `/login`, where Chrome's Password Manager automatically reinjected the saved origin credentials into the empty DOM inputs upon mount.
+
+### Applied Minimal Fix:
+1. **Immediate Form Clearing Upon Submission (`Login.jsx` & `Signup.jsx`)**:
+   - Captured `data.email` and `data.password` in local constants and called `clearSensitiveFields()` synchronously before commencing the async authentication network request.
+   - Both input boxes visually empty the exact instant the user initiates login, satisfying the requirement: *"login hote he woh empty ho jana chaiye box kuch nahi dikhana chaiye"*.
+   - On failed authentication, `catch (err)` cleanly restores the email while leaving the password field completely clear.
+2. **Browser Password Manager Autofill Trap & Delayed Mount Wipe**:
+   - Placed hidden, zero-size dummy inputs (`prevent_autofill_email`, `prevent_autofill_pwd`) at the start of `<form>` to satisfy Chrome's autofill heuristics without populating the real inputs.
+   - Added a 100ms delayed tick in `useEffect` to ensure any asynchronous browser prefill on mount is wiped clean if the user has not actively focused the inputs.
+3. **Verification**:
+   - Automated headless tests confirm fields are empty during submission and empty on reopening after logout.
+   - All 75 viewports and form checks continue to pass with 0 errors.
+
+
 
 

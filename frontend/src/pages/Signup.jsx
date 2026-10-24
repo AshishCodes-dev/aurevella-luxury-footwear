@@ -69,22 +69,42 @@ export const Signup = () => {
   // Ensure form fields and native DOM are clean whenever this screen mounts, unmounts, or route changes
   useEffect(() => {
     clearSensitiveFields();
+
+    // Delayed cleanup to prevent browser password manager / autofill heuristics from prefilling on mount
+    const timer = setTimeout(() => {
+      const emailEl = document.getElementById('email');
+      const passEl = document.getElementById('password');
+      const confirmEl = document.getElementById('confirmPassword');
+      const activeEl = document.activeElement;
+      if (activeEl !== emailEl && activeEl !== passEl && activeEl !== confirmEl) {
+        clearSensitiveFields();
+      }
+    }, 100);
+
     return () => {
+      clearTimeout(timer);
       clearSensitiveFields();
     };
   }, [clearSensitiveFields, location.key]);
 
   const onSubmit = async (data) => {
+    const { name, email, password } = data;
+
+    // Immediately clear all fields so the box is empty the moment registration is clicked
+    clearSensitiveFields();
     setFormError(null);
     setIsSubmitting(true);
+
     try {
-      await signupWithEmail(data.name, data.email, data.password);
+      await signupWithEmail(name, email, password);
       // Immediately clear passwords and form state upon successful registration before navigating
       clearSensitiveFields();
       navigate('/account', { replace: true });
     } catch (err) {
       console.error('Signup error:', err);
-      // On failed signup: clear both password fields, retain name and email
+      // On failed signup: restore name and email, clear both password fields
+      setValue('name', name);
+      setValue('email', email);
       setValue('password', '');
       setValue('confirmPassword', '');
       const pwdEl = document.getElementById('password');
@@ -106,6 +126,7 @@ export const Signup = () => {
   };
 
   const handleGoogleSignIn = async () => {
+    clearSensitiveFields();
     setFormError(null);
     setIsSubmitting(true);
     try {
@@ -148,6 +169,25 @@ export const Signup = () => {
             )}
 
             <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate autoComplete="off">
+              {/* Hidden dummy fields to consume automatic browser password manager autofill on load */}
+              <input
+                type="text"
+                name="prevent_autofill_email"
+                tabIndex={-1}
+                aria-hidden="true"
+                autoComplete="username"
+                className="sr-only"
+                style={{ position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1, pointerEvents: 'none' }}
+              />
+              <input
+                type="password"
+                name="prevent_autofill_pwd"
+                tabIndex={-1}
+                aria-hidden="true"
+                autoComplete="new-password"
+                className="sr-only"
+                style={{ position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1, pointerEvents: 'none' }}
+              />
               <div>
                 <Label htmlFor="name">Full Name</Label>
                 <Input

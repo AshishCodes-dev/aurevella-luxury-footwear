@@ -38,9 +38,149 @@ export const getRazorpayWebhookSecret = () => {
 };
 
 /**
+ * Internal slot for an injected offline mock instance.
+ * Strictly used in automated test environments to prevent network requests.
+ * In production/normal mode, this remains null and getRazorpayInstance()
+ * instantiates the official Razorpay SDK client.
+ */
+let customRazorpayInstance = null;
+
+/**
+ * Injects a test-only mock Razorpay instance.
+ * Fails closed with a fatal error if invoked in production.
+ *
+ * @param {Object|null} instance
+ */
+export const setCustomRazorpayInstance = (instance) => {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      '[SECURITY FATAL] Custom Razorpay mock instance cannot be injected in production environment.'
+    );
+  }
+  customRazorpayInstance = instance;
+};
+
+/**
+ * Resets the custom Razorpay instance to null.
+ */
+export const resetCustomRazorpayInstance = () => {
+  customRazorpayInstance = null;
+};
+
+/**
+ * Creates a configurable offline Razorpay mock client for test suites.
+ * Guaranteed to never make network requests.
+ * Fails closed with a fatal error if invoked in production.
+ * Fails loudly with an explicit error if an unhandled call is attempted.
+ *
+ * @param {Object} [options]
+ * @returns {Object}
+ */
+export const createMockRazorpay = (options = {}) => {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      '[SECURITY FATAL] Cannot create mock Razorpay instance in production environment.'
+    );
+  }
+
+  const paymentHandlers = new Map();
+  const orderHandlers = [];
+  let defaultPaymentHandler = null;
+  let defaultOrderHandler = null;
+
+  const mock = {
+    payments: {
+      fetch: async (paymentId) => {
+        if (paymentHandlers.has(paymentId)) {
+          const handler = paymentHandlers.get(paymentId);
+          if (typeof handler === 'function') {
+            return handler(paymentId);
+          }
+          if (handler instanceof Error) {
+            throw handler;
+          }
+          return handler;
+        }
+        if (defaultPaymentHandler) {
+          if (typeof defaultPaymentHandler === 'function') {
+            return defaultPaymentHandler(paymentId);
+          }
+          if (defaultPaymentHandler instanceof Error) {
+            throw defaultPaymentHandler;
+          }
+          return defaultPaymentHandler;
+        }
+        throw new Error(
+          `[OFFLINE MOCK GUARD] Real network call blocked! Unhandled razorpay.payments.fetch("${paymentId}") in test.`
+        );
+      },
+    },
+    orders: {
+      create: async (params) => {
+        if (orderHandlers.length > 0) {
+          const handler = orderHandlers.shift();
+          if (typeof handler === 'function') {
+            return handler(params);
+          }
+          if (handler instanceof Error) {
+            throw handler;
+          }
+          return handler;
+        }
+        if (defaultOrderHandler) {
+          if (typeof defaultOrderHandler === 'function') {
+            return defaultOrderHandler(params);
+          }
+          if (defaultOrderHandler instanceof Error) {
+            throw defaultOrderHandler;
+          }
+          return defaultOrderHandler;
+        }
+        throw new Error(
+          `[OFFLINE MOCK GUARD] Real network call blocked! Unhandled razorpay.orders.create(${JSON.stringify(
+            params
+          )}) in test.`
+        );
+      },
+    },
+
+    // Chainable configuration helpers
+    mockPayment: (paymentId, recordOrHandler) => {
+      paymentHandlers.set(paymentId, recordOrHandler);
+      return mock;
+    },
+    mockDefaultPayment: (recordOrHandler) => {
+      defaultPaymentHandler = recordOrHandler;
+      return mock;
+    },
+    mockOrder: (recordOrHandler) => {
+      orderHandlers.push(recordOrHandler);
+      return mock;
+    },
+    mockDefaultOrder: (recordOrHandler) => {
+      defaultOrderHandler = recordOrHandler;
+      return mock;
+    },
+    reset: () => {
+      paymentHandlers.clear();
+      orderHandlers.length = 0;
+      defaultPaymentHandler = null;
+      defaultOrderHandler = null;
+    },
+  };
+
+  return mock;
+};
+
+/**
  * Creates and returns an initialized Razorpay instance in Test Mode.
+ * Returns customRazorpayInstance only in non-production environments if set by a test runner.
  */
 export const getRazorpayInstance = () => {
+  if (process.env.NODE_ENV !== 'production' && customRazorpayInstance) {
+    return customRazorpayInstance;
+  }
+
   const key_id = getRazorpayKeyId();
   const key_secret = getRazorpayKeySecret();
 

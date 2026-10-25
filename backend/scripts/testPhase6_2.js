@@ -20,9 +20,9 @@ async function runPhase6_2TestSuite() {
 
   // Verify MongoDB connection topology
   const host = mongoose.connection.host || 'unknown';
-  const isReplicaSet = mongoose.connection.client?.topology?.description?.type === 'ReplicaSetWithPrimary' ||
-    host.includes('mongodb.net');
-  console.log(`[Database] Connected to ${host} (ReplicaSet Transactions Supported: ${isReplicaSet})\n`);
+  const topoType = mongoose.connection.client?.topology?.description?.type || 'unknown';
+  const isReplicaSet = ['ReplicaSetWithPrimary', 'Sharded', 'LoadBalanced'].includes(topoType);
+  console.log(`[Database] Connected to ${host} (Topology: ${topoType}, Transactions Supported: ${isReplicaSet})\n`);
 
   const results = [];
   let allPassed = true;
@@ -51,11 +51,18 @@ async function runPhase6_2TestSuite() {
   process.env.RAZORPAY_KEY_SECRET = TEST_KEY_SECRET;
   process.env.RAZORPAY_WEBHOOK_SECRET = TEST_WEBHOOK_SECRET;
 
+  // Initialize deterministic offline Razorpay mock (guarantees zero external network requests)
+  const mockRazorpay = razorpayConfig.createMockRazorpay();
+  razorpayConfig.setCustomRazorpayInstance(mockRazorpay);
+
   try {
     // ----------------------------------------------------
     // Suite 1: Test Accounts & Products Setup
     // ----------------------------------------------------
     console.log('[Suite 1] Setting Up Test Accounts & Products...');
+
+    // Clean up any stale test-owned orders from interrupted prior runs
+    await Order.deleteMany({ orderNumber: { $regex: /^AUR-TEST/ } });
 
     const testUserA = await User.findOneAndUpdate(
       { email: 'userA_p62@aurevella.com' },
@@ -340,6 +347,15 @@ async function runPhase6_2TestSuite() {
     // 5C: Valid signature accepted & transitions order to 'paid'
     const initialStock = (await Product.findById(testProduct._id)).stockQuantity;
 
+    // Register offline mock payment response (status: 'captured')
+    mockRazorpay.mockPayment(razorpayPaymentId, {
+      id: razorpayPaymentId,
+      order_id: razorpayOrderId,
+      amount: orderUserA.totalPaise,
+      currency: 'INR',
+      status: 'captured',
+    });
+
     const validVerifyRes = await fetch(`${baseUrl}/api/payments/verify`, {
       method: 'POST',
       headers: authHeadersA,
@@ -407,6 +423,124 @@ async function runPhase6_2TestSuite() {
       'Security: Rejects attaching already-used razorpayPaymentId to a different order (409)',
       duplicatePayRes.status === 409,
       `Status: ${duplicatePayRes.status} (Conflict blocked)`
+    );
+
+    // 5F: Uncaptured payment (status: 'authorized') rejected and inventory preserved
+    const orderUncaptured = await createTestOrder(testUserA, 1);
+    const rzpOrderUncaptured = `order_test_uncap_${Date.now()}`;
+    const rzpPayUncaptured = `pay_test_uncap_${Date.now()}`;
+    orderUncaptured.paymentDetails.razorpayOrderId = rzpOrderUncaptured;
+    await orderUncaptured.save();
+
+    const uncapSig = crypto
+      .createHmac('sha256', TEST_KEY_SECRET)
+      .update(`${rzpOrderUncaptured}|${rzpPayUncaptured}`)
+      .digest('hex');
+
+    mockRazorpay.mockPayment(rzpPayUncaptured, {
+      id: rzpPayUncaptured,
+      order_id: rzpOrderUncaptured,
+      amount: orderUncaptured.totalPaise,
+      currency: 'INR',
+      status: 'authorized', // Not captured!
+    });
+
+    const stockBeforeUncap = (await Product.findById(testProduct._id)).stockQuantity;
+    const uncapRes = await fetch(`${baseUrl}/api/payments/verify`, {
+      method: 'POST',
+      headers: authHeadersA,
+      body: JSON.stringify({
+        orderId: orderUncaptured._id.toString(),
+        razorpayOrderId: rzpOrderUncaptured,
+        razorpayPaymentId: rzpPayUncaptured,
+        razorpaySignature: uncapSig,
+      }),
+    });
+    const uncapData = await uncapRes.json();
+    const stockAfterUncap = (await Product.findById(testProduct._id)).stockQuantity;
+
+    record(
+      'Gateway Validation: Rejects uncaptured payment status (409 PAYMENT_NOT_CAPTURED)',
+      uncapRes.status === 409 && uncapData.code === 'PAYMENT_NOT_CAPTURED' && stockAfterUncap === stockBeforeUncap,
+      `Status: ${uncapRes.status}, Code: ${uncapData.code}, Stock unchanged: ${stockAfterUncap}`
+    );
+
+    // 5G: Gateway amount mismatch flags order for reconciliation without decrementing stock
+    const orderMismatch = await createTestOrder(testUserA, 1);
+    const rzpOrderMismatch = `order_test_mis_${Date.now()}`;
+    const rzpPayMismatch = `pay_test_mis_${Date.now()}`;
+    orderMismatch.paymentDetails.razorpayOrderId = rzpOrderMismatch;
+    await orderMismatch.save();
+
+    const mismatchSig = crypto
+      .createHmac('sha256', TEST_KEY_SECRET)
+      .update(`${rzpOrderMismatch}|${rzpPayMismatch}`)
+      .digest('hex');
+
+    mockRazorpay.mockPayment(rzpPayMismatch, {
+      id: rzpPayMismatch,
+      order_id: rzpOrderMismatch,
+      amount: orderMismatch.totalPaise + 50000, // ₹500 mismatch!
+      currency: 'INR',
+      status: 'captured',
+    });
+
+    const stockBeforeMismatch = (await Product.findById(testProduct._id)).stockQuantity;
+    const mismatchRes = await fetch(`${baseUrl}/api/payments/verify`, {
+      method: 'POST',
+      headers: authHeadersA,
+      body: JSON.stringify({
+        orderId: orderMismatch._id.toString(),
+        razorpayOrderId: rzpOrderMismatch,
+        razorpayPaymentId: rzpPayMismatch,
+        razorpaySignature: mismatchSig,
+      }),
+    });
+    const mismatchData = await mismatchRes.json();
+    const orderMismatchInDb = await Order.findById(orderMismatch._id);
+    const stockAfterMismatch = (await Product.findById(testProduct._id)).stockQuantity;
+
+    record(
+      'Gateway Validation: Rejects amount mismatch and flags for atelier reconciliation (409)',
+      mismatchRes.status === 409 &&
+        mismatchData.code === 'PAYMENT_RECONCILIATION_NEEDED' &&
+        orderMismatchInDb.status === 'payment_reconciliation_needed' &&
+        stockAfterMismatch === stockBeforeMismatch,
+      `Status: ${mismatchRes.status}, Order DB status: ${orderMismatchInDb.status}`
+    );
+
+    // 5H: Gateway unreachable/missing returns 502 without decrementing stock
+    const orderGatewayErr = await createTestOrder(testUserA, 1);
+    const rzpOrderGwErr = `order_test_gwerr_${Date.now()}`;
+    const rzpPayGwErr = `pay_test_gwerr_${Date.now()}`;
+    orderGatewayErr.paymentDetails.razorpayOrderId = rzpOrderGwErr;
+    await orderGatewayErr.save();
+
+    const gwErrSig = crypto
+      .createHmac('sha256', TEST_KEY_SECRET)
+      .update(`${rzpOrderGwErr}|${rzpPayGwErr}`)
+      .digest('hex');
+
+    mockRazorpay.mockPayment(rzpPayGwErr, new Error('Simulated gateway timeout error'));
+
+    const stockBeforeGwErr = (await Product.findById(testProduct._id)).stockQuantity;
+    const gwErrRes = await fetch(`${baseUrl}/api/payments/verify`, {
+      method: 'POST',
+      headers: authHeadersA,
+      body: JSON.stringify({
+        orderId: orderGatewayErr._id.toString(),
+        razorpayOrderId: rzpOrderGwErr,
+        razorpayPaymentId: rzpPayGwErr,
+        razorpaySignature: gwErrSig,
+      }),
+    });
+    const gwErrData = await gwErrRes.json();
+    const stockAfterGwErr = (await Product.findById(testProduct._id)).stockQuantity;
+
+    record(
+      'Gateway Validation: Gateway failure returns 502 GATEWAY_VERIFICATION_UNAVAILABLE',
+      gwErrRes.status === 502 && gwErrData.code === 'GATEWAY_VERIFICATION_UNAVAILABLE' && stockAfterGwErr === stockBeforeGwErr,
+      `Status: ${gwErrRes.status}, Code: ${gwErrData.code}, Stock unchanged: ${stockAfterGwErr}`
     );
 
     // ----------------------------------------------------
@@ -799,7 +933,7 @@ async function runPhase6_2TestSuite() {
       `Status: ${orderAfterEmptyCurr.status}`
     );
 
-    // 6G6: "order.paid" event without payment entity succeeds using trusted order.entity
+    // 6G6: "order.paid" event without payment entity is safely flagged for reconciliation (Phase 7 Audit Fix)
     const orderPaidOnly = await createTestOrder(testUserA, 1);
     const rzpOrderPaidOnlyId = `order_paid_only_${Date.now()}`;
     orderPaidOnly.paymentDetails.razorpayOrderId = rzpOrderPaidOnlyId;
@@ -825,16 +959,17 @@ async function runPhase6_2TestSuite() {
 
     const orderAfterPaidOnly = await Order.findById(orderPaidOnly._id);
     const stockAfterOrderPaidOnly = (await Product.findById(testProduct._id)).stockQuantity;
-    const isOrderPaidOnlySuccess =
+    const isOrderPaidOnlySafe =
       orderPaidOnlyRes.status === 200 &&
-      orderAfterPaidOnly.status === 'paid' &&
-      orderAfterPaidOnly.paymentDetails.inventoryDecremented === true &&
-      stockAfterOrderPaidOnly === stockBeforeOrderPaidOnly - 1;
+      orderAfterPaidOnly.status === 'payment_reconciliation_needed' &&
+      orderAfterPaidOnly.paymentDetails.failureReason === 'insufficient_payment_evidence' &&
+      orderAfterPaidOnly.paymentDetails.inventoryDecremented === false &&
+      stockAfterOrderPaidOnly === stockBeforeOrderPaidOnly;
 
     record(
-      'Webhook: "order.paid" without payment entity succeeds using trusted order.entity',
-      isOrderPaidOnlySuccess,
-      `Status: ${orderAfterPaidOnly.status}, Stock: ${stockBeforeOrderPaidOnly} -> ${stockAfterOrderPaidOnly}`
+      'Webhook: "order.paid" without payment entity is safely flagged for reconciliation (Phase 7 Audit Fix)',
+      isOrderPaidOnlySafe,
+      `Status: ${orderAfterPaidOnly.status}, Reason: ${orderAfterPaidOnly.paymentDetails.failureReason}, Stock preserved: ${stockAfterOrderPaidOnly}`
     );
 
     // 6G7: "order.paid" without payment entity and without valid order.entity details flags reconciliation
@@ -858,21 +993,43 @@ async function runPhase6_2TestSuite() {
 
     const orderAfterMissingBoth = await Order.findById(orderMissingBoth._id);
     record(
-      'Webhook Safety: Missing payment entity & missing amount details flags "payment_reconciliation_needed"',
+      'Webhook Safety: Missing payment entity flags "payment_reconciliation_needed" with insufficient_payment_evidence',
       missingBothRes.status === 200 &&
         orderAfterMissingBoth.status === 'payment_reconciliation_needed' &&
-        orderAfterMissingBoth.paymentDetails.failureReason === 'payment_amount_mismatch',
+        orderAfterMissingBoth.paymentDetails.failureReason === 'insufficient_payment_evidence',
       `Status: ${orderAfterMissingBoth.status}, Reason: ${orderAfterMissingBoth.paymentDetails.failureReason}`
     );
 
     // 6G8: Idempotency & non-downgrade: Delayed malformed webhook on already-paid order preserves 'paid' status
+    const paidOrderForDowngrade = await createTestOrder(testUserA, 1);
+    const rzpPaidDowngradeId = `order_paid_dw_${Date.now()}`;
+    const rzpPaymentDowngradeId = `pay_dw_${Date.now()}`;
+    paidOrderForDowngrade.paymentDetails.razorpayOrderId = rzpPaidDowngradeId;
+    await paidOrderForDowngrade.save();
+
+    // Mark it paid via valid webhook first
+    await sendSignedWebhook({
+      event: 'payment.captured',
+      payload: {
+        payment: {
+          entity: {
+            id: rzpPaymentDowngradeId,
+            order_id: rzpPaidDowngradeId,
+            amount: paidOrderForDowngrade.totalPaise,
+            currency: 'INR',
+            status: 'captured',
+          },
+        },
+      },
+    });
+
     const delayedMalformedRes = await sendSignedWebhook({
       event: 'payment.captured',
       payload: {
         payment: {
           entity: {
             id: `pay_delayed_malformed_${Date.now()}`,
-            order_id: rzpOrderPaidOnlyId, // Already paid in 6G6!
+            order_id: rzpPaidDowngradeId, // Already paid!
             amount: 99999999, // Tampered amount
             currency: 'EUR', // Tampered currency
             status: 'captured',
@@ -881,7 +1038,7 @@ async function runPhase6_2TestSuite() {
       },
     });
 
-    const orderAfterDelayed = await Order.findById(orderPaidOnly._id);
+    const orderAfterDelayed = await Order.findById(paidOrderForDowngrade._id);
     record(
       'Webhook Idempotency: Delayed malformed webhook on already-paid order cannot downgrade status',
       delayedMalformedRes.status === 200 && orderAfterDelayed.status === 'paid',
@@ -998,6 +1155,22 @@ async function runPhase6_2TestSuite() {
       .update(`${orderFinal2.paymentDetails.razorpayOrderId}|${payIdFinal2}`)
       .digest('hex');
 
+    // Register offline mock payments for contention orders
+    mockRazorpay.mockPayment(payIdFinal1, {
+      id: payIdFinal1,
+      order_id: orderFinal1.paymentDetails.razorpayOrderId,
+      amount: orderFinal1.totalPaise,
+      currency: 'INR',
+      status: 'captured',
+    });
+    mockRazorpay.mockPayment(payIdFinal2, {
+      id: payIdFinal2,
+      order_id: orderFinal2.paymentDetails.razorpayOrderId,
+      amount: orderFinal2.totalPaise,
+      currency: 'INR',
+      status: 'captured',
+    });
+
     // Fire verification concurrently for both orders competing for the same single unit
     const [compRes1, compRes2] = await Promise.all([
       fetch(`${baseUrl}/api/payments/verify`, {
@@ -1036,9 +1209,190 @@ async function runPhase6_2TestSuite() {
     );
 
     // ----------------------------------------------------
+    // Suite 8: Concurrency & Payment Hardening (Phase 8.6)
+    // ----------------------------------------------------
+    console.log('\n[Suite 8] Testing Concurrency, Duplicate Webhook/Verify Deduplication & Production Guards...');
+
+    // 8A: Concurrent Verification and Webhook on the Same Order (Never Double Decrement)
+    await Product.updateOne({ _id: testProduct._id }, { $set: { stockQuantity: 10 } });
+    const orderConcurrent = await createTestOrder(testUserA, 2); // 2 units
+    const rzpOrderConcurrent = `order_test_conc_${Date.now()}`;
+    const rzpPayConcurrent = `pay_test_conc_${Date.now()}`;
+    orderConcurrent.paymentDetails.razorpayOrderId = rzpOrderConcurrent;
+    await orderConcurrent.save();
+
+    const sigConcurrent = crypto
+      .createHmac('sha256', TEST_KEY_SECRET)
+      .update(`${rzpOrderConcurrent}|${rzpPayConcurrent}`)
+      .digest('hex');
+
+    mockRazorpay.mockPayment(rzpPayConcurrent, {
+      id: rzpPayConcurrent,
+      order_id: rzpOrderConcurrent,
+      amount: orderConcurrent.totalPaise,
+      currency: 'INR',
+      status: 'captured',
+    });
+
+    const stockBeforeConcurrent = (await Product.findById(testProduct._id)).stockQuantity; // 10
+
+    // Fire client verify and webhook simultaneously for the exact same order
+    const [clientVerifyRes, webhookRes] = await Promise.all([
+      fetch(`${baseUrl}/api/payments/verify`, {
+        method: 'POST',
+        headers: authHeadersA,
+        body: JSON.stringify({
+          orderId: orderConcurrent._id.toString(),
+          razorpayOrderId: rzpOrderConcurrent,
+          razorpayPaymentId: rzpPayConcurrent,
+          razorpaySignature: sigConcurrent,
+        }),
+      }),
+      sendSignedWebhook({
+        event: 'payment.captured',
+        payload: {
+          payment: {
+            entity: {
+              id: rzpPayConcurrent,
+              order_id: rzpOrderConcurrent,
+              amount: orderConcurrent.totalPaise,
+              currency: 'INR',
+              status: 'captured',
+            },
+          },
+        },
+      }),
+    ]);
+
+    const stockAfterConcurrent = (await Product.findById(testProduct._id)).stockQuantity;
+    const orderAfterConcurrent = await Order.findById(orderConcurrent._id);
+
+    // Stock must be decremented by exactly 2 (from 10 to 8), NEVER by 4!
+    const isDecrementedExactlyOnce = stockAfterConcurrent === stockBeforeConcurrent - 2;
+    const isBothSuccessful = clientVerifyRes.status === 200 && webhookRes.status === 200;
+    const isOrderFinalPaid =
+      orderAfterConcurrent.status === 'paid' &&
+      orderAfterConcurrent.paymentDetails?.inventoryDecremented === true;
+
+    record(
+      'Concurrency: Simultaneous verify & webhook on same order decrements stock exactly once (0 double decrement)',
+      isBothSuccessful && isDecrementedExactlyOnce && isOrderFinalPaid,
+      `Responses: verify ${clientVerifyRes.status}, webhook ${webhookRes.status}, Stock: ${stockBeforeConcurrent} -> ${stockAfterConcurrent} (-2), Status: ${orderAfterConcurrent.status}`
+    );
+
+    // 8B: Production Guard: Fallback rejected when NODE_ENV === 'production'
+    const orderProdGuard = await createTestOrder(testUserA, 1);
+    const originalEnv = process.env.NODE_ENV;
+    let prodFallbackThrew = false;
+    let prodFallbackErrMsg = '';
+
+    try {
+      process.env.NODE_ENV = 'production';
+      await processPaymentSuccessAndDeductInventory({
+        orderId: orderProdGuard._id,
+        razorpayPaymentId: `pay_prod_guard_${Date.now()}`,
+      });
+    } catch (err) {
+      if (err.message.includes('[SECURITY FATAL]') && err.message.includes('production environment')) {
+        prodFallbackThrew = true;
+        prodFallbackErrMsg = err.message;
+      }
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+
+    const orderAfterProdGuard = await Order.findById(orderProdGuard._id);
+    const isStockUntouchedProd =
+      (await Product.findById(testProduct._id)).stockQuantity === stockAfterConcurrent;
+
+    record(
+      'Production Guard: Standalone fallback fails closed when NODE_ENV === "production"',
+      prodFallbackThrew && isStockUntouchedProd && orderAfterProdGuard.status === 'pending_payment',
+      `Error: ${prodFallbackErrMsg.substring(0, 80)}..., Stock preserved: ${isStockUntouchedProd}`
+    );
+
+    // 8C: Multi-Item Atomicity: Depleted item in multi-item order triggers compensation and 0 inventory lost
+    await Product.updateOne({ _id: testProduct._id }, { $set: { stockQuantity: 5 } });
+    await Product.updateOne({ _id: testProduct2._id }, { $set: { stockQuantity: 0 } }); // Out of stock!
+
+    const orderMultiDepleted = await Order.create({
+      orderNumber: `AUR-TEST-P62-MULTI-${Date.now().toString(36).toUpperCase()}`,
+      user: testUserA._id,
+      items: [
+        {
+          product: testProduct._id,
+          productCode: testProduct.code,
+          name: testProduct.name,
+          slug: testProduct.slug,
+          image: testProduct.image,
+          pricePaise: testProduct.pricePaise,
+          quantity: 2, // Available (5)
+          lineTotalPaise: testProduct.pricePaise * 2,
+        },
+        {
+          product: testProduct2._id,
+          productCode: testProduct2.code,
+          name: testProduct2.name,
+          slug: testProduct2.slug,
+          image: testProduct2.image,
+          pricePaise: testProduct2.pricePaise,
+          quantity: 1, // Depleted (0)
+          lineTotalPaise: testProduct2.pricePaise,
+        },
+      ],
+      itemsCount: 3,
+      subtotalPaise: testProduct.pricePaise * 2 + testProduct2.pricePaise,
+      shippingFeePaise: 0,
+      totalPaise: testProduct.pricePaise * 2 + testProduct2.pricePaise,
+      currency: 'INR',
+      status: 'pending_payment',
+      shippingAddress: {
+        recipientName: 'Test Recipient A',
+        phone: '+91 9876543210',
+        addressLine1: '123 Heritage Lane',
+        city: 'Jaipur',
+        state: 'Rajasthan',
+        postalCode: '302001',
+        country: 'India',
+      },
+      paymentDetails: {
+        method: 'razorpay',
+        razorpayOrderId: `order_multi_dep_${Date.now()}`,
+        inventoryDecremented: false,
+        webhookEventIds: [],
+      },
+    });
+
+    let multiDepletionThrew = false;
+    try {
+      await processPaymentSuccessAndDeductInventory({
+        orderId: orderMultiDepleted._id,
+        razorpayPaymentId: `pay_multi_dep_${Date.now()}`,
+      });
+    } catch (err) {
+      multiDepletionThrew = err.name === 'InventoryReconciliationError';
+    }
+
+    const testProdStockAfterMulti = (await Product.findById(testProduct._id)).stockQuantity;
+    const testProd2StockAfterMulti = (await Product.findById(testProduct2._id)).stockQuantity;
+    const orderAfterMulti = await Order.findById(orderMultiDepleted._id);
+
+    const isStock1Preserved = testProdStockAfterMulti === 5;
+    const isStock2Preserved = testProd2StockAfterMulti === 0;
+    const isMultiOrderReconciled =
+      orderAfterMulti.status === 'payment_reconciliation_needed' &&
+      orderAfterMulti.paymentDetails?.inventoryDecremented === false;
+
+    record(
+      'Multi-Item Atomicity: Out-of-stock item triggers clean compensation; 0 partial stock deducted',
+      multiDepletionThrew && isStock1Preserved && isStock2Preserved && isMultiOrderReconciled,
+      `Item 1 stock: 5 -> ${testProdStockAfterMulti}, Item 2 stock: 0 -> ${testProd2StockAfterMulti}, Status: ${orderAfterMulti.status}`
+    );
+
+    // ----------------------------------------------------
     // Cleanup Test Data
     // ----------------------------------------------------
-    await Order.deleteMany({ orderNumber: { $regex: /^AUR-/ } });
+    await Order.deleteMany({ orderNumber: { $regex: /^AUR-TEST/ } });
     await Product.deleteMany({ slug: { $in: ['phase62-test-heel', 'phase62-test-sandal'] } });
     await User.deleteMany({
       email: { $in: ['userA_p62@aurevella.com', 'userB_p62@aurevella.com'] },
@@ -1056,6 +1410,7 @@ async function runPhase6_2TestSuite() {
       console.error('❌ SOME PHASE 6.2 TESTS FAILED. See details above.\n');
     }
   } finally {
+    razorpayConfig.resetCustomRazorpayInstance();
     server.close();
     await mongoose.disconnect();
     console.log('[Teardown] Ephemeral server and MongoDB connection closed cleanly.\n');

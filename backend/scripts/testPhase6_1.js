@@ -511,8 +511,12 @@ async function runPhase6_1TestSuite() {
       method: 'POST',
       headers: authHeadersAlpha,
       body: JSON.stringify({
-        items: [{ id: 'prod-01', quantity: 1 }],
+        items: [
+          { id: 'prod-01', quantity: 1 },
+          { id: 'prod-02', quantity: 1 },
+        ],
         addressId: alphaAddress._id.toString(),
+        notes: 'Hand delivery requested at door.',
         idempotencyKey, // Same key
       }),
     });

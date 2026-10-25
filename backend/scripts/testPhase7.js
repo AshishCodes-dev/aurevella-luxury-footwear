@@ -22,6 +22,11 @@ import Address from '../src/models/Address.js';
 import User from '../src/models/User.js';
 import Order from '../src/models/Order.js';
 import { toRupees, formatRupeeText } from '../src/utils/orderPricing.js';
+import {
+  createMockRazorpay,
+  setCustomRazorpayInstance,
+  resetCustomRazorpayInstance,
+} from '../src/config/razorpay.js';
 
 async function runPhase7TestSuite() {
   console.log('====================================================');
@@ -55,6 +60,10 @@ async function runPhase7TestSuite() {
   process.env.RAZORPAY_KEY_ID = TEST_KEY_ID;
   process.env.RAZORPAY_KEY_SECRET = TEST_KEY_SECRET;
   process.env.RAZORPAY_WEBHOOK_SECRET = TEST_WEBHOOK_SECRET;
+
+  // Initialize deterministic offline Razorpay mock (guarantees zero external network requests)
+  const mockRazorpay = createMockRazorpay();
+  setCustomRazorpayInstance(mockRazorpay);
 
   try {
     // ----------------------------------------------------
@@ -400,6 +409,15 @@ async function runPhase7TestSuite() {
       .update(`${rzpOrderId}|${rzpPaymentId}`)
       .digest('hex');
 
+    // Register offline mock payment record (status: 'captured')
+    mockRazorpay.mockPayment(rzpPaymentId, {
+      id: rzpPaymentId,
+      order_id: rzpOrderId,
+      amount: validOrderData.order.totalPaise,
+      currency: 'INR',
+      status: 'captured',
+    });
+
     const stockBeforeVerify = (await Product.findById(heelProduct._id)).stockQuantity;
 
     const verifyRes = await fetch(`${baseUrl}/api/payments/verify`, {
@@ -478,9 +496,12 @@ async function runPhase7TestSuite() {
       `Customer B order count: ${historyBData.total} (0 cross-tenant leak)`
     );
 
-    // Restore test product stock
+    // Restore test product stock and safely clean test-owned records
     await Product.updateOne({ _id: heelProduct._id }, { $set: { stockQuantity: 15 } });
     await Product.updateOne({ _id: slideProduct._id }, { $set: { stockQuantity: 10 } });
+    await Order.deleteMany({ user: { $in: [customerA._id, customerB._id] } });
+    await Address.deleteMany({ user: { $in: [customerA._id, customerB._id] } });
+    await User.deleteMany({ _id: { $in: [customerA._id, customerB._id] } });
 
     console.log('\n====================================================');
     console.log('              PHASE 7 TEST RESULTS MATRIX           ');
@@ -496,6 +517,7 @@ async function runPhase7TestSuite() {
     console.error('[Phase 7 Suite Critical Error]:', error);
     allPassed = false;
   } finally {
+    resetCustomRazorpayInstance();
     server.close();
     await mongoose.disconnect();
     console.log('[Teardown] Ephemeral server and MongoDB connection closed cleanly.');

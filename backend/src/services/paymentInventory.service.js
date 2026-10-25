@@ -27,6 +27,23 @@ class OutOfStockError extends Error {
 }
 
 /**
+ * Determines whether the current MongoDB deployment reliably supports multi-document transactions.
+ * Requires a confirmed replica set or sharded cluster topology from the MongoDB driver.
+ * Never relies on hostname substrings.
+ *
+ * @returns {boolean}
+ */
+export const isTransactionSupportedTopology = () => {
+  const client = mongoose.connection.client;
+  const topology = client?.topology;
+  const topoType = topology?.description?.type;
+
+  // Reliable MongoDB driver topology types that support multi-document ACID transactions
+  const transactionalTopologies = ['ReplicaSetWithPrimary', 'Sharded', 'LoadBalanced'];
+  return transactionalTopologies.includes(topoType);
+};
+
+/**
  * Transitions an order to 'paid' status and atomically decrements inventory.
  * Guarantees that inventory is decremented AT MOST ONCE per order, using
  * Mongoose session transactions on replica set deployments (Atlas)
@@ -85,28 +102,87 @@ export const processPaymentSuccessAndDeductInventory = async ({
     };
   }
 
-  // If order is currently in processing (another concurrent worker), handle gracefully
-  if (existingOrder.status === 'processing') {
-    const refreshed = await Order.findById(orderId);
-    if (refreshed.status === 'paid') {
-      return {
-        success: true,
-        alreadyProcessed: true,
-        order: refreshed,
-        status: 'paid',
-        message: 'Order was finalized by concurrent worker.',
-      };
-    }
+  // Guard against processing orders that are in a terminal non-payable state
+  if (['cancelled', 'payment_reconciliation_needed'].includes(existingOrder.status)) {
     return {
-      success: true,
-      inProgress: true,
-      order: refreshed,
-      status: 'processing',
-      message: 'Order payment is currently being processed by another worker.',
+      success: false,
+      alreadyProcessed: true,
+      order: existingOrder,
+      status: existingOrder.status,
+      message: `Order is in "${existingOrder.status}" state and cannot be processed for payment.`,
     };
   }
 
-  // 3. Retry wrapper for transient write conflicts in multi-document transactions
+  // 3. Atomically claim the order from 'pending_payment' to 'processing'
+  // Single-document atomic update guarantees that only ONE worker can transition the order.
+  const claimedOrder = await Order.findOneAndUpdate(
+    {
+      _id: orderId,
+      status: 'pending_payment',
+    },
+    {
+      $set: {
+        status: 'processing',
+        'paymentDetails.processingClaimedAt': new Date(),
+      },
+    },
+    { new: true }
+  );
+
+  if (!claimedOrder) {
+    // Another worker has already claimed this order or it transitioned.
+    // Poll to allow the in-flight worker to complete its transaction cleanly.
+    let currentOrder = await Order.findById(orderId);
+    for (let poll = 0; poll < 20 && currentOrder?.status === 'processing'; poll++) {
+      await new Promise((resolve) => setTimeout(resolve, 75));
+      currentOrder = await Order.findById(orderId);
+    }
+
+    if (currentOrder?.status === 'paid') {
+      if (webhookEventId && !currentOrder.paymentDetails?.webhookEventIds?.includes(webhookEventId)) {
+        await Order.updateOne(
+          { _id: orderId },
+          { $addToSet: { 'paymentDetails.webhookEventIds': webhookEventId } }
+        );
+      }
+      return {
+        success: true,
+        alreadyProcessed: true,
+        order: currentOrder,
+        status: 'paid',
+        message: 'Payment and inventory already processed for this order.',
+      };
+    }
+
+    if (currentOrder?.status === 'payment_reconciliation_needed') {
+      return {
+        success: false,
+        alreadyProcessed: true,
+        order: currentOrder,
+        status: 'payment_reconciliation_needed',
+        message: 'Order is flagged for manual reconciliation.',
+      };
+    }
+
+    if (currentOrder?.status === 'processing') {
+      return {
+        success: true,
+        inProgress: true,
+        order: currentOrder,
+        status: 'processing',
+        message: 'Order payment is currently being processed by another worker.',
+      };
+    }
+
+    return {
+      success: false,
+      order: currentOrder,
+      status: currentOrder?.status || 'unknown',
+      message: `Order is in unexpected state: ${currentOrder?.status}`,
+    };
+  }
+
+  // 4. Retry wrapper for transient write conflicts in multi-document transactions
   const executeWithRetry = async (fn, maxRetries = 5) => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -127,14 +203,30 @@ export const processPaymentSuccessAndDeductInventory = async ({
     }
   };
 
-  // 4. Multi-document transaction execution
+  // 5. Multi-document transaction execution
   try {
+    const isTxSupported = isTransactionSupportedTopology();
+
+    if (!isTxSupported) {
+      if (process.env.NODE_ENV === 'production') {
+        const topoType = mongoose.connection.client?.topology?.description?.type || 'unknown';
+        throw new Error(
+          `[SECURITY FATAL] Multi-document ACID transactions are strictly required for payment fulfillment in production environment. Current MongoDB topology "${topoType}" does not support transactions.`
+        );
+      }
+      return await executeAtomicFallback();
+    }
+
     return await executeWithRetry(async () => {
       let session = null;
       try {
         session = await mongoose.startSession();
-      } catch (_) {
-        // Fallback if session cannot be started
+      } catch (sessionErr) {
+        if (process.env.NODE_ENV === 'production') {
+          throw new Error(
+            `[SECURITY FATAL] Failed to start Mongoose session in production: ${sessionErr.message}`
+          );
+        }
         return await executeAtomicFallback();
       }
 
@@ -142,7 +234,7 @@ export const processPaymentSuccessAndDeductInventory = async ({
         let finalOrder = null;
 
         await session.withTransaction(async () => {
-          // Step 4A: Fetch order inside transaction
+          // Step 5A: Fetch order inside transaction
           const orderInSession = await Order.findById(orderId).session(session);
           if (!orderInSession) {
             throw new Error(`Order ${orderId} not found inside transaction`);
@@ -164,7 +256,7 @@ export const processPaymentSuccessAndDeductInventory = async ({
             return;
           }
 
-          // Step 4B: Conditional atomic decrement for every item with stock check inside session
+          // Step 5B: Conditional atomic decrement for every item with stock check inside session
           for (const item of orderInSession.items) {
             const qty = item.quantity;
             const productId = item.product;
@@ -189,12 +281,15 @@ export const processPaymentSuccessAndDeductInventory = async ({
             }
           }
 
-          // Step 4C: Final order payment and inventory state update inside session
+          // Step 5C: Final order payment and inventory state update inside session
           const updateDoc = {
             $set: {
               status: 'paid',
               'paymentDetails.inventoryDecremented': true,
               'paymentDetails.paidAt': orderInSession.paymentDetails?.paidAt || new Date(),
+            },
+            $unset: {
+              'paymentDetails.processingClaimedAt': 1,
             },
           };
           if (razorpayPaymentId) {
@@ -240,6 +335,9 @@ export const processPaymentSuccessAndDeductInventory = async ({
             'paymentDetails.failureReason': 'insufficient_stock_post_payment',
             'paymentDetails.reconciliationNotes': `Payment captured (${razorpayPaymentId}) but stock was depleted: ${txError.message}. Transaction aborted cleanly.`,
           },
+          $unset: {
+            'paymentDetails.processingClaimedAt': 1,
+          },
           ...(webhookEventId
             ? { $addToSet: { 'paymentDetails.webhookEventIds': webhookEventId } }
             : {}),
@@ -259,11 +357,43 @@ export const processPaymentSuccessAndDeductInventory = async ({
       );
     }
 
+    if (
+      txError.message?.includes('Transaction numbers are only allowed on a replica set member or mongos')
+    ) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+          '[SECURITY FATAL] Multi-document ACID transactions failed on production deployment. Standalone fallback is strictly forbidden in production.'
+        );
+      }
+      return await executeAtomicFallback();
+    }
+
+    // If order was claimed to 'processing' but aborted with an unexpected failure,
+    // safely release the claim back to 'pending_payment' so subsequent requests can re-attempt
+    try {
+      const orderCheck = await Order.findById(orderId);
+      if (orderCheck && orderCheck.status === 'processing') {
+        await Order.updateOne(
+          { _id: orderId, status: 'processing' },
+          {
+            $set: { status: 'pending_payment' },
+            $unset: { 'paymentDetails.processingClaimedAt': 1 },
+          }
+        );
+      }
+    } catch (_) {}
+
     throw txError;
   }
 
-  // --- Fallback Helper for Standalone Non-Replica Set MongoDB Environments ---
+  // --- Fallback Helper for Standalone Non-Replica Set MongoDB Environments (Test/Dev Only) ---
   async function executeAtomicFallback() {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        '[SECURITY FATAL] executeAtomicFallback cannot be executed in production environment.'
+      );
+    }
+
     const decrementedItems = [];
     let stockDepletionError = null;
 
@@ -314,6 +444,9 @@ export const processPaymentSuccessAndDeductInventory = async ({
             'paymentDetails.failureReason': 'insufficient_stock_post_payment',
             'paymentDetails.reconciliationNotes': `Payment received (${razorpayPaymentId}) but inventory depleted for "${stockDepletionError.productName}".`,
           },
+          $unset: {
+            'paymentDetails.processingClaimedAt': 1,
+          },
           ...(webhookEventId
             ? { $addToSet: { 'paymentDetails.webhookEventIds': webhookEventId } }
             : {}),
@@ -332,6 +465,9 @@ export const processPaymentSuccessAndDeductInventory = async ({
         status: 'paid',
         'paymentDetails.inventoryDecremented': true,
         'paymentDetails.paidAt': existingOrder.paymentDetails?.paidAt || new Date(),
+      },
+      $unset: {
+        'paymentDetails.processingClaimedAt': 1,
       },
     };
     if (razorpayPaymentId) {

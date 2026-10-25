@@ -2,7 +2,7 @@ import 'dotenv/config';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import app from '../src/app.js';
-import { connectDB } from '../src/config/db.js';
+import { connectTestDB } from '../src/config/db.js';
 import Product from '../src/models/Product.js';
 import Address from '../src/models/Address.js';
 import User from '../src/models/User.js';
@@ -14,7 +14,7 @@ async function runPhase6_1TestSuite() {
   console.log('   AUREVELLA — Phase 6.1 Backend Verification Suite ');
   console.log('====================================================\n');
 
-  await connectDB();
+  await connectTestDB();
 
   const results = [];
   let allPassed = true;

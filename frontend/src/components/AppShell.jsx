@@ -141,6 +141,12 @@ export const AppShell = ({ children }) => {
                 >
                   Account ({user?.role === 'admin' ? 'Admin' : user?.name?.split(' ')[0] || 'User'})
                 </Link>
+                <Link
+                  to="/orders"
+                  className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                >
+                  Orders
+                </Link>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -263,6 +269,12 @@ export const AppShell = ({ children }) => {
                   className="min-h-[44px] flex items-center justify-center uppercase tracking-[0.2em] text-xs bg-[#181210] border border-[#2F1C15] text-[#FEF5E6] hover:bg-[#241B18] transition-subtle"
                 >
                   My Account
+                </Link>
+                <Link
+                  to="/orders"
+                  className="min-h-[44px] flex items-center justify-center uppercase tracking-[0.2em] text-xs bg-[#181210] border border-[#2F1C15] text-[#FEF5E6] hover:bg-[#241B18] transition-subtle"
+                >
+                  My Orders & Commissions
                 </Link>
                 <Button variant="outline" size="sm" onClick={handleLogout} className="w-full">
                   Sign Out

@@ -85,13 +85,45 @@ export const createOrder = async (req, res) => {
   try {
     const { items, addressId, notes = '', idempotencyKey } = req.body;
 
-    // 1. Idempotency Check: if identical key exists for user, return existing order
+    // 1. Server-side item validation and pricing calculation
+    const pricing = await validateAndCalculateOrderItems(items);
+
+    // 2. Shipping address validation and immutable snapshotting
+    const addressSnapshot = await validateAndSnapshotAddress(addressId, req.user._id);
+
+    // 3. Idempotency Check: if identical key exists for user, ensure request parameters match
     if (idempotencyKey && typeof idempotencyKey === 'string' && idempotencyKey.trim()) {
       const existing = await Order.findOne({
         user: req.user._id,
         idempotencyKey: idempotencyKey.trim(),
       });
       if (existing) {
+        // Compare items count, total, and individual line quantities
+        const itemsMatch =
+          existing.items.length === pricing.items.length &&
+          existing.totalPaise === pricing.totalPaise &&
+          existing.items.every((exItem) => {
+            const match = pricing.items.find(
+              (p) => p.product.toString() === exItem.product.toString()
+            );
+            return match && match.quantity === exItem.quantity;
+          });
+
+        // Compare address delivery parameters
+        const addressMatch =
+          existing.shippingAddress?.postalCode === addressSnapshot.postalCode &&
+          existing.shippingAddress?.addressLine1 === addressSnapshot.addressLine1 &&
+          existing.shippingAddress?.recipientName === addressSnapshot.recipientName;
+
+        if (!itemsMatch || !addressMatch) {
+          return res.status(409).json({
+            status: 'error',
+            code: 'IDEMPOTENCY_CONFLICT',
+            message:
+              'This idempotency key was previously used for an order with different cart items or delivery address. Please start a new checkout session.',
+          });
+        }
+
         return res.status(200).json({
           status: 'success',
           isDuplicate: true,
@@ -99,12 +131,6 @@ export const createOrder = async (req, res) => {
         });
       }
     }
-
-    // 2. Server-side item validation and pricing calculation
-    const pricing = await validateAndCalculateOrderItems(items);
-
-    // 3. Shipping address validation and immutable snapshotting
-    const addressSnapshot = await validateAndSnapshotAddress(addressId, req.user._id);
 
     // 4. Generate unique human-readable order number (AUR-YYYYMMDD-XXXX)
     let orderNumber = generateOrderNumber();

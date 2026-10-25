@@ -89,3 +89,55 @@ export const createUserAddress = async (addressData) => {
     body: addressData,
   });
 };
+
+// Order & Checkout API Helpers
+export const fetchOrderQuote = async ({ items, addressId = null }) => {
+  return apiFetch('/api/orders/quote', {
+    method: 'POST',
+    body: { items, addressId },
+  });
+};
+
+export const createOrder = async ({ items, addressId, notes = '', idempotencyKey }) => {
+  return apiFetch('/api/orders', {
+    method: 'POST',
+    body: { items, addressId, notes, idempotencyKey },
+  });
+};
+
+export const fetchUserOrders = async (params = {}) => {
+  const query = new URLSearchParams();
+  if (params.page) query.set('page', params.page);
+  if (params.limit) query.set('limit', params.limit);
+  const qs = query.toString();
+  return apiFetch(qs ? `/api/orders?${qs}` : '/api/orders');
+};
+
+export const fetchOrderByIdOrNumber = async (idOrNumber) => {
+  return apiFetch(`/api/orders/${encodeURIComponent(idOrNumber)}`);
+};
+
+// Payment API Helpers (Razorpay Test Mode)
+export const createPaymentOrder = async (orderId) => {
+  return apiFetch('/api/payments/create-order', {
+    method: 'POST',
+    body: { orderId },
+  });
+};
+
+export const verifyPayment = async ({
+  orderId,
+  razorpayOrderId,
+  razorpayPaymentId,
+  razorpaySignature,
+}) => {
+  return apiFetch('/api/payments/verify', {
+    method: 'POST',
+    body: {
+      orderId,
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature,
+    },
+  });
+};

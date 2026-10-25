@@ -62,6 +62,31 @@ export const Account = () => {
   return (
     <div className="flex-1 flex flex-col justify-center items-center w-full px-4 py-8 sm:py-16">
       <div className="w-full max-w-2xl space-y-8">
+        {/* Orders & Commissions Navigation Card */}
+        <Card>
+          <CardHeader className="text-left flex flex-row items-center justify-between pb-4">
+            <div>
+              <CardTitle>Commissions & Orders</CardTitle>
+              <CardDescription>View status, delivery tracking, and payment receipts for your atelier footwear</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-2">
+              <p className="text-xs text-[#B8AD9A] max-w-md">
+                Track your handcrafted commissions from initial leather cut to white-glove dispatch.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate('/orders')}
+                className="shrink-0"
+              >
+                View Order History
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Account Overview */}
       <Card>
         <CardHeader className="text-left">

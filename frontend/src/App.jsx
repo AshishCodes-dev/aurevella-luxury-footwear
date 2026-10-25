@@ -11,6 +11,8 @@ import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
 import ForgotPassword from './pages/ForgotPassword.jsx';
 import Account from './pages/Account.jsx';
+import Checkout from './pages/Checkout.jsx';
+import Orders from './pages/Orders.jsx';
 import PlaceholderPage from './pages/PlaceholderPage.jsx';
 
 const AppRoutes = () => {
@@ -25,8 +27,22 @@ const AppRoutes = () => {
         {/* Product Catalogue */}
         <Route path="/shop" element={<Shop />} />
 
-        {/* Dedicated Shopping Bag Page */}
+        {/* Dedicated Shopping Bag Page & Cart Alias */}
         <Route path="/bag" element={<BagPage />} />
+        <Route path="/cart" element={<BagPage />} />
+
+        {/* Bespoke Checkout Flow */}
+        <Route path="/checkout" element={<Checkout />} />
+
+        {/* Verified Customer Orders Register */}
+        <Route
+          path="/orders"
+          element={
+            <ProtectedRoute>
+              <Orders />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Authentication Routes (Keyed with authEpoch to guarantee fresh remount & clean form state on logout) */}
         <Route path="/login" element={<Login key={`login-${authEpoch}`} />} />

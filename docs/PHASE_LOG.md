@@ -1419,7 +1419,184 @@ Phase 6.1 implements the server-side Order model, immutable snapshotting, and st
 | **Order History Pagination Support** | `npm run test:phase6-1` (Suite 7) | **PASS** | Verified `page`, `limit`, `total`, `pages` query handling |
 | **Phase 5 Regression Verification** | `npm run test:phase5` | **PASS** | 17/17 tests passed with zero regressions |
 
+---
 
+# Phase 6.2 Log: Secure Razorpay Test-Mode Backend Foundation
 
+## 1. Executive Summary & Architecture Overview
+
+Phase 6.2 implements the payment backend foundation using Razorpay Test Mode for Aurevella. It establishes cryptographic payment signature verification, provider-to-server webhook ingestion using exact raw request body HMACs, and an atomic inventory deduction engine preventing duplicate deductions, overselling, and race conditions.
+
+### Key Pillars:
+1. **Razorpay Configuration & Safety (`razorpay.js`)**:
+   - Environment variables: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET`.
+   - Fails safely with clear configuration errors if variables are missing.
+   - Timing-safe cryptographic HMAC-SHA256 signature verification (`crypto.timingSafeEqual`) preventing timing attacks.
+   - Zero exposure of API secrets or webhook secrets in responses, logs, or client-facing models.
+2. **Payment Order Creation (`POST /api/payments/create-order`)**:
+   - Authenticated customer endpoint (`authenticate`), CSRF-protected (`csrfGuard`).
+   - Looks up orders strictly scoped to `req.user._id` and `status: 'pending_payment'`.
+   - Uses server-calculated `order.totalPaise` directly from database; client-supplied amounts or prices are completely ignored.
+   - Idempotent: If a Razorpay order was already generated for the local order, reuses existing `razorpayOrderId` without redundant gateway calls.
+   - Returns only safe checkout fields: `keyId`, `razorpayOrderId`, `amountPaise`, `currency`, `orderNumber`.
+3. **Payment Signature Verification (`POST /api/payments/verify`)**:
+   - Accepts `{ orderId, razorpayOrderId, razorpayPaymentId, razorpaySignature }` validated via Zod.
+   - Re-verifies order ownership and local `paymentDetails.razorpayOrderId === razorpayOrderId`.
+   - Rejects forged or tampered signatures with HTTP 400.
+   - Idempotent: If order is already `paid`, returns existing state without double stock deduction.
+4. **Provider-to-Server Webhook (`POST /api/payments/webhook`)**:
+   - Exempt from customer CSRF (`csrfGuard`), uses raw request body Buffer captured via `express.json({ verify })`.
+   - Verifies `X-Razorpay-Signature` against `RAZORPAY_WEBHOOK_SECRET`.
+   - Handles `order.paid` and `payment.captured` events idempotently with durable `x-razorpay-event-id` tracking in `paymentDetails.webhookEventIds`.
+   - Records `payment.failed` with failure reason.
+   - Acknowledges unsupported events with HTTP 200 `{ status: 'ignored' }` so Razorpay stops retrying.
+5. **Atomic Inventory & Concurrency Protection (`paymentInventory.service.js`)**:
+   - Guaranteed single decrement: Uses atomic test-and-set query `Order.findOneAndUpdate({ _id, 'paymentDetails.inventoryDecremented': false })` as a concurrency mutex.
+   - Simultaneous verification and webhook requests decrement inventory exactly once.
+   - Underflow prevention: Decrements each line item using atomic query `Product.findOneAndUpdate({ _id, stockQuantity: { $gte: qty } }, { $inc: { stockQuantity: -qty } })`. Stock never falls below zero.
+   - Stock exhaustion safeguard: If stock was depleted post-payment, automatically rolls back any decremented items, logs rollback errors, and transitions order to `'payment_reconciliation_needed'` rather than falsely marking as fulfilled.
+
+---
+
+## 2. Files Changed & Created
+
+### New Files Created:
+1. `backend/src/config/razorpay.js` — Razorpay client factory and timing-safe signature verification utilities.
+2. `backend/src/services/paymentInventory.service.js` — Atomic inventory decrement service, concurrency lock, and rollback compensation.
+3. `backend/src/controllers/payment.controller.js` — Payment order initiation, signature verification, and webhook handler.
+4. `backend/src/routes/payment.routes.js` — Router mounting `/create-order`, `/verify`, and `/webhook` with Zod validation.
+5. `backend/scripts/testPhase6_2.js` — Automated 16-test verification suite covering configuration safety, signatures, concurrency, and reconciliation.
+
+### Existing Files Modified:
+6. `backend/package.json` — Added `"razorpay": "^2.9.8"` and `"test:phase6-2": "node scripts/testPhase6_2.js"`.
+7. `backend/package-lock.json` — Lockfile updated for `razorpay` dependency.
+8. `backend/src/models/Order.js` — Added `'payment_reconciliation_needed'` status, `inventoryDecremented`, `webhookEventIds`, and `reconciliationNotes`.
+9. `backend/src/app.js` — Configured raw request body Buffer capture in `express.json({ verify })` and mounted `paymentRoutes`.
+10. `docs/PHASE_LOG.md` — Appended Phase 6.2 execution log.
+
+---
+
+## 3. Test & Verification Matrix (`npm run test:phase6-2`)
+
+### Audit Remediation Updates (Pre-Commit Verification)
+
+Following an independent pre-commit audit, two edge-case fixes were implemented and verified:
+
+1. **Fix 1: Strict Webhook Payment Validation (`payment.controller.js`)**
+   - **Amount Strictness**: Rejects or flags for reconciliation any payment amount that is missing, null, a non-number type (such as string `"350000"`), `NaN`, non-finite, or not strictly equal to `order.totalPaise`.
+   - **Currency Strictness**: Rejects or flags for reconciliation any missing, null, non-string, whitespace-only, or mismatched currency (must equal `order.currency || 'INR'`).
+   - **Trusted Entity Fallback for `order.paid`**: Handles `order.paid` events where `payload.payment.entity` may be absent by verifying against trusted `payload.order.entity.amount_paid` (or `amount`) and `currency`. If required details cannot be safely established, flags `payment_reconciliation_needed` without marking the order `paid` or deducting stock.
+   - **Non-Downgrade & Idempotency Guarantee**: Ensures already-paid orders (`status === 'paid'`) cannot be downgraded to reconciliation by delayed or duplicate malformed webhooks.
+
+2. **Fix 2: Safe MongoDB Unique-Index Migration Preparation (`scripts/migratePaymentIdIndex.js`)**
+   - Prepared an isolated, dry-run-first migration script `backend/scripts/migratePaymentIdIndex.js` to replace the legacy non-unique sparse index with `{ unique: true, partialFilterExpression: { 'paymentDetails.razorpayPaymentId': { $type: 'string' } } }`.
+   - Built with duplicate payment ID aggregation audit, preflight validation, zero automatic index dropping on server start, and an explicit `--execute` flag requirement.
+   - Dry-run preflight verified against MongoDB Atlas: 0 duplicate payment IDs found across all orders; live database indexes were left unmodified.
+
+| Check / Test Target | Verification Command / Suite | Result | Notes |
+| :--- | :--- | :---: | :--- |
+| **Missing Config Fail-Safe** | `npm run test:phase6-2` (Suite 2) | **PASS** | Threw safe error when `RAZORPAY_KEY_SECRET` missing |
+| **Unauthenticated Initiation Rejection** | `npm run test:phase6-2` (Suite 2) | **PASS** | Status 401 returned on unauthenticated request |
+| **Invalid Request Body Rejection** | `npm run test:phase6-2` (Suite 2) | **PASS** | Status 400 returned when `orderId` was omitted |
+| **Cross-User Payment Hijack Prevention** | `npm run test:phase6-2` (Suite 3) | **PASS** | Customer B cannot initiate payment for Customer A order (404) |
+| **Server-Side Order Amount & Key ID** | `npm run test:phase6-2` (Suite 4) | **PASS** | Returned 350,000 paise (₹3,500) and public keyId |
+| **Initiation Idempotency** | `npm run test:phase6-2` (Suite 4) | **PASS** | Repeated initiation reused existing `razorpayOrderId` |
+| **Forged Signature Rejection** | `npm run test:phase6-2` (Suite 5) | **PASS** | Status 400 returned on invalid signature |
+| **Mismatched Razorpay Order ID Rejection** | `npm run test:phase6-2` (Suite 5) | **PASS** | Status 400 returned on order ID mismatch |
+| **Valid Signature & Atomic Decrement** | `npm run test:phase6-2` (Suite 5) | **PASS** | Order marked `paid`, stock decremented from 10 to 9 |
+| **Verification Idempotency** | `npm run test:phase6-2` (Suite 5) | **PASS** | Repeated verification did not decrement stock again (stayed 9) |
+| **Payment ID Uniqueness Guard** | `npm run test:phase6-2` (Suite 5) | **PASS** | Rejects attaching already-used `razorpayPaymentId` to another order (409) |
+| **Webhook Forged Signature Rejection** | `npm run test:phase6-2` (Suite 6) | **PASS** | Status 400 returned on invalid webhook HMAC |
+| **Webhook "order.paid" Processing** | `npm run test:phase6-2` (Suite 6) | **PASS** | Raw request body HMAC verified; stock decremented from 9 to 7 |
+| **Webhook Event Deduplication** | `npm run test:phase6-2` (Suite 6) | **PASS** | Re-delivering event `evt_test_unique_001` left stock at 7 |
+| **Webhook Amount Mismatch Flagging** | `npm run test:phase6-2` (Suite 6) | **PASS** | Reconciled as `payment_amount_mismatch` without marking paid |
+| **Webhook Currency Mismatch Flagging** | `npm run test:phase6-2` (Suite 6) | **PASS** | Reconciled as `payment_currency_mismatch` without marking paid |
+| **Webhook Non-Destructive Failed Event** | `npm run test:phase6-2` (Suite 6) | **PASS** | `payment.failed` cannot overwrite an already-paid order |
+| **Null Amount Rejection** | `npm run test:phase6-2` (Suite 6.2 Rem.) | **PASS** | Reconciled as `payment_amount_mismatch` without marking paid |
+| **String Amount Rejection** | `npm run test:phase6-2` (Suite 6.2 Rem.) | **PASS** | Reconciled as `payment_amount_mismatch` without marking paid |
+| **Missing Amount Rejection** | `npm run test:phase6-2` (Suite 6.2 Rem.) | **PASS** | Reconciled as `payment_amount_mismatch` without marking paid |
+| **Null Currency Rejection** | `npm run test:phase6-2` (Suite 6.2 Rem.) | **PASS** | Reconciled as `payment_currency_mismatch` without marking paid |
+| **Empty Currency Rejection** | `npm run test:phase6-2` (Suite 6.2 Rem.) | **PASS** | Reconciled as `payment_currency_mismatch` without marking paid |
+| **Trusted order.entity "order.paid"** | `npm run test:phase6-2` (Suite 6.2 Rem.) | **PASS** | Succeeds and decrements stock when payment entity is absent |
+| **Missing Detail "order.paid" Reconciled** | `npm run test:phase6-2` (Suite 6.2 Rem.) | **PASS** | Flags `payment_amount_mismatch` safely without stock deduction |
+| **Already-Paid Non-Downgrade Safety** | `npm run test:phase6-2` (Suite 6.2 Rem.) | **PASS** | Delayed malformed webhook preserves terminal `paid` status |
+| **Transaction Rollback Atomicity** | `npm run test:phase6-2` (Suite 7) | **PASS** | Partial item depletion cleanly aborts transaction (0 partial commit) |
+| **Contention on Final Stock Unit** | `npm run test:phase6-2` (Suite 8) | **PASS** | 2 concurrent orders: exactly 1 succeeds (200), 1 reconciled (409), stock = 0 |
+| **Phase 6.1 Regression Suite** | `npm run test:phase6-1` | **PASS** | 18/18 tests passed with zero regressions |
+| **Phase 5 Regression Suite** | `npm run test:phase5` | **PASS** | 17/17 tests passed with zero regressions |
+---
+
+# Phase 7 — Cart & Checkout Integration (Complete)
+
+**Phase Status**: Completed & Verified
+**Branch**: `main`
+**Scope**: Full-stack cart and checkout integration connecting the authenticated customer bag, delivery address selection/creation, server-authoritative pricing quote, idempotent order creation, Razorpay Test-Mode payment gateway, and customer order history.
+
+## 1. Architectural Highlights
+
+### A. Shopping Bag & Persistence
+- **Zero Sensitive Data in Storage**: Shopping bag continues to persist in `localStorage` storing strictly `[{ id, quantity }]`. No prices, tokens, or payment data are ever stored on the client.
+- **Client & Server Clamping**: Quantity is clamped strictly between 1 and 10 per footwear model.
+- **Direct Navigation**: "Proceed to Checkout" primary CTAs added across `BagPage` and `BagDrawer` with preserved concierge inquiry options.
+
+### B. Address Management & Selection
+- **Saved Address Selection**: Fetches authenticated customer addresses via `GET /api/users/addresses` and permits one-click selection.
+- **Inline Address Creation**: Seamless inline address entry validated against Indian postal code format (`/^[1-9][0-9]{5}$/`), telephone format, and required geographic fields. Persists immediately via `POST /api/users/addresses`.
+- **Multi-Tenant Isolation**: Server verifies that `addressId` belongs strictly to the authenticated `req.user._id`, preventing address hijacking.
+
+### C. Server-Authoritative Quote Engine
+- **Zero Client Price Trust**: `POST /api/orders/quote` recalculates all line items, subtotals, complimentary luxury delivery fees, and payable totals directly from database `pricePaise`.
+- **Availability Revalidation**: Detects if requested quantities exceed available inventory and blocks order creation with human-readable error messages.
+- **Dynamic Refresh**: Quotes refresh automatically whenever cart items or address selections change.
+
+### D. Idempotent Order Creation & Payment Lifecycle
+- **Idempotency Keying**: Unique idempotency key is generated per checkout session to prevent duplicate submissions on double-clicks.
+- **Order Creation**: Creates orders with immutable snapshots of items and shipping address in `pending_payment` status. Inventory is preserved until verified payment.
+- **Razorpay Test Mode Integration**: Loads checkout SDK dynamically, initializes with server-provided `keyId` and `amountPaise`, verifies cryptographic HMAC SHA-256 signatures on the backend, and transitions order to `paid` with atomic stock decrement.
+- **Cancellation & Dismissal Handling**: If modal is dismissed or payment cancelled, order remains in `pending_payment` with a clean "Retry Payment" option.
+
+### E. Customer Orders Register
+- Accessible at `/orders` and linked from `Account` and `AppShell`.
+- Displays commissioned orders, status badges (`Paid`, `Pending Payment`, `Reconciliation Needed`), item snapshots, and retry payment triggers for pending orders.
+
+## 2. Test Verification Matrix
+
+| Check / Test Target | Verification Command / Suite | Result | Notes |
+| :--- | :--- | :---: | :--- |
+| **Cart Items Empty Rejection** | `npm run test:phase7` (Suite 2) | **PASS** | Rejects empty items list for quote calculation (400) |
+| **Cart Quantity Limit (>10)** | `npm run test:phase7` (Suite 2) | **PASS** | Rejects quantity exceeding 10 per model (400) |
+| **Server Quote Calculation** | `npm run test:phase7` (Suite 2) | **PASS** | Evaluates exact integer paise subtotal & complimentary shipping |
+| **Dynamic Quote Refresh** | `npm run test:phase7` (Suite 2) | **PASS** | Recalculates total when cart items change |
+| **Stock Constraint Check** | `npm run test:phase7` (Suite 2) | **PASS** | Rejects requested quantity exceeding available stock (400) |
+| **Address Hijacking Prevention** | `npm run test:phase7` (Suite 3) | **PASS** | Rejects using another customer's shipping address (400) |
+| **Order Creation & Snapshot** | `npm run test:phase7` (Suite 3) | **PASS** | Order created in `pending_payment` with immutable snapshot |
+| **Inventory Preservation** | `npm run test:phase7` (Suite 3) | **PASS** | Stock is preserved and NOT decremented prior to payment |
+| **Order Idempotency** | `npm run test:phase7` (Suite 3) | **PASS** | Duplicate submission returns existing order without duplicates |
+| **Gateway Order Creation** | `npm run test:phase7` (Suite 4) | **PASS** | Creates Razorpay order matching verified server total |
+| **Payment Dismissal Safety** | `npm run test:phase7` (Suite 4) | **PASS** | Unpaid / dismissed payment leaves order in `pending_payment` |
+| **Signature Verification** | `npm run test:phase7` (Suite 4) | **PASS** | Transitions order to `paid` and decrements stock atomically |
+| **Verification Idempotency** | `npm run test:phase7` (Suite 4) | **PASS** | Repeated verification does not decrement stock twice |
+| **Order History Retrieval** | `npm run test:phase7` (Suite 5) | **PASS** | Customer retrieves their own commissioned orders |
+| **History Tenant Isolation** | `npm run test:phase7` (Suite 5) | **PASS** | Customer B cannot view Customer A orders (0 leak) |
+| **Phase 6.2 Regression Suite** | `npm run test:phase6-2` | **PASS** | 26/26 tests passed with 100% success |
+| **Phase 6.1 Regression Suite** | `npm run test:phase6-1` | **PASS** | 18/18 tests passed with 100% success |
+| **Phase 5 Regression Suite** | `npm run test:phase5` | **PASS** | 17/17 tests passed with 100% success |
+| **Frontend Production Build** | `npm run build` (frontend) | **PASS** | 2,095 modules bundled with 0 errors |
+| **Git Diff Whitespace Check** | `git diff --check` | **PASS** | Clean (Code 0, zero trailing whitespace) |
+
+---
+
+## 4. Local Razorpay Test Mode Setup Instructions
+
+To run with real Razorpay Test Mode locally:
+1. Log in to [Razorpay Dashboard](https://dashboard.razorpay.com).
+2. Toggle to **Test Mode** (orange badge in top navigation).
+3. Navigate to **Account & Settings $\rightarrow$ API Keys** and click **Generate Test Key**.
+4. Copy the Key ID (`rzp_test_...`) into `RAZORPAY_KEY_ID` in `backend/.env`.
+5. Copy the Key Secret into `RAZORPAY_KEY_SECRET` in `backend/.env`.
+6. Navigate to **Account & Settings $\rightarrow$ Webhooks $\rightarrow$ Add New Webhook**:
+   - Webhook URL: `https://<your-ngrok-or-dev-domain>/api/payments/webhook`
+   - Active Events: `order.paid`, `payment.captured`, `payment.failed`
+   - Secret: Enter a unique passphrase and copy it into `RAZORPAY_WEBHOOK_SECRET` in `backend/.env` (do NOT reuse the API Key Secret).
 
 

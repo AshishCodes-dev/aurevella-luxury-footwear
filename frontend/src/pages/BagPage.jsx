@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, Plus, Minus, Trash2, MessageSquare, ArrowLeft } from 'lucide-react';
+import { ShoppingBag, Plus, Minus, Trash2, MessageSquare, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useBag } from '../context/BagContext.jsx';
 import { siteConfig } from '../content/site.js';
 import useDocumentTitle from '../utils/useDocumentTitle.js';
@@ -170,21 +170,31 @@ export const BagPage = () => {
                 </div>
               </div>
 
+              <div className="pt-2">
+                <Link
+                  to="/checkout"
+                  className="w-full inline-flex items-center justify-center gap-2 min-h-[48px] px-6 text-xs uppercase tracking-[0.2em] bg-[#FEF5E6] text-[#0F0A09] hover:bg-white font-semibold transition-subtle shadow-md"
+                >
+                  <span>Proceed to Checkout</span>
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
+
               <div className="p-4 bg-[#0F0A09] border border-[#2F1C15] text-[11px] text-[#B8AD9A] leading-relaxed">
                 <p className="text-[#FEF5E6] font-medium mb-1 uppercase tracking-wider text-[10px]">
-                  Concierge Reservation
+                  Concierge Assistance
                 </p>
-                Online payment gateway is in staging. You may reserve this bespoke order directly with our Atelier Concierge on WhatsApp.
+                Prefer personalized sizing guidance or bespoke fitting consultation? Connect with our Atelier Concierge on WhatsApp.
               </div>
 
               <a
                 href={getWhatsAppReservationUrl()}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full inline-flex items-center justify-center gap-2 min-h-[48px] px-6 text-xs uppercase tracking-[0.2em] bg-[#FEF5E6] text-[#0F0A09] hover:bg-white font-semibold transition-subtle shadow-md"
+                className="w-full inline-flex items-center justify-center gap-2 min-h-[42px] px-4 text-[11px] uppercase tracking-[0.15em] border border-[#2F1C15] text-[#B8AD9A] hover:text-[#FEF5E6] hover:border-[#4A2C26] transition-subtle"
               >
-                <MessageSquare size={16} />
-                <span>Reserve via WhatsApp</span>
+                <MessageSquare size={14} />
+                <span>Reserve via WhatsApp Concierge</span>
               </a>
             </div>
           </div>

@@ -218,23 +218,34 @@ export const BagDrawer = () => {
                 Includes complimentary insured delivery & bespoke presentation box across India.
               </p>
 
-              {/* Reservation Advisory Notice */}
-              <div className="p-3 bg-[#0F0A09] border border-[#2F1C15] text-[11px] text-[#B8AD9A] leading-relaxed">
-                <p className="text-[#FEF5E6] font-medium mb-1 uppercase tracking-wider text-[10px]">
-                  Bespoke Atelier Inquiries
-                </p>
-                Online payment integration is in staging. Reserve this selection directly with our Concierge for personalized sizing verification.
-              </div>
+              {/* Primary Checkout Action */}
+              <Link
+                to="/checkout"
+                onClick={closeBag}
+                className="w-full inline-flex items-center justify-center gap-2 min-h-[48px] px-6 text-xs uppercase tracking-[0.2em] bg-[#FEF5E6] text-[#0F0A09] hover:bg-white font-semibold transition-subtle shadow-md outline-none focus-visible:ring-1 focus-visible:ring-white"
+              >
+                <span>Proceed to Checkout</span>
+                <ArrowRight size={16} />
+              </Link>
+
+              {/* View Full Bag Link */}
+              <Link
+                to="/bag"
+                onClick={closeBag}
+                className="w-full inline-flex items-center justify-center min-h-[40px] text-[11px] uppercase tracking-[0.18em] border border-[#2F1C15] text-[#FEF5E6] hover:bg-[#221A18] transition-subtle"
+              >
+                View Full Bag ({totalCount})
+              </Link>
 
               {/* Concierge Order Reservation Action */}
               <a
                 href={getWhatsAppReservationUrl()}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full inline-flex items-center justify-center gap-2 min-h-[48px] px-6 text-xs uppercase tracking-[0.2em] bg-[#FEF5E6] text-[#0F0A09] hover:bg-white font-semibold transition-subtle shadow-md outline-none focus-visible:ring-1 focus-visible:ring-white"
+                className="w-full inline-flex items-center justify-center gap-2 min-h-[38px] px-4 text-[10px] uppercase tracking-[0.15em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle"
               >
-                <MessageSquare size={16} />
-                <span>Reserve via WhatsApp</span>
+                <MessageSquare size={13} />
+                <span>Reserve via WhatsApp Concierge</span>
               </a>
 
               {/* Continue Shopping button */}

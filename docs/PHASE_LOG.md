@@ -1349,6 +1349,76 @@ Phase 5 establishes the production-grade MongoDB schema, public catalogue API, c
 | **Frontend Production Build** | `npm run build` (frontend) | **PASS** | 2,093 modules bundled with 0 errors |
 | **Headless Layout Audit** | `npm run check:layout` (frontend) | **PASS** | 75/75 viewports, catalogue filter, and bag operations verified |
 
+---
+
+# Phase 6.1 Log: Order Model & Pricing/Stock Foundation
+
+## 1. Executive Summary & Architecture Overview
+
+Phase 6.1 implements the server-side Order model, immutable snapshotting, and strict zero-client-trust pricing and stock validation engine for Aurevella.
+
+### Key Pillars:
+1. **Order Model (`Order.js`)**:
+   - Stores all monetary amounts in integer paise (`pricePaise`, `lineTotalPaise`, `subtotalPaise`, `shippingFeePaise`, `totalPaise`) with `Number.isInteger` validation.
+   - Enforces human-readable unique order numbers matching `^AUR-[0-9]{8}-[A-Z0-9]{4}$` generated via `generateOrderNumber()`.
+   - Embeds immutable product snapshots (`product`, `productCode`, `name`, `slug`, `image`, `pricePaise`, `quantity`, `lineTotalPaise`).
+   - Embeds immutable shipping address snapshots (`recipientName`, `phone`, `addressLine1`, `addressLine2`, `city`, `state`, `postalCode`, `country`).
+   - Restricts order status to controlled enum: `['pending_payment', 'paid', 'payment_failed', 'processing', 'shipped', 'delivered', 'cancelled']`.
+   - Supports safe client serialization via `toSafeJSON()` returning Indian Rupee formatted text (`₹3,499`).
+2. **Pricing & Stock Engine (`orderPricing.js`)**:
+   - **Zero Client Price Trust**: Completely ignores any prices, totals, names, or image paths sent in the request body. All prices and metadata are loaded directly from the database `Product` document.
+   - **Stock & Quantity Constraints**: Validates item quantities ($1 \le \text{qty} \le 10$), checks that each product is active (`isActive === true`), and verifies available stock (`stockQuantity >= requestedQuantity`).
+   - **Stock Preservation Policy**: Per project requirements, stock is **not decremented during Phase 6.1**; inventory deduction will occur in Phase 6.2 upon verified payment.
+3. **Address Ownership & Security**:
+   - Enforces that the `addressId` specified for delivery belongs strictly to `req.user._id`, preventing cross-customer delivery tampering.
+4. **Order Routes (`order.routes.js`, `order.controller.js`)**:
+   - `POST /api/orders/quote`: Read-only pre-checkout validation returning server-calculated totals without creating database records.
+   - `POST /api/orders`: Authenticated endpoint that creates an Order in `pending_payment` status with idempotency key protection.
+   - `GET /api/orders`: Retrieves customer order history strictly scoped to `req.user._id`.
+   - `GET /api/orders/:idOrNumber`: Retrieves single order details strictly scoped to `req.user._id` (returns 404 for other customers).
+
+---
+
+## 2. Files Changed & Created
+
+### New Files Created:
+1. `backend/src/models/Order.js` — Mongoose schema for orders with snapshots, integer paise, controlled statuses, and order number generator.
+2. `backend/src/utils/orderPricing.js` — Core pricing engine and address snapshot validator.
+3. `backend/src/controllers/order.controller.js` — Handlers for quotes, order creation, and order history.
+4. `backend/src/routes/order.routes.js` — Router mounting `/api/orders` endpoints with Zod validation.
+5. `backend/scripts/testPhase6_1.js` — Automated verification suite covering models, pricing, stock, address security, and multi-tenant isolation.
+
+### Existing Files Modified:
+6. `backend/src/app.js` — Mounted `orderRoutes` at `app.use('/api/orders', orderRoutes)`.
+7. `backend/package.json` — Registered `"test:phase6-1": "node scripts/testPhase6_1.js"`.
+8. `docs/PHASE_LOG.md` — Appended Phase 6.1 log and verification matrix.
+
+---
+
+## 3. Test & Verification Matrix (`npm run test:phase6-1`)
+
+| Check / Test Target | Verification Command / Suite | Result | Notes |
+| :--- | :--- | :---: | :--- |
+| **Order Model: Non-Integer Paise Rejection** | `npm run test:phase6-1` (Suite 1) | **PASS** | Rejected fractional paise `3499.5` |
+| **Order Model: Status Enum Enforcement** | `npm run test:phase6-1` (Suite 1) | **PASS** | Rejected arbitrary status `'unsupported_arbitrary_status'` |
+| **Order Model: Quantity Limit ($\le 10$)** | `npm run test:phase6-1` (Suite 1) | **PASS** | Rejected quantity of 25 |
+| **Zero Client Price Trust** | `npm run test:phase6-1` (Suite 3) | **PASS** | Overrode client tampered price (₹1) with real DB price (1,029,700 paise / ₹10,297) |
+| **Rupee & Fractional Paise Precision** | `npm run test:phase6-1` (Suite 3) | **PASS** | `toRupees(349950) === 3499.5`, `formatRupeeText(349950) === '₹3,499.50'` |
+| **Non-Existent Product Rejection** | `npm run test:phase6-1` (Suite 4) | **PASS** | Status 400 returned for missing product ID |
+| **Inactive Product Rejection** | `npm run test:phase6-1` (Suite 4) | **PASS** | Status 400 returned for product with `isActive: false` |
+| **Insufficient Stock Rejection** | `npm run test:phase6-1` (Suite 4) | **PASS** | Status 400 caught when requested (5) exceeded stock (2) |
+| **Cross-Tenant Address Hijack Prevention** | `npm run test:phase6-1` (Suite 5) | **PASS** | Status 400 returned when User B attempted to use User A's address |
+| **Unique Order Number Generation** | `npm run test:phase6-1` (Suite 6) | **PASS** | Generated `AUR-YYYYMMDD-XXXX` pattern (`AUR-20261025-BZZZ`) |
+| **Address Snapshotting & Initial Status** | `npm run test:phase6-1` (Suite 6) | **PASS** | Embedded immutable snapshot; initialized to `pending_payment` |
+| **Stock Preservation in Phase 6.1** | `npm run test:phase6-1` (Suite 6) | **PASS** | Verified stock remained exactly 25 before and after order creation |
+| **Idempotency Protection** | `npm run test:phase6-1` (Suite 6) | **PASS** | Resubmission with same key returned existing order (`isDuplicate: true`) |
+| **Cross-User Idempotency Isolation** | `npm run test:phase6-1` (Suite 6) | **PASS** | User B using same key creates new order; keys strictly scoped to user |
+| **Order History Scoping** | `npm run test:phase6-1` (Suite 7) | **PASS** | User Alpha retrieved own order history |
+| **Order History Multi-Tenant Isolation** | `npm run test:phase6-1` (Suite 7) | **PASS** | User Beta received 0 cross-tenant leaks |
+| **Order Detail Multi-Tenant Isolation** | `npm run test:phase6-1` (Suite 7) | **PASS** | User Beta received 404 when querying User Alpha's order number |
+| **Order History Pagination Support** | `npm run test:phase6-1` (Suite 7) | **PASS** | Verified `page`, `limit`, `total`, `pages` query handling |
+| **Phase 5 Regression Verification** | `npm run test:phase5` | **PASS** | 17/17 tests passed with zero regressions |
+
 
 
 

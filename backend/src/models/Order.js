@@ -191,6 +191,7 @@ const orderSchema = new mongoose.Schema(
         'shipped',
         'delivered',
         'cancelled',
+        'payment_reconciliation_needed',
       ],
       default: 'pending_payment',
       index: true,
@@ -210,7 +211,6 @@ const orderSchema = new mongoose.Schema(
       razorpayPaymentId: {
         type: String,
         trim: true,
-        sparse: true,
       },
       razorpaySignature: {
         type: String,
@@ -221,6 +221,20 @@ const orderSchema = new mongoose.Schema(
         default: null,
       },
       failureReason: {
+        type: String,
+        trim: true,
+        default: null,
+      },
+      inventoryDecremented: {
+        type: Boolean,
+        default: false,
+        index: true,
+      },
+      webhookEventIds: {
+        type: [String],
+        default: [],
+      },
+      reconciliationNotes: {
         type: String,
         trim: true,
         default: null,
@@ -248,6 +262,15 @@ orderSchema.index(
   {
     unique: true,
     partialFilterExpression: { idempotencyKey: { $type: 'string' } },
+  }
+);
+
+// Database-enforced uniqueness protection preventing a payment ID from confirming multiple orders
+orderSchema.index(
+  { 'paymentDetails.razorpayPaymentId': 1 },
+  {
+    unique: true,
+    partialFilterExpression: { 'paymentDetails.razorpayPaymentId': { $type: 'string' } },
   }
 );
 
@@ -314,6 +337,7 @@ orderSchema.methods.toSafeJSON = function () {
     paymentDetails: {
       method: this.paymentDetails?.method || 'razorpay',
       razorpayOrderId: this.paymentDetails?.razorpayOrderId || null,
+      razorpayPaymentId: this.paymentDetails?.razorpayPaymentId || null,
       paidAt: this.paymentDetails?.paidAt || null,
     },
     notes: this.notes,

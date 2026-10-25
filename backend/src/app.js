@@ -12,6 +12,7 @@ import adminRoutes from './routes/admin.routes.js';
 import productRoutes, { getCategories } from './routes/product.routes.js';
 import userRoutes from './routes/user.routes.js';
 import orderRoutes from './routes/order.routes.js';
+import paymentRoutes from './routes/payment.routes.js';
 
 const app = express();
 
@@ -24,8 +25,14 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 // Cookie Parser
 app.use(cookieParser());
 
-// Body Parsers
-app.use(express.json());
+// Body Parsers with Raw Body Capture for Webhooks
+app.use(
+  express.json({
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true }));
 
 // NoSQL Injection Sanitize Middleware
@@ -69,6 +76,7 @@ app.use('/api/products', productRoutes);
 app.get('/api/categories', getCategories);
 app.use('/api/users', userRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // 404 Handler
 app.use((req, res, next) => {

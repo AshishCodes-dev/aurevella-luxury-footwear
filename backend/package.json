@@ -7,8 +7,11 @@
     "start": "node server.js",
     "check-env": "node scripts/checkEnv.js",
     "seed:products": "node src/utils/seedProducts.js",
+    "migrate:payment-index": "node scripts/migratePaymentIdIndex.js",
     "test:phase5": "node scripts/testPhase5.js",
-    "test:phase6-1": "node scripts/testPhase6_1.js"
+    "test:phase6-1": "node scripts/testPhase6_1.js",
+    "test:phase6-2": "node scripts/testPhase6_2.js",
+    "test:phase7": "node scripts/testPhase7.js"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",
@@ -21,6 +24,7 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.10.1",
     "morgan": "^1.10.0",
+    "razorpay": "^2.9.8",
     "zod": "^4.6.7"
   },
   "devDependencies": {

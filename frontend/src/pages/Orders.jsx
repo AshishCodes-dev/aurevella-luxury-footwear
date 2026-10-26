@@ -301,8 +301,13 @@ export const Orders = () => {
                         />
                         <div>
                           <h4 className="font-serif text-sm text-[#FEF5E6]">{item.name}</h4>
-                          <p className="text-[11px] text-[#B8AD9A]">
-                            Qty: {item.quantity} × {item.priceText}
+                          <p className="text-[11px] text-[#B8AD9A] flex items-center gap-2 mt-0.5">
+                            <span>Qty: {item.quantity} × {item.priceText}</span>
+                            {item.size && (
+                              <span className="px-1.5 py-0.2 text-[10px] uppercase tracking-wider text-[#FEF5E6] bg-[#0F0A09] border border-[#2F1C15]">
+                                Size: {item.size}
+                              </span>
+                            )}
                           </p>
                         </div>
                       </div>

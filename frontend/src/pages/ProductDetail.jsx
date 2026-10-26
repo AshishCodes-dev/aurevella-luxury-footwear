@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ShoppingBag,
@@ -10,10 +10,12 @@ import {
   AlertCircle,
   Plus,
   Minus,
+  Ruler,
 } from 'lucide-react';
-import { getProductById } from '../data/products.js';
+import { getProductById, DEFAULT_PROVISIONAL_SIZES } from '../data/products.js';
 import { fetchProductByIdOrSlug } from '../utils/api.js';
 import { useBag } from '../context/BagContext.jsx';
+import { SizingGuideModal } from '../components/SizingGuideModal.jsx';
 import useDocumentTitle from '../utils/useDocumentTitle.js';
 
 export const ProductDetail = () => {
@@ -24,8 +26,12 @@ export const ProductDetail = () => {
   const [product, setProduct] = useState(() => getProductById(id));
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
+  const [selectedSize, setSelectedSize] = useState(null);
+  const [sizeError, setSizeError] = useState(null);
+  const [isSizingGuideOpen, setIsSizingGuideOpen] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const sizeSelectorRef = useRef(null);
 
   // Set accessible document title based on product resolution
   const pageTitle = product
@@ -38,6 +44,8 @@ export const ProductDetail = () => {
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
+    setSelectedSize(null);
+    setSizeError(null);
 
     const loadProduct = async () => {
       // 1. Check local launch catalogue first (authoritative single source of truth for launch models)
@@ -75,6 +83,7 @@ export const ProductDetail = () => {
                 slug: localMatch.slug,
                 link: localMatch.link,
                 description: localMatch.description,
+                sizes: localMatch.sizes || apiProd.sizes || DEFAULT_PROVISIONAL_SIZES,
                 ...(typeof apiProd.stockQuantity === 'number' ? { stockQuantity: apiProd.stockQuantity } : {}),
                 ...(typeof apiProd.inStock === 'boolean' ? { inStock: apiProd.inStock } : {}),
               });
@@ -99,6 +108,7 @@ export const ProductDetail = () => {
                 image: apiProd.image || '',
                 alt: apiProd.alt || apiProd.name,
                 description: apiProd.description || '',
+                sizes: Array.isArray(apiProd.sizes) && apiProd.sizes.length > 0 ? apiProd.sizes : DEFAULT_PROVISIONAL_SIZES,
                 ...(typeof apiProd.stockQuantity === 'number' ? { stockQuantity: apiProd.stockQuantity } : {}),
                 ...(typeof apiProd.inStock === 'boolean' ? { inStock: apiProd.inStock } : {}),
               });
@@ -134,8 +144,14 @@ export const ProductDetail = () => {
 
   const handleAddToBag = () => {
     if (!product) return;
-    const success = addToBag(product.id, quantity, product);
+    if (!selectedSize) {
+      setSizeError('Please select a shoe size before adding to bag');
+      sizeSelectorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    const success = addToBag(product.id, quantity, product, selectedSize);
     if (success) {
+      setSizeError(null);
       setIsAdded(true);
       setTimeout(() => setIsAdded(false), 2000);
     }
@@ -269,6 +285,70 @@ export const ProductDetail = () => {
 
           {/* Add-to-Bag Controls */}
           <div className="pt-6 border-t border-[#2F1C15] space-y-6">
+            {/* Footwear Size Selection */}
+            <div ref={sizeSelectorRef} className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs uppercase tracking-widest text-[#B8AD9A] font-medium">
+                    Select Size (EU):
+                  </span>
+                  {selectedSize && (
+                    <span className="text-xs font-semibold text-[#FEF5E6] bg-[#181210] border border-[#2F1C15] px-2 py-0.5">
+                      {selectedSize}
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSizingGuideOpen(true)}
+                  className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                >
+                  <Ruler size={13} />
+                  <span>Size Guide & Measurements</span>
+                </button>
+              </div>
+
+              {/* Size Pills */}
+              <div
+                role="group"
+                aria-label="Available footwear sizes"
+                className="grid grid-cols-3 sm:grid-cols-6 gap-2"
+              >
+                {(product.sizes || DEFAULT_PROVISIONAL_SIZES).map((sz) => {
+                  const isSelected = selectedSize === sz;
+                  return (
+                    <button
+                      key={sz}
+                      type="button"
+                      aria-pressed={isSelected}
+                      onClick={() => {
+                        setSelectedSize(sz);
+                        setSizeError(null);
+                      }}
+                      className={`min-h-[46px] flex items-center justify-center text-xs uppercase tracking-wider font-medium border transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] ${
+                        isSelected
+                          ? 'bg-[#FEF5E6] text-[#0F0A09] border-[#FEF5E6] font-semibold shadow-md'
+                          : 'bg-[#181210] text-[#FEF5E6] border-[#2F1C15] hover:border-[#FEF5E6]/50 hover:bg-[#201715]'
+                      }`}
+                    >
+                      {sz}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Inline Validation Error */}
+              {sizeError && (
+                <div
+                  role="alert"
+                  className="p-3 bg-red-950/40 border border-red-800 text-red-200 text-xs flex items-center gap-2 animate-fade-in"
+                >
+                  <AlertCircle size={15} className="text-red-400 shrink-0" />
+                  <span>{sizeError}</span>
+                </div>
+              )}
+            </div>
+
             {/* Quantity Selector */}
             <div className="flex items-center gap-4">
               <span className="text-xs uppercase tracking-widest text-[#B8AD9A] min-w-[70px]">
@@ -361,6 +441,13 @@ export const ProductDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Sizing Guide Modal */}
+      <SizingGuideModal
+        isOpen={isSizingGuideOpen}
+        onClose={() => setIsSizingGuideOpen(false)}
+        productName={product?.name}
+      />
     </div>
   );
 };

@@ -117,11 +117,18 @@ export const Checkout = () => {
   // Fingerprint representing current cart items, quantities, and selected delivery address
   const cartFingerprint = useMemo(() => {
     const itemsSig = (rawItems || [])
-      .map((i) => `${i.id}:${i.quantity}`)
+      .map((i) => `${i.id}:${i.size || 'default'}:${i.quantity}`)
       .sort()
       .join('|');
     return `${itemsSig}#${selectedAddressId || 'none'}`;
   }, [rawItems, selectedAddressId]);
+
+  // Detect if any footwear items in the bag lack a selected size
+  const hasUnsizedCartItems = useMemo(() => {
+    return (rawItems || []).some(
+      (item) => !item.size || typeof item.size !== 'string' || item.size.trim().length === 0
+    );
+  }, [rawItems]);
 
   const lastFingerprintRef = useRef(cartFingerprint);
 
@@ -251,6 +258,15 @@ export const Checkout = () => {
     }
     if (rawItems.length === 0) {
       setCheckoutError('Your shopping bag is empty.');
+      return;
+    }
+    if (hasUnsizedCartItems) {
+      setCheckoutError(
+        'One or more footwear models in your shopping bag do not have a size selected. Please return to your bag to select your shoe size before commissioning your order.'
+      );
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
       return;
     }
 
@@ -641,7 +657,17 @@ export const Checkout = () => {
           <AlertCircle size={18} className="shrink-0 mt-0.5 text-red-400" />
           <div className="flex-1 leading-relaxed">
             <strong className="block mb-0.5 text-red-300 font-medium">Checkout Advisory:</strong>
-            {checkoutError}
+            <p>{checkoutError}</p>
+            {hasUnsizedCartItems && (
+              <div className="mt-2.5">
+                <Link
+                  to="/bag"
+                  className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[#FEF5E6] hover:text-white underline font-medium transition-subtle"
+                >
+                  Return to Shopping Bag to Select Size &rarr;
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -909,7 +935,7 @@ export const Checkout = () => {
 
             <ul className="divide-y divide-[#2F1C15]/70">
               {bagItems.map((item) => (
-                <li key={item.id} className="py-4 flex items-center justify-between gap-4 first:pt-2 last:pb-0">
+                <li key={item.lineKey || `${item.id}_${item.size || 'default'}`} className="py-4 flex items-center justify-between gap-4 first:pt-2 last:pb-0">
                   <div className="flex items-center gap-4">
                     <img
                       src={item.image}
@@ -925,8 +951,17 @@ export const Checkout = () => {
                       <h4 className="font-serif text-sm sm:text-base text-[#FEF5E6]">
                         {item.name}
                       </h4>
-                      <p className="text-xs text-[#B8AD9A]">
-                        Qty: {item.quantity} × {item.priceText}
+                      <p className="text-xs text-[#B8AD9A] flex items-center gap-2 mt-0.5">
+                        <span>Qty: {item.quantity} × {item.priceText}</span>
+                        {item.size ? (
+                          <span className="px-1.5 py-0.2 text-[10px] uppercase tracking-wider text-[#FEF5E6] bg-[#0F0A09] border border-[#2F1C15]">
+                            Size: {item.size}
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.2 text-[10px] uppercase tracking-wider text-amber-300 bg-amber-950/40 border border-amber-900/60 font-medium">
+                            Size not selected
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -938,6 +973,18 @@ export const Checkout = () => {
                 </li>
               ))}
             </ul>
+
+            {hasUnsizedCartItems && (
+              <div className="p-3 bg-amber-950/30 border border-amber-900/60 text-amber-200 text-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 animate-fade-in">
+                <span>One or more footwear models in your selection require a shoe size.</span>
+                <Link
+                  to="/bag"
+                  className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wider text-[#FEF5E6] hover:text-white underline font-medium shrink-0"
+                >
+                  Select Size in Bag &rarr;
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Section 3: Bespoke Delivery Instructions */}
@@ -1018,7 +1065,7 @@ export const Checkout = () => {
             <button
               type="button"
               onClick={handlePlaceOrderAndPay}
-              disabled={isSubmitting || quoteLoading || Boolean(quoteError) || !selectedAddressId}
+              disabled={isSubmitting || quoteLoading || Boolean(quoteError) || !selectedAddressId || hasUnsizedCartItems}
               className="w-full inline-flex items-center justify-center gap-2 min-h-[50px] px-6 text-xs uppercase tracking-[0.2em] bg-[#FEF5E6] text-[#0F0A09] hover:bg-white font-semibold transition-subtle shadow-lg disabled:opacity-40 disabled:cursor-not-allowed select-none"
             >
               {isSubmitting ? (
@@ -1026,6 +1073,8 @@ export const Checkout = () => {
                   <span className="w-4 h-4 border-2 border-[#0F0A09] border-t-transparent rounded-full animate-spin" />
                   <span>Securing Order...</span>
                 </>
+              ) : hasUnsizedCartItems ? (
+                <span>Select Shoe Size to Proceed</span>
               ) : quoteLoading ? (
                 <span>Recalculating Quote...</span>
               ) : (

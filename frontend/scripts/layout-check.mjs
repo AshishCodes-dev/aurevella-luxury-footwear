@@ -727,6 +727,10 @@ async function runLayoutChecks() {
       console.log('✔ PASS: PDP quantity incremented to 2.');
     }
 
+    // Select size EU 38 before adding to bag
+    await pdpPage.locator('button:has-text("EU 38")').click({ force: true });
+    await pdpPage.waitForTimeout(100);
+
     // Test Add to Bag from PDP
     const pdpAddBtn = pdpPage.locator('button:has-text("Add to Bag")');
     await pdpAddBtn.click({ force: true });
@@ -878,15 +882,28 @@ async function runLayoutChecks() {
       console.log('✔ PASS: Backend unapproved image blocked; client-provided image path locked.');
     }
 
-    // Click Add to Bag on the page and verify canonical local ID is passed
+    // 5. Verify size selection validation and canonical local ID persistence
+    // Attempt Add to Bag without selecting size
+    await precedencePage.locator('button:has-text("Add to Bag")').click({ force: true });
+    await precedencePage.waitForTimeout(100);
+    const errorText = await precedencePage.textContent('body');
+    if (!errorText.includes('Please select a shoe size before adding to bag')) {
+      pdpErrors.push('FAIL: PDP did not block Add to Bag when no size was selected');
+    } else {
+      console.log('✔ PASS: PDP enforces size selection validation before adding to bag.');
+    }
+
+    // Select size EU 38 and click Add to Bag
+    await precedencePage.locator('button:has-text("EU 38")').click({ force: true });
+    await precedencePage.waitForTimeout(100);
     await precedencePage.locator('button:has-text("Add to Bag")').click({ force: true });
     await precedencePage.waitForTimeout(200);
 
     const storageBag = await precedencePage.evaluate(() => JSON.parse(localStorage.getItem('aurevella_bag') || '[]'));
-    if (!storageBag.some((i) => i.id === 'prod-01')) {
-      pdpErrors.push(`FAIL: Add to bag did not use canonical local ID "prod-01", bag contents: ${JSON.stringify(storageBag)}`);
+    if (!storageBag.some((i) => i.id === 'prod-01' && i.size === 'EU 38')) {
+      pdpErrors.push(`FAIL: Add to bag did not use canonical local ID "prod-01" with size "EU 38", bag contents: ${JSON.stringify(storageBag)}`);
     } else {
-      console.log('✔ PASS: Add-to-bag continues using canonical local ID "prod-01" (Mongo _id rejected).');
+      console.log('✔ PASS: Add-to-bag continues using canonical local ID "prod-01" with selected size "EU 38" (Mongo _id rejected).');
     }
 
     // 6. Verify Neutralized Commercial Claims
@@ -985,7 +1002,9 @@ async function runLayoutChecks() {
       pdpErrors.push(`FAIL: Dynamic PDP did not render product title (got "${dynTitle}")`);
     }
 
-    // Click Add to Bag
+    // Select size EU 38 and click Add to Bag
+    await dynPage.locator('button:has-text("EU 38")').click({ force: true });
+    await dynPage.waitForTimeout(100);
     await dynPage.locator('button:has-text("Add to Bag")').click({ force: true });
     await dynPage.waitForTimeout(200);
 
@@ -1051,6 +1070,173 @@ async function runLayoutChecks() {
 
     await dynPage.close();
     await dynContext.close();
+
+    // 8. Footwear Sizing Guide & Composite Cart Suite (Phase 14)
+    console.log('\n--- Running Suite 8: Footwear Size Selection & Sizing Guide ---');
+    const sizeContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const sizePage = await sizeContext.newPage();
+    await setupMockApi(sizePage);
+
+    await sizePage.goto(`${baseUrl}/product/prod-01`, { waitUntil: 'networkidle' });
+    await sizePage.waitForTimeout(200);
+
+    // 8A: Sizing Guide Modal open and close
+    const guideTrigger = sizePage.locator('button:has-text("Size Guide & Measurements")');
+    if (!(await guideTrigger.isVisible())) {
+      pdpErrors.push('FAIL: "Size Guide & Measurements" button missing on PDP');
+    } else {
+      await guideTrigger.click({ force: true });
+      await sizePage.waitForTimeout(200);
+
+      const modalVisible = await sizePage.locator('[role="dialog"][aria-labelledby="sizing-guide-title"]').isVisible();
+      if (!modalVisible) {
+        pdpErrors.push('FAIL: Sizing guide modal did not open on trigger click');
+      } else {
+        console.log('✔ PASS: Sizing guide modal opened with proper accessibility dialog semantics.');
+      }
+
+      // Check conversion chart contains EU 36-41
+      const modalText = await sizePage.textContent('[role="dialog"]');
+      if (!modalText.includes('EU 36') || !modalText.includes('EU 41') || !modalText.includes('Foot Length')) {
+        pdpErrors.push('FAIL: Sizing guide modal missing conversion chart rows or measurements');
+      } else {
+        console.log('✔ PASS: Sizing guide modal contains complete conversion reference.');
+      }
+
+      // Switch to How to Measure tab
+      await sizePage.locator('button:has-text("How to Measure")').click({ force: true });
+      await sizePage.waitForTimeout(150);
+      const measureText = await sizePage.textContent('[role="dialog"]');
+      if (!measureText.includes('Paper Preparation') || !measureText.includes('Dual Foot Standing')) {
+        pdpErrors.push('FAIL: How to Measure tab content missing');
+      } else {
+        console.log('✔ PASS: Sizing guide measurement steps rendered properly.');
+      }
+
+      // Close modal using Escape key
+      await sizePage.keyboard.press('Escape');
+      await sizePage.waitForTimeout(200);
+      const modalClosed = !(await sizePage.locator('[role="dialog"]').isVisible());
+      if (!modalClosed) {
+        pdpErrors.push('FAIL: Sizing guide modal did not close on Escape key');
+      } else {
+        console.log('✔ PASS: Sizing guide modal closed via Escape key listener.');
+      }
+    }
+
+    // 8B: Composite Cart - adding different sizes creates separate lines
+    await sizePage.evaluate(() => localStorage.removeItem('aurevella_bag'));
+    await sizePage.goto(`${baseUrl}/product/prod-01`, { waitUntil: 'networkidle' });
+    await sizePage.waitForTimeout(200);
+
+    // Add EU 37
+    await sizePage.locator('button:has-text("EU 37")').click({ force: true });
+    await sizePage.locator('button:has-text("Add to Bag")').click({ force: true });
+    await sizePage.waitForTimeout(300);
+
+    // Close drawer
+    await sizePage.keyboard.press('Escape');
+    await sizePage.waitForTimeout(200);
+
+    // Add EU 39
+    await sizePage.locator('button:has-text("EU 39")').click({ force: true });
+    await sizePage.locator('button:has-text("Add to Bag")').click({ force: true });
+    await sizePage.waitForTimeout(300);
+
+    // Verify localStorage has 2 lines for prod-01
+    const multiBag = await sizePage.evaluate(() => JSON.parse(localStorage.getItem('aurevella_bag') || '[]'));
+    if (multiBag.length !== 2 || !multiBag.some((i) => i.size === 'EU 37') || !multiBag.some((i) => i.size === 'EU 39')) {
+      pdpErrors.push(`FAIL: Composite cart lines not created for distinct sizes: ${JSON.stringify(multiBag)}`);
+    } else {
+      console.log('✔ PASS: Composite cart correctly maintained separate lines for different sizes of the same model.');
+    }
+
+    // Verify drawer displays size badge
+    const drawerHtml = await sizePage.locator('[role="dialog"][aria-label="Shopping Bag Drawer"]').innerHTML();
+    if (!drawerHtml.includes('Size: EU 37') || !drawerHtml.includes('Size: EU 39')) {
+      pdpErrors.push('FAIL: Bag drawer did not display size badges on line items');
+    } else {
+      console.log('✔ PASS: Bag drawer displays clear size badges on composite line items.');
+    }
+
+    await sizePage.close();
+    await sizeContext.close();
+
+    // 8C: Legacy unsized cart item blocks checkout and provides return-to-bag recovery path
+    const checkoutContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const checkoutPage = await checkoutContext.newPage();
+    await setupMockApi(checkoutPage);
+    await checkoutPage.route('**/api/auth/me', (route) => {
+      route.fulfill({
+        status: 200,
+        headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user: {
+            uid: 'test-vip-user',
+            email: 'vip@aurevella.com',
+            name: 'Elena Rossi',
+            role: 'customer',
+          },
+        }),
+      });
+    });
+    await checkoutPage.route('**/api/users/addresses', (route) => {
+      route.fulfill({
+        status: 200,
+        headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'success',
+          addresses: [
+            {
+              id: 'addr-mock-1',
+              recipientName: 'Elena Rossi',
+              phone: '+91 9876543210',
+              addressLine1: '402 Signature Towers',
+              city: 'Mumbai',
+              state: 'Maharashtra',
+              postalCode: '400001',
+              isDefault: true,
+            },
+          ],
+        }),
+      });
+    });
+    await checkoutPage.route('**/api/orders/quote', (route) => {
+      route.fulfill({
+        status: 400,
+        headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'error',
+          message: 'A valid footwear size is required for "Floral Block Heel Sandal". Available sizes: EU 36, EU 37, EU 38, EU 39, EU 40, EU 41',
+        }),
+      });
+    });
+
+    // Populate localStorage with unsized legacy cart
+    await checkoutPage.goto(`${baseUrl}/shop`, { waitUntil: 'networkidle' });
+    await checkoutPage.evaluate(() => {
+      localStorage.setItem('aurevella_bag', JSON.stringify([{ id: 'prod-01', quantity: 1 }]));
+    });
+
+    await checkoutPage.goto(`${baseUrl}/checkout`, { waitUntil: 'networkidle' });
+    await checkoutPage.waitForTimeout(300);
+
+    const checkoutHtml = await checkoutPage.textContent('body');
+    if (!checkoutHtml.includes('Size not selected') || !checkoutHtml.includes('Select Shoe Size to Proceed')) {
+      pdpErrors.push('FAIL: Checkout did not block unsized legacy cart or render "Select Shoe Size to Proceed" button');
+    } else {
+      console.log('✔ PASS: Checkout correctly blocked legacy unsized cart with disabled "Select Shoe Size to Proceed" state.');
+    }
+
+    const returnLink = checkoutPage.locator('a[href="/bag"]:has-text("Select Size in Bag")');
+    if (!(await returnLink.isVisible())) {
+      pdpErrors.push('FAIL: Recovery link to return to bag was not visible on checkout page');
+    } else {
+      console.log('✔ PASS: Recovery link to return to shopping bag rendered visibly for unsized items.');
+    }
+
+    await checkoutPage.close();
+    await checkoutContext.close();
 
     if (pdpErrors.length > 0) {
       console.error('\n[PDP Test Failures]:');

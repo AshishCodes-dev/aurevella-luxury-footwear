@@ -675,7 +675,7 @@ export const AdminOrders = ({ initialOrderId = null, onClearInitialOrder = null 
                             </span>
                           </td>
                           <td className="py-2.5 px-4 text-[#B8AD9A] font-mono">
-                            {item.size || 'Standard'}
+                            {item.size || '—'}
                           </td>
                           <td className="py-2.5 px-4 text-center font-mono">
                             {item.quantity}

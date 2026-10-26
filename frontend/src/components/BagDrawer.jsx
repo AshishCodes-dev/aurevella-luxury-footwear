@@ -51,7 +51,7 @@ export const BagDrawer = () => {
     if (items.length === 0) return siteConfig.contact.whatsapp.url;
 
     const itemsSummary = items
-      .map((item) => `• ${item.quantity}x ${item.name} (${item.priceText})`)
+      .map((item) => `• ${item.quantity}x ${item.name}${item.size ? ` (Size: ${item.size})` : ''} (${item.priceText})`)
       .join('\n');
 
     const message = `Hello Aurevella Atelier,\nI would like to place an order inquiry for the following handcrafted footwear:\n\n${itemsSummary}\n\nEstimated Subtotal: ${subtotalText}\n\nPlease advise on sizing guidance and delivery timeline.`;
@@ -143,7 +143,7 @@ export const BagDrawer = () => {
                 )}
                 <ul className="divide-y divide-[#2F1C15]" aria-label="Items in bag">
                 {items.map((item) => (
-                  <li key={item.id} className="py-5 flex gap-4 first:pt-0 last:pb-0">
+                  <li key={item.lineKey || `${item.id}_${item.size || 'default'}`} className="py-5 flex gap-4 first:pt-0 last:pb-0">
                     {/* Thumbnail */}
                     <div className="w-20 h-20 bg-[#120D0C] border border-[#2F1C15] shrink-0 overflow-hidden aspect-square">
                       <img
@@ -167,6 +167,15 @@ export const BagDrawer = () => {
                         <div className="text-xs text-[#FEF5E6]/90 font-medium">
                           {item.priceText}
                         </div>
+                        {item.size ? (
+                          <span className="inline-block mt-1.5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-[#FEF5E6] bg-[#140E0C] border border-[#2F1C15]">
+                            Size: {item.size}
+                          </span>
+                        ) : (
+                          <span className="inline-block mt-1.5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-amber-300/80 bg-amber-950/30 border border-amber-900/40">
+                            Size not selected
+                          </span>
+                        )}
                       </div>
 
                       {/* Quantity & Remove Controls */}
@@ -174,7 +183,7 @@ export const BagDrawer = () => {
                         <div className="flex items-center border border-[#2F1C15] bg-[#181210]">
                           <button
                             type="button"
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            onClick={() => updateQuantity(item.id, item.size, item.quantity - 1)}
                             aria-label={`Decrease quantity for ${item.name}`}
                             className="min-h-[34px] min-w-[34px] flex items-center justify-center text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle"
                           >
@@ -185,7 +194,7 @@ export const BagDrawer = () => {
                           </span>
                           <button
                             type="button"
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.id, item.size, item.quantity + 1)}
                             disabled={item.quantity >= 10}
                             aria-label={`Increase quantity for ${item.name}`}
                             className="min-h-[34px] min-w-[34px] flex items-center justify-center text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle disabled:opacity-30 disabled:cursor-not-allowed"
@@ -200,7 +209,7 @@ export const BagDrawer = () => {
                           </span>
                           <button
                             type="button"
-                            onClick={() => removeFromBag(item.id)}
+                            onClick={() => removeFromBag(item.id, item.size)}
                             aria-label={`Remove ${item.name} from bag`}
                             className="min-h-[44px] min-w-[36px] flex items-center justify-center text-[#B8AD9A] hover:text-red-400 transition-subtle"
                           >

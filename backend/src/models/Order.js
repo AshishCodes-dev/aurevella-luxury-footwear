@@ -56,6 +56,12 @@ const orderItemSchema = new mongoose.Schema(
         message: '{VALUE} is not an integer paise value',
       },
     },
+    size: {
+      type: String,
+      trim: true,
+      default: null,
+      maxlength: [20, 'Size description cannot exceed 20 characters'],
+    },
   },
   { _id: false }
 );
@@ -301,6 +307,7 @@ orderSchema.methods.toSafeJSON = function () {
         slug: i.slug,
         image: i.image,
         quantity: i.quantity,
+        size: i.size || null,
         pricePaise: i.pricePaise,
         price: unitRupees,
         priceText: formatRupeeText(i.pricePaise),

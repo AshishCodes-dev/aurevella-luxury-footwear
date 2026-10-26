@@ -21,6 +21,10 @@ export const BagProvider = ({ children }) => {
         .filter((item) => item && typeof item.id === 'string' && item.id.trim().length > 0)
         .map((item) => ({
           id: item.id.trim(),
+          size:
+            item.size && typeof item.size === 'string' && item.size.trim().length > 0
+              ? item.size.trim()
+              : null,
           quantity: Math.min(Math.max(1, parseInt(item.quantity, 10) || 1), 10),
         }));
     } catch (_) {
@@ -105,6 +109,9 @@ export const BagProvider = ({ children }) => {
             priceText: launchProduct.priceText,
             image: launchProduct.image,
             alt: launchProduct.alt,
+            size: item.size || null,
+            lineKey: `${launchProduct.id}_${item.size || 'default'}`,
+            sizes: launchProduct.sizes || ['EU 36', 'EU 37', 'EU 38', 'EU 39', 'EU 40', 'EU 41'],
             quantity: item.quantity,
             lineTotal: launchProduct.price * item.quantity,
             lineTotalText: formatPriceINR(launchProduct.price * item.quantity),
@@ -131,6 +138,12 @@ export const BagProvider = ({ children }) => {
             priceText: dynamicProduct.priceText || formatPriceINR(price),
             image: dynamicProduct.image || '',
             alt: dynamicProduct.alt || dynamicProduct.name,
+            size: item.size || null,
+            lineKey: `${resolvedId}_${item.size || 'default'}`,
+            sizes:
+              Array.isArray(dynamicProduct.sizes) && dynamicProduct.sizes.length > 0
+                ? dynamicProduct.sizes
+                : ['EU 36', 'EU 37', 'EU 38', 'EU 39', 'EU 40', 'EU 41'],
             quantity: item.quantity,
             lineTotal: price * item.quantity,
             lineTotalText: formatPriceINR(price * item.quantity),
@@ -163,18 +176,22 @@ export const BagProvider = ({ children }) => {
   }, [rawItems.length, detailedItems.length]);
 
   const removeUnavailableItems = () => {
-    const validIds = new Set(detailedItems.map((i) => i.id));
-    setRawItems((prev) => prev.filter((i) => validIds.has(i.id)));
+    const validLineKeys = new Set(detailedItems.map((i) => i.lineKey));
+    setRawItems((prev) =>
+      prev.filter((i) => validLineKeys.has(`${i.id}_${i.size || 'default'}`))
+    );
   };
 
   // Add product to bag (validates against trusted launch models and verified dynamic catalogue)
-  const addToBag = (productId, quantity = 1, productData = null) => {
+  const addToBag = (productId, quantity = 1, productData = null, size = null) => {
     if (!productId || typeof productId !== 'string') {
       console.error(`Invalid product ID rejected: ${productId}`);
       return false;
     }
 
     const trimmedId = productId.trim();
+    const validSize =
+      size && typeof size === 'string' && size.trim().length > 0 ? size.trim() : null;
 
     // Check if it's an authorized launch product
     const isLaunch = PRODUCTS_MAP.has(trimmedId) || getProductById(trimmedId) !== null;
@@ -212,36 +229,69 @@ export const BagProvider = ({ children }) => {
     const validQty = Math.min(Math.max(1, parseInt(quantity, 10) || 1), 10);
 
     setRawItems((prev) => {
-      const existingIdx = prev.findIndex((i) => i.id === trimmedId);
+      const existingIdx = prev.findIndex(
+        (i) => i.id === trimmedId && (i.size || null) === validSize
+      );
       if (existingIdx > -1) {
         const updated = [...prev];
         const newQty = Math.min(10, updated[existingIdx].quantity + validQty);
         updated[existingIdx] = { ...updated[existingIdx], quantity: newQty };
         return updated;
       }
-      return [...prev, { id: trimmedId, quantity: validQty }];
+      return [...prev, { id: trimmedId, size: validSize, quantity: validQty }];
     });
 
     setIsBagOpen(true);
     return true;
   };
 
-  // Remove product from bag
-  const removeFromBag = (productId) => {
-    setRawItems((prev) => prev.filter((i) => i.id !== productId));
+  // Remove product line from bag (supports composite (productId, size) or fallback (productId))
+  const removeFromBag = (productId, size = null) => {
+    const trimmedId = typeof productId === 'string' ? productId.trim() : productId;
+    const targetSize =
+      size && typeof size === 'string' && size.trim().length > 0 ? size.trim() : null;
+
+    setRawItems((prev) =>
+      prev.filter((i) => {
+        if (targetSize !== null) {
+          return !(i.id === trimmedId && (i.size || null) === targetSize);
+        }
+        return i.id !== trimmedId;
+      })
+    );
   };
 
-  // Update item quantity
-  const updateQuantity = (productId, newQuantity) => {
+  // Update item quantity (supports updateQuantity(id, size, qty) or legacy updateQuantity(id, qty))
+  const updateQuantity = (productId, sizeOrQty, maybeQty) => {
+    const trimmedId = typeof productId === 'string' ? productId.trim() : productId;
+    let size = null;
+    let newQuantity;
+
+    if (maybeQty !== undefined) {
+      size =
+        typeof sizeOrQty === 'string' && sizeOrQty.trim().length > 0
+          ? sizeOrQty.trim()
+          : null;
+      newQuantity = maybeQty;
+    } else {
+      newQuantity = sizeOrQty;
+    }
+
     const qty = parseInt(newQuantity, 10);
     if (isNaN(qty) || qty <= 0) {
-      removeFromBag(productId);
+      removeFromBag(trimmedId, size);
       return;
     }
 
     const clampedQty = Math.min(Math.max(1, qty), 10);
     setRawItems((prev) =>
-      prev.map((i) => (i.id === productId ? { ...i, quantity: clampedQty } : i))
+      prev.map((i) => {
+        const matches =
+          size !== null
+            ? i.id === trimmedId && (i.size || null) === size
+            : i.id === trimmedId;
+        return matches ? { ...i, quantity: clampedQty } : i;
+      })
     );
   };
 

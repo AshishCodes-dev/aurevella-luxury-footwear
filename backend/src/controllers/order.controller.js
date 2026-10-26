@@ -34,6 +34,7 @@ export const validateCheckoutQuote = async (req, res) => {
           name: i.name,
           slug: i.slug,
           image: i.image,
+          size: i.size || null,
           quantity: i.quantity,
           pricePaise: i.pricePaise,
           price: toRupees(i.pricePaise),
@@ -104,7 +105,9 @@ export const createOrder = async (req, res) => {
           existing.totalPaise === pricing.totalPaise &&
           existing.items.every((exItem) => {
             const match = pricing.items.find(
-              (p) => p.product.toString() === exItem.product.toString()
+              (p) =>
+                p.product.toString() === exItem.product.toString() &&
+                (p.size || null) === (exItem.size || null)
             );
             return match && match.quantity === exItem.quantity;
           });

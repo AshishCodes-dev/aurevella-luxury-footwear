@@ -210,7 +210,7 @@ async function runPhase7TestSuite() {
       method: 'POST',
       headers: headersA,
       body: JSON.stringify({
-        items: [{ id: heelProduct.code, quantity: 11 }],
+        items: [{ id: heelProduct.code, quantity: 11, size: 'EU 38' }],
       }),
     });
     record(
@@ -225,8 +225,8 @@ async function runPhase7TestSuite() {
       headers: headersA,
       body: JSON.stringify({
         items: [
-          { id: heelProduct.code, quantity: 2 },
-          { id: slideProduct.code, quantity: 1 },
+          { id: heelProduct.code, quantity: 2, size: 'EU 38' },
+          { id: slideProduct.code, quantity: 1, size: 'EU 37' },
         ],
         addressId: addrA._id.toString(),
       }),
@@ -253,7 +253,7 @@ async function runPhase7TestSuite() {
       headers: headersA,
       body: JSON.stringify({
         items: [
-          { id: heelProduct.code, quantity: 1 }, // Quantity updated from 2 to 1
+          { id: heelProduct.code, quantity: 1, size: 'EU 38' }, // Quantity updated from 2 to 1
         ],
         addressId: addrA._id.toString(),
       }),
@@ -271,7 +271,7 @@ async function runPhase7TestSuite() {
       headers: headersA,
       body: JSON.stringify({
         items: [
-          { id: slideProduct.code, quantity: 10 }, // Slide product has stock 10
+          { id: slideProduct.code, quantity: 10, size: 'EU 37' }, // Slide product has stock 10
         ],
       }),
     });
@@ -280,13 +280,28 @@ async function runPhase7TestSuite() {
       method: 'POST',
       headers: headersA,
       body: JSON.stringify({
-        items: [{ id: slideProduct.code, quantity: 11 }],
+        items: [{ id: slideProduct.code, quantity: 11, size: 'EU 37' }],
       }),
     });
     record(
       'Stock Constraint: Rejects item quantity exceeding available database inventory (400)',
       stockExceededRes.status === 400,
       `Status: ${stockExceededRes.status}`
+    );
+
+    // 2F: Mandatory footwear size validation check
+    const unsizedRes = await fetch(`${baseUrl}/api/orders/quote`, {
+      method: 'POST',
+      headers: headersA,
+      body: JSON.stringify({
+        items: [{ id: heelProduct.code, quantity: 1 }],
+      }),
+    });
+    const unsizedData = await unsizedRes.json();
+    record(
+      'Size Validation: Rejects quote without mandatory footwear size (400)',
+      unsizedRes.status === 400 && unsizedData.message.includes('size is required'),
+      `Status: ${unsizedRes.status}, message: "${unsizedData.message}"`
     );
 
     // ----------------------------------------------------
@@ -299,7 +314,7 @@ async function runPhase7TestSuite() {
       method: 'POST',
       headers: headersB, // Tara Verma
       body: JSON.stringify({
-        items: [{ id: heelProduct.code, quantity: 1 }],
+        items: [{ id: heelProduct.code, quantity: 1, size: 'EU 38' }],
         addressId: addrA._id.toString(), // Aria Sharma's address!
       }),
     });
@@ -314,7 +329,7 @@ async function runPhase7TestSuite() {
       method: 'POST',
       headers: headersA,
       body: JSON.stringify({
-        items: [{ id: heelProduct.code, quantity: 1 }],
+        items: [{ id: heelProduct.code, quantity: 1, size: 'EU 38' }],
         addressId: addrA._id.toString(),
         notes: 'Please pack in luxury presentation cedar box.',
         idempotencyKey: 'idemp_p7_order_001',
@@ -345,7 +360,7 @@ async function runPhase7TestSuite() {
       method: 'POST',
       headers: headersA,
       body: JSON.stringify({
-        items: [{ id: heelProduct.code, quantity: 1 }],
+        items: [{ id: heelProduct.code, quantity: 1, size: 'EU 38' }],
         addressId: addrA._id.toString(),
         idempotencyKey: 'idemp_p7_order_001',
       }),

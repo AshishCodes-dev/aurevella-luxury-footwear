@@ -275,6 +275,7 @@ async function runPhase6_1TestSuite() {
         {
           id: 'prod-01',
           quantity: 2,
+          size: 'EU 38',
           price: 1, // Tampered client price (ignored)
           pricePaise: 100, // Tampered client paise (ignored)
           lineTotal: 2,
@@ -282,6 +283,7 @@ async function runPhase6_1TestSuite() {
         {
           id: 'prod-02',
           quantity: 1,
+          size: 'EU 37',
           price: 10, // Tampered client price (ignored)
         },
       ],
@@ -336,7 +338,7 @@ async function runPhase6_1TestSuite() {
       method: 'POST',
       headers: authHeadersAlpha,
       body: JSON.stringify({
-        items: [{ id: 'non-existent-product-id-xyz', quantity: 1 }],
+        items: [{ id: 'non-existent-product-id-xyz', quantity: 1, size: 'EU 38' }],
       }),
     });
     record(
@@ -366,7 +368,7 @@ async function runPhase6_1TestSuite() {
       method: 'POST',
       headers: authHeadersAlpha,
       body: JSON.stringify({
-        items: [{ id: 'prod-inactive-test', quantity: 1 }],
+        items: [{ id: 'prod-inactive-test', quantity: 1, size: 'EU 38' }],
       }),
     });
     record(
@@ -383,7 +385,7 @@ async function runPhase6_1TestSuite() {
       method: 'POST',
       headers: authHeadersAlpha,
       body: JSON.stringify({
-        items: [{ id: 'prod-03', quantity: 10 }], // We will test an item where requested > stock
+        items: [{ id: 'prod-03', quantity: 10, size: 'EU 38' }], // We will test an item where requested > stock
       }),
     });
     // Let's create a temporary product with stock = 2 and request 5
@@ -407,7 +409,7 @@ async function runPhase6_1TestSuite() {
       method: 'POST',
       headers: authHeadersAlpha,
       body: JSON.stringify({
-        items: [{ id: 'prod-low-stock-test', quantity: 5 }], // Requests 5, available: 2
+        items: [{ id: 'prod-low-stock-test', quantity: 5, size: 'EU 38' }], // Requests 5, available: 2
       }),
     });
     const outOfStockData = await outOfStockRes.json();
@@ -424,6 +426,25 @@ async function runPhase6_1TestSuite() {
     // Clean up low stock test product
     await Product.deleteOne({ _id: lowStockProd._id });
 
+    // 4D: Rejects missing shoe size on footwear products
+    const unsizedQuoteRes = await fetch(`${baseUrl}/api/orders/quote`, {
+      method: 'POST',
+      headers: authHeadersAlpha,
+      body: JSON.stringify({
+        items: [{ id: 'prod-01', quantity: 1 }],
+      }),
+    });
+    const unsizedQuoteData = await unsizedQuoteRes.json();
+    const isUnsizedRejected =
+      unsizedQuoteRes.status === 400 &&
+      unsizedQuoteData.message.includes('size is required');
+
+    record(
+      'Validation: Rejects footwear request missing required size with 400 Bad Request',
+      isUnsizedRejected,
+      `Status: ${unsizedQuoteRes.status}, message: "${unsizedQuoteData.message}"`
+    );
+
     // ----------------------------------------------------
     // Suite 5: Address Security & Cross-Tenant Isolation
     // ----------------------------------------------------
@@ -434,7 +455,7 @@ async function runPhase6_1TestSuite() {
       method: 'POST',
       headers: authHeadersBeta,
       body: JSON.stringify({
-        items: [{ id: 'prod-01', quantity: 1 }],
+        items: [{ id: 'prod-01', quantity: 1, size: 'EU 38' }],
         addressId: alphaAddress._id.toString(), // Alpha's address!
       }),
     });
@@ -460,8 +481,8 @@ async function runPhase6_1TestSuite() {
       headers: authHeadersAlpha,
       body: JSON.stringify({
         items: [
-          { id: 'prod-01', quantity: 1, price: 99 }, // Price ignored
-          { id: 'prod-02', quantity: 1, price: 199 }, // Price ignored
+          { id: 'prod-01', quantity: 1, size: 'EU 38', price: 99 }, // Price ignored
+          { id: 'prod-02', quantity: 1, size: 'EU 37', price: 199 }, // Price ignored
         ],
         addressId: alphaAddress._id.toString(),
         notes: 'Hand delivery requested at door.',
@@ -512,8 +533,8 @@ async function runPhase6_1TestSuite() {
       headers: authHeadersAlpha,
       body: JSON.stringify({
         items: [
-          { id: 'prod-01', quantity: 1 },
-          { id: 'prod-02', quantity: 1 },
+          { id: 'prod-01', quantity: 1, size: 'EU 38' },
+          { id: 'prod-02', quantity: 1, size: 'EU 37' },
         ],
         addressId: alphaAddress._id.toString(),
         notes: 'Hand delivery requested at door.',
@@ -537,7 +558,7 @@ async function runPhase6_1TestSuite() {
       method: 'POST',
       headers: authHeadersBeta,
       body: JSON.stringify({
-        items: [{ id: 'prod-01', quantity: 1 }],
+        items: [{ id: 'prod-01', quantity: 1, size: 'EU 38' }],
         addressId: betaAddress._id.toString(),
         idempotencyKey, // Identical key as User Alpha
       }),

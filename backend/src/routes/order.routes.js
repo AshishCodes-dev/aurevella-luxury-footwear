@@ -18,6 +18,7 @@ const orderItemInputSchema = z.object({
     .int('Quantity must be an integer')
     .min(1, 'Quantity must be at least 1')
     .max(10, 'Maximum 10 items per product model'),
+  size: z.string().trim().max(20).optional().nullable(),
 });
 
 const quoteOrderSchema = z.object({

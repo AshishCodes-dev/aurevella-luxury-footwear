@@ -4,6 +4,8 @@
  * All prices are validated here; client-submitted prices are NEVER trusted.
  */
 
+export const DEFAULT_PROVISIONAL_SIZES = ['EU 36', 'EU 37', 'EU 38', 'EU 39', 'EU 40', 'EU 41'];
+
 export const PRODUCTS = [
   {
     id: 'prod-01',
@@ -16,6 +18,7 @@ export const PRODUCTS = [
     image: '/images/products/product-01-floral-block-heel-sandal.jpg',
     alt: 'Block heel ankle-strap sandal with red floral print and a pearl embellishment',
     description: 'Ankle-strap sandal adorned with artisanal red floral print and pearl embellishment, featuring interchangeable heel mechanics.',
+    sizes: DEFAULT_PROVISIONAL_SIZES,
     priority: true,
   },
   {
@@ -29,6 +32,7 @@ export const PRODUCTS = [
     image: '/images/products/product-02-blue-floral-slide.jpg',
     alt: 'Flat slide with a knotted blue floral strap and woven sole',
     description: 'Bespoke flat slide handcrafted with a knotted blue floral strap, woven textured footbed, and ergonomic contouring.',
+    sizes: DEFAULT_PROVISIONAL_SIZES,
     priority: true,
   },
   {
@@ -42,6 +46,7 @@ export const PRODUCTS = [
     image: '/images/products/product-03-floral-block-heel-mule.jpg',
     alt: 'Block heel mule with red floral print and a gold buckle',
     description: 'Sculpted mule silhouette with vibrant red floral leather upper, antiqued gold hardware buckle, and stable block heel.',
+    sizes: DEFAULT_PROVISIONAL_SIZES,
     priority: true,
   },
 ];

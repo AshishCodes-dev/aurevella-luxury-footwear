@@ -78,6 +78,10 @@ const productSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    sizes: {
+      type: [String],
+      default: ['EU 36', 'EU 37', 'EU 38', 'EU 39', 'EU 40', 'EU 41'],
+    },
   },
   {
     timestamps: true,
@@ -118,6 +122,10 @@ productSchema.methods.toSafeJSON = function () {
     alt: this.alt || this.name,
     stockQuantity: this.stockQuantity,
     inStock: this.stockQuantity > 0,
+    sizes:
+      Array.isArray(this.sizes) && this.sizes.length > 0
+        ? this.sizes
+        : ['EU 36', 'EU 37', 'EU 38', 'EU 39', 'EU 40', 'EU 41'],
     isActive: this.isActive,
     priority: this.priority,
     createdAt: this.createdAt,

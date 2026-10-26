@@ -46,7 +46,7 @@ export const formatRupeeText = (paise) => {
  * and calculates line totals, subtotal, and total strictly using server pricePaise.
  * Client-submitted prices and totals are strictly ignored.
  *
- * @param {Array<{ id: string, quantity: number }>} rawItems
+ * @param {Array<{ id: string, quantity: number, size?: string|null }>} rawItems
  * @returns {Promise<{
  *   items: Array<any>,
  *   itemsCount: number,
@@ -66,6 +66,7 @@ export const validateAndCalculateOrderItems = async (rawItems) => {
   }
 
   const validatedItems = [];
+  const requestedQtyPerProduct = new Map();
   let itemsCount = 0;
   let subtotalPaise = 0;
 
@@ -117,18 +118,64 @@ export const validateAndCalculateOrderItems = async (rawItems) => {
       );
     }
 
-    if (product.stockQuantity < qty) {
+    // Sizing validation:
+    // Footwear products with configured supported sizes require a valid, selected size.
+    // Non-footwear products or products explicitly configured with empty sizes array (sizes = []) do not require sizing.
+    const rawSize =
+      item.size !== undefined && item.size !== null && typeof item.size === 'string' && item.size.trim().length > 0
+        ? item.size.trim()
+        : null;
+
+    const hasExplicitlyNoSizes = Array.isArray(product.sizes) && product.sizes.length === 0;
+    const availableSizes =
+      Array.isArray(product.sizes) && product.sizes.length > 0
+        ? product.sizes
+        : ['EU 36', 'EU 37', 'EU 38', 'EU 39', 'EU 40', 'EU 41'];
+
+    if (!hasExplicitlyNoSizes) {
+      if (!rawSize) {
+        throw new OrderValidationError(
+          `A valid footwear size is required for "${product.name}". Available sizes: ${availableSizes.join(', ')}`,
+          400,
+          {
+            productId: trimmedId,
+            productName: product.name,
+            availableSizes,
+            reason: 'size_required',
+          }
+        );
+      }
+
+      if (!availableSizes.includes(rawSize)) {
+        throw new OrderValidationError(
+          `Invalid or unsupported size "${rawSize}" for "${product.name}". Available sizes: ${availableSizes.join(', ')}`,
+          400,
+          {
+            productId: trimmedId,
+            productName: product.name,
+            requestedSize: rawSize,
+            availableSizes,
+            reason: 'unsupported_size',
+          }
+        );
+      }
+    }
+
+    const productIdStr = product._id.toString();
+    const totalRequestedSoFar = (requestedQtyPerProduct.get(productIdStr) || 0) + qty;
+    if (product.stockQuantity < totalRequestedSoFar) {
       throw new OrderValidationError(
         `Insufficient stock for "${product.name}". Requested: ${qty}, available: ${product.stockQuantity}`,
         400,
         {
           productId: trimmedId,
           productName: product.name,
-          requested: qty,
+          requested: totalRequestedSoFar,
           available: product.stockQuantity,
         }
       );
     }
+    requestedQtyPerProduct.set(productIdStr, totalRequestedSoFar);
 
     // Integer paise calculations strictly from database
     const unitPricePaise = product.pricePaise;
@@ -140,6 +187,7 @@ export const validateAndCalculateOrderItems = async (rawItems) => {
       name: product.name,
       slug: product.slug,
       image: product.image,
+      size: rawSize || null,
       pricePaise: unitPricePaise,
       quantity: qty,
       lineTotalPaise,

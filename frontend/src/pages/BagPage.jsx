@@ -21,7 +21,7 @@ export const BagPage = () => {
     if (items.length === 0) return siteConfig.contact.whatsapp.url;
 
     const itemsSummary = items
-      .map((item) => `• ${item.quantity}x ${item.name} (${item.priceText})`)
+      .map((item) => `• ${item.quantity}x ${item.name}${item.size ? ` (Size: ${item.size})` : ''} (${item.priceText})`)
       .join('\n');
 
     const message = `Hello Aurevella Atelier,\nI would like to place an order inquiry for the following handcrafted footwear:\n\n${itemsSummary}\n\nEstimated Subtotal: ${subtotalText}\n\nPlease advise on sizing guidance and delivery timeline.`;
@@ -104,7 +104,7 @@ export const BagPage = () => {
             )}
             <ul className="divide-y divide-[#2F1C15] bg-[#181210] border border-[#2F1C15] p-6 sm:p-8">
               {items.map((item) => (
-                <li key={item.id} className="py-6 flex flex-col sm:flex-row gap-6 first:pt-0 last:pb-0">
+                <li key={item.lineKey || `${item.id}_${item.size || 'default'}`} className="py-6 flex flex-col sm:flex-row gap-6 first:pt-0 last:pb-0">
                   <div className="w-24 h-24 sm:w-28 sm:h-28 bg-[#120D0C] border border-[#2F1C15] shrink-0 overflow-hidden aspect-square">
                     <img
                       src={item.image}
@@ -126,13 +126,22 @@ export const BagPage = () => {
                       <div className="text-sm font-medium text-[#FEF5E6]/90">
                         {item.priceText}
                       </div>
+                      {item.size ? (
+                        <span className="inline-block mt-1.5 px-2.5 py-0.5 text-[10px] uppercase tracking-wider text-[#FEF5E6] bg-[#0F0A09] border border-[#2F1C15]">
+                          Size: {item.size}
+                        </span>
+                      ) : (
+                        <span className="inline-block mt-1.5 px-2.5 py-0.5 text-[10px] uppercase tracking-wider text-amber-300/80 bg-amber-950/30 border border-amber-900/40">
+                          Size not selected
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex flex-wrap items-center justify-between gap-4 mt-4 pt-3 border-t border-[#2F1C15]/60">
                       <div className="flex items-center border border-[#2F1C15] bg-[#0F0A09]">
                         <button
                           type="button"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.id, item.size, item.quantity - 1)}
                           aria-label={`Decrease quantity for ${item.name}`}
                           className="min-h-[36px] min-w-[36px] flex items-center justify-center text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle"
                         >
@@ -143,7 +152,7 @@ export const BagPage = () => {
                         </span>
                         <button
                           type="button"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.id, item.size, item.quantity + 1)}
                           disabled={item.quantity >= 10}
                           aria-label={`Increase quantity for ${item.name}`}
                           className="min-h-[36px] min-w-[36px] flex items-center justify-center text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle disabled:opacity-30 disabled:cursor-not-allowed"
@@ -158,7 +167,7 @@ export const BagPage = () => {
                         </span>
                         <button
                           type="button"
-                          onClick={() => removeFromBag(item.id)}
+                          onClick={() => removeFromBag(item.id, item.size)}
                           aria-label={`Remove ${item.name} from bag`}
                           className="min-h-[44px] min-w-[36px] flex items-center justify-center text-[#B8AD9A] hover:text-red-400 transition-subtle"
                         >

@@ -141,3 +141,70 @@ export const verifyPayment = async ({
     },
   });
 };
+
+// Admin Dashboard API Helpers
+export const fetchAdminPing = async () => {
+  return apiFetch('/api/admin/ping');
+};
+
+export const fetchAdminStats = async () => {
+  return apiFetch('/api/admin/stats');
+};
+
+export const fetchAdminProducts = async (params = {}) => {
+  const query = new URLSearchParams();
+  if (params.page) query.set('page', params.page);
+  if (params.limit) query.set('limit', params.limit);
+  if (params.search) query.set('search', params.search);
+  if (params.category) query.set('category', params.category);
+  if (params.isActive !== undefined) query.set('isActive', params.isActive);
+  if (params.sort) query.set('sort', params.sort);
+  const qs = query.toString();
+  return apiFetch(qs ? `/api/admin/products?${qs}` : '/api/admin/products');
+};
+
+export const fetchAdminProduct = async (idOrSlug) => {
+  return apiFetch(`/api/admin/products/${encodeURIComponent(idOrSlug)}`);
+};
+
+export const createAdminProduct = async (productData) => {
+  return apiFetch('/api/admin/products', {
+    method: 'POST',
+    body: productData,
+  });
+};
+
+export const updateAdminProduct = async (id, productData) => {
+  return apiFetch(`/api/admin/products/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: productData,
+  });
+};
+
+export const updateAdminProductStock = async (id, stockQuantity) => {
+  return apiFetch(`/api/admin/products/${encodeURIComponent(id)}/stock`, {
+    method: 'PATCH',
+    body: { stockQuantity },
+  });
+};
+
+export const fetchAdminOrders = async (params = {}) => {
+  const query = new URLSearchParams();
+  if (params.page) query.set('page', params.page);
+  if (params.limit) query.set('limit', params.limit);
+  if (params.status) query.set('status', params.status);
+  if (params.search) query.set('search', params.search);
+  const qs = query.toString();
+  return apiFetch(qs ? `/api/admin/orders?${qs}` : '/api/admin/orders');
+};
+
+export const fetchAdminOrder = async (idOrNumber) => {
+  return apiFetch(`/api/admin/orders/${encodeURIComponent(idOrNumber)}`);
+};
+
+export const updateAdminOrderFulfillment = async (idOrNumber, { status, notes }) => {
+  return apiFetch(`/api/admin/orders/${encodeURIComponent(idOrNumber)}/fulfillment`, {
+    method: 'PATCH',
+    body: { status, notes },
+  });
+};

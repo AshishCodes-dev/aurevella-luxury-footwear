@@ -147,6 +147,44 @@ async function setupMockApi(targetPage) {
       }),
     });
   });
+  await targetPage.route(/.*\/api\/admin\/stats.*/, (route) => {
+    route.fulfill({
+      status: 200,
+      headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: 'success',
+        metrics: {
+          revenue: { totalFormatted: '₹12,497', totalPaise: 1249700 },
+          orders: { total: 4, paid: 1, processing: 1, shipped: 1, delivered: 1, pending: 0, cancelled: 0 },
+          inventory: { totalProducts: 3, lowStockCount: 1, lowStockItems: [] },
+          customers: { total: 8 },
+          recentOrders: [],
+        },
+      }),
+    });
+  });
+  await targetPage.route(/.*\/api\/admin\/products.*/, (route) => {
+    route.fulfill({
+      status: 200,
+      headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: 'success',
+        products: MOCK_LAUNCH_PRODUCTS,
+        pagination: { page: 1, limit: 10, total: 3, pages: 1 },
+      }),
+    });
+  });
+  await targetPage.route(/.*\/api\/admin\/orders.*/, (route) => {
+    route.fulfill({
+      status: 200,
+      headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: 'success',
+        orders: [],
+        pagination: { page: 1, limit: 10, total: 0, pages: 1 },
+      }),
+    });
+  });
 }
 
 async function runLayoutChecks() {

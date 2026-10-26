@@ -14,6 +14,7 @@ import ForgotPassword from './pages/ForgotPassword.jsx';
 import Account from './pages/Account.jsx';
 import Checkout from './pages/Checkout.jsx';
 import Orders from './pages/Orders.jsx';
+import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import PlaceholderPage from './pages/PlaceholderPage.jsx';
 
 const AppRoutes = () => {
@@ -45,6 +46,16 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute>
               <Orders />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Secure Atelier Executive Admin Portal */}
+        <Route
+          path="/admin/*"
+          element={
+            <ProtectedRoute requireAdmin={true}>
+              <AdminDashboard />
             </ProtectedRoute>
           }
         />

@@ -28,7 +28,8 @@ AureVeLla/
 │   │   ├── testPhase5.js               # Phase 5 payment regression suite
 │   │   ├── testPhase6_1.js             # Phase 6.1 catalogue & variant regression suite
 │   │   ├── testPhase6_2.js             # Phase 6.2 payment isolation & ACID transaction suite
-│   │   └── testPhase7.js               # Phase 7 checkout & order history regression suite
+│   │   ├── testPhase7.js               # Phase 7 checkout & order history regression suite
+│   │   └── testPhase11.js              # Phase 11 secure admin dashboard & order management suite
 │   ├── src/
 │   │   ├── config/
 │   │   │   ├── db.js                   # Mongoose connection & URI parser
@@ -36,6 +37,7 @@ AureVeLla/
 │   │   │   └── razorpay.js             # Razorpay SDK instance & offline test double factory
 │   │   ├── controllers/
 │   │   │   ├── address.controller.js   # Customer address book handlers
+│   │   │   ├── admin.controller.js     # Atelier executive stats, product CRUD & fulfillment
 │   │   │   ├── auth.controller.js      # Session exchange, user profile & logout handlers
 │   │   │   ├── order.controller.js     # Server quotes & order creation handlers
 │   │   │   ├── payment.controller.js   # Payment creation, verification & webhooks
@@ -52,7 +54,7 @@ AureVeLla/
 │   │   │   ├── Product.js              # Footwear models, pricing in paise & inventory
 │   │   │   └── User.js                 # Authenticated customers & admin roles
 │   │   ├── routes/
-│   │   │   ├── admin.routes.js         # Administrative authorization ping route
+│   │   │   ├── admin.routes.js         # Protected administrative metrics, product & order routes
 │   │   │   ├── auth.routes.js          # Session, profile & authentication routes
 │   │   │   ├── order.routes.js         # Quote calculation & order creation routes
 │   │   │   ├── payment.routes.js       # Razorpay orders, callback verification & webhook
@@ -90,6 +92,11 @@ AureVeLla/
 │   │   ├── data/
 │   │   │   └── products.js             # Trusted client product registry & fallback
 │   │   ├── pages/
+│   │   │   ├── admin/
+│   │   │   │   ├── AdminDashboard.jsx  # Top-level executive portal with tabs & status badges
+│   │   │   │   ├── AdminOverview.jsx   # Business metrics, revenue, low stock & orders pipeline
+│   │   │   │   ├── AdminProducts.jsx   # Product catalogue table, stock edit & creation modal
+│   │   │   │   └── AdminOrders.jsx     # Orders table, customer dossiers & fulfillment progression
 │   │   │   ├── Account.jsx             # Profile management & order history navigation
 │   │   │   ├── BagPage.jsx             # Dedicated shopping bag page
 │   │   │   ├── Checkout.jsx            # Multi-step bespoke checkout & Razorpay modal
@@ -98,6 +105,7 @@ AureVeLla/
 │   │   │   ├── Login.jsx               # Email/password & Google login with auto-reset
 │   │   │   ├── Orders.jsx              # Customer orders register & payment retry
 │   │   │   ├── PlaceholderPage.jsx     # Luxury fallback template for upcoming sections
+│   │   │   ├── ProductDetail.jsx       # Complete responsive product detail page (PDP)
 │   │   │   ├── Shop.jsx                # Footwear catalogue with category & sort filters
 │   │   │   └── Signup.jsx              # Customer registration screen
 │   │   ├── utils/
@@ -121,10 +129,12 @@ AureVeLla/
 | :--- | :--- | :--- | :--- |
 | `/` | `Home.jsx` | Public | Luxury brand showcase, brand narrative, 3 featured silhouettes, and concierge links. |
 | `/shop` | `Shop.jsx` | Public | Footwear catalogue, category filtering (`All`, `Interchangeable Heel`, `Flat Slide`), and sorting. |
+| `/product/:id`, `/shop/:id` | `ProductDetail.jsx` | Public | Full Product Detail Page (PDP) with responsive layout, size selector, and Add-to-Bag flow. |
 | `/bag`, `/cart` | `BagPage.jsx` | Public | Dedicated shopping bag page with quantity modification and line totals. |
 | `/checkout` | `Checkout.jsx` | Authenticated | Multi-step checkout: address selection, server quote engine, and Razorpay payment modal. |
 | `/orders` | `Orders.jsx` | Authenticated | Customer orders register showing commissioned pairs, payment receipts, and retry actions. |
 | `/account` | `Account.jsx` | Authenticated | Profile overview, name/phone editing, and secure session logout. |
+| `/admin`, `/admin/*` | `AdminDashboard.jsx` | Admin (`role: 'admin'`) | Dedicated Atelier Admin Dashboard: live executive stats, product catalogue CRUD, and order fulfillment progression. |
 | `/login` | `Login.jsx` | Public | Email/password & Google sign-in with automatic form reset on mount/unmount. |
 | `/signup` | `Signup.jsx` | Public | Customer account registration. |
 | `/forgot-password` | `ForgotPassword.jsx`| Public | Single-use password reset email submission. |
@@ -167,9 +177,21 @@ AureVeLla/
 - `POST /api/payments/verify` — Verifies cryptographic HMAC SHA-256 signature, validates capture/amount with gateway, claims order state atomically (`pending_payment` $\rightarrow$ `processing`), and decrements inventory.
 - `POST /api/payments/webhook` — Provider-to-server raw body webhook handler with signature verification.
 
-### System & Admin Ping
+### Administrative Management (`/api/admin`) — *Requires `authenticate` & `authorizeAdmin`*
+- `GET /api/admin/ping` — Admin-only authorization check confirming `role: 'admin'`.
+- `GET /api/admin/stats` — Executive analytics: total verified revenue from paid orders, orders breakdown by status, product count, low-stock watchlist ($\le 5$ units), patron count, and recent 5 orders.
+- `GET /api/admin/products` — Paginated product catalogue management with query search, category filtering, and status filtering.
+- `GET /api/admin/products/:idOrSlug` — Retrieves full product attributes by ObjectId, unique code, or slug.
+- `POST /api/admin/products` — Creates product with server-side Zod validation (integer `pricePaise`, category existence check, unique slug and code).
+- `PUT /api/admin/products/:id` — Updates permitted product attributes (title, pricePaise, categoryId, description, images, stockQuantity, isActive, priority).
+- `PATCH /api/admin/products/:id/stock` — Atomic stock adjustment with non-negative integer validation.
+- `GET /api/admin/orders` — Paginated customer orders list with status filtering and live search across order number, customer name, phone, and Razorpay payment ID.
+- `GET /api/admin/orders/:idOrNumber` — Full order dossier with customer snapshot, shipping destination, line items, and tamper-resistant payment verification record.
+- `PATCH /api/admin/orders/:idOrNumber/fulfillment` — Strict state machine progression (`paid` $\rightarrow$ `processing` $\rightarrow$ `shipped` $\rightarrow$ `delivered`, or `cancelled`).
+  - **Payment Security Policy**: Admin endpoints **NEVER** allow setting status to `paid` (strictly reserved for Razorpay verification). Razorpay payment details (`razorpayPaymentId`, `paidAt`) are immutable and protected against tampering.
+
+### System & Health Probes
 - `GET /api/health` — Public server and database connectivity health probe.
-- `GET /api/admin/ping` — Admin-only authorization check requiring `role: 'admin'`.
 
 ---
 
@@ -266,6 +288,7 @@ npm run test:phase5      # 17/17 tests: payment creation, verification & refunds
 npm run test:phase6-1    # 18/18 tests: catalogue browsing, category filters & stock bounds
 npm run test:phase6-2    # 26/26 tests: payment gateway isolation, ACID transactions & concurrency
 npm run test:phase7      # 31/31 tests: bespoke checkout flow, quotes & address isolation
+npm run test:phase11     # 37/37 tests: secure admin dashboard, product CRUD & order fulfillment
 ```
 
 ---
@@ -273,7 +296,7 @@ npm run test:phase7      # 31/31 tests: bespoke checkout flow, quotes & address 
 ## 🚀 Deployment Considerations (Hostinger)
 
 1. **SPA Route Fallback**:
-   [`frontend/public/.htaccess`](frontend/public/.htaccess) contains the Apache/LiteSpeed URL rewrite rules. When deploying `frontend/dist/` to Hostinger's `public_html/`, direct page refreshes on `/shop`, `/checkout`, `/account`, and `/orders` will properly serve `index.html`.
+   [`frontend/public/.htaccess`](frontend/public/.htaccess) contains the Apache/LiteSpeed URL rewrite rules. When deploying `frontend/dist/` to Hostinger's `public_html/`, direct page refreshes on `/shop`, `/checkout`, `/account`, `/orders`, and `/admin` will properly serve `index.html`.
 2. **Subdomain Architecture**:
    Because backend authentication tokens use `httpOnly`, `SameSite=Lax` cookies, the Express API must be mapped via DNS to a subdomain of the production domain (e.g. `api.myaurevella.in`).
 3. **ACID Transaction Requirement**:
@@ -284,7 +307,5 @@ npm run test:phase7      # 31/31 tests: bespoke checkout flow, quotes & address 
 ## ⚠️ Known Limitations & Current Scope
 
 - **Shopping Bag Persistence**: The shopping cart operates using browser `localStorage` (`aurevella_bag`). Cross-device database cart synchronization (`/api/cart`) is reserved for a future phase.
-- **Product Detail Page (PDP)**: Detailed individual product pages (`/products/:slug`) are not yet mounted in the router; clicking "Details" links to `/shop`.
-- **Admin Dashboard UI**: Administrative frontend management screens and backend CRUD endpoints (`/api/admin/products`, `/api/admin/orders`) are not yet implemented. Administrative ping authorization is verified.
 - **Policy Copy**: Static legal routes (`/privacy`, `/terms`, `/shipping-policy`, `/returns-policy`, `/about`, `/contact`) render luxury placeholder screens awaiting finalized client copy.
 - **Live Payment Gateway Sandbox**: Payment workflows are verified using automated in-memory test doubles and local test database simulations; manual browser checkout with live `rzp_test_...` sandbox credentials has not yet been executed.

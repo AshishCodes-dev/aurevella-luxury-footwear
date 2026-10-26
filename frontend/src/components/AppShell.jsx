@@ -147,6 +147,14 @@ export const AppShell = ({ children }) => {
                 >
                   Orders
                 </Link>
+                {user?.role === 'admin' && (
+                  <Link
+                    to="/admin"
+                    className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-[#FEF5E6] bg-[#241B18] border border-[#2F1C15] hover:border-[#FEF5E6]/40 transition-subtle min-h-[44px] inline-flex items-center px-2.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                  >
+                    Atelier Admin
+                  </Link>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -276,6 +284,15 @@ export const AppShell = ({ children }) => {
                 >
                   My Orders & Commissions
                 </Link>
+                {user?.role === 'admin' && (
+                  <Link
+                    to="/admin"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="min-h-[44px] flex items-center justify-center uppercase tracking-[0.2em] text-xs bg-[#241B18] border border-amber-900/60 text-amber-200 hover:bg-[#2F1C15] transition-subtle"
+                  >
+                    Atelier Admin Portal
+                  </Link>
+                )}
                 <Button variant="outline" size="sm" onClick={handleLogout} className="w-full">
                   Sign Out
                 </Button>

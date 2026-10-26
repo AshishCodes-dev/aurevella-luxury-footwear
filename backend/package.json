@@ -11,7 +11,8 @@
     "test:phase5": "node scripts/testPhase5.js",
     "test:phase6-1": "node scripts/testPhase6_1.js",
     "test:phase6-2": "node scripts/testPhase6_2.js",
-    "test:phase7": "node scripts/testPhase7.js"
+    "test:phase7": "node scripts/testPhase7.js",
+    "test:phase11": "node scripts/testPhase11.js"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",

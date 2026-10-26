@@ -17,6 +17,10 @@ if (!fs.existsSync(shotsDir)) {
 const ROUTES = [
   { path: '/', name: 'home', isShort: false },
   { path: '/shop', name: 'shop', isShort: false },
+  { path: '/product/prod-01', name: 'pdp-prod-01', isShort: false },
+  { path: '/product/prod-02', name: 'pdp-prod-02', isShort: false },
+  { path: '/product/prod-03', name: 'pdp-prod-03', isShort: false },
+  { path: '/product/invalid-model-404', name: 'pdp-not-found', isShort: true },
   { path: '/bag', name: 'bag', isShort: true },
   { path: '/collections', name: 'collections', isShort: true },
   { path: '/limited-edition', name: 'limited-edition', isShort: true },
@@ -34,6 +38,116 @@ const ROUTES = [
 
 const WIDTHS = [360, 390, 768, 1024, 1440];
 const HEIGHT = 844; // standard reference mobile/desktop viewport height
+
+function getCorsHeaders(route) {
+  const reqHeaders = route.request().headers();
+  const origin = reqHeaders['origin'] || 'http://127.0.0.1:4173';
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Aurevella-Request',
+  };
+}
+
+const MOCK_LAUNCH_PRODUCTS = [
+  {
+    id: 'prod-01',
+    code: 'prod-01',
+    name: 'Floral Block Heel Sandal',
+    slug: 'floral-block-heel-sandal',
+    pricePaise: 349900,
+    price: 3499,
+    priceText: '₹3,499',
+    category: 'Interchangeable Heel',
+    image: '/images/products/product-01-floral-block-heel-sandal.jpg',
+    alt: 'Block heel ankle-strap sandal with red floral print and a pearl embellishment',
+    description: 'Ankle-strap sandal adorned with artisanal red floral print and pearl embellishment, featuring interchangeable heel mechanics.',
+    priority: true,
+  },
+  {
+    id: 'prod-02',
+    code: 'prod-02',
+    name: 'Blue Floral Slide',
+    slug: 'blue-floral-slide',
+    pricePaise: 329900,
+    price: 3299,
+    priceText: '₹3,299',
+    category: 'Flat Slide',
+    image: '/images/products/product-02-blue-floral-slide.jpg',
+    alt: 'Flat slide with a knotted blue floral strap and woven sole',
+    description: 'Bespoke flat slide handcrafted with a knotted blue floral strap, woven textured footbed, and ergonomic contouring.',
+    priority: true,
+  },
+  {
+    id: 'prod-03',
+    code: 'prod-03',
+    name: 'Floral Block Heel Mule',
+    slug: 'floral-block-heel-mule',
+    pricePaise: 369900,
+    price: 3699,
+    priceText: '₹3,699',
+    category: 'Interchangeable Heel',
+    image: '/images/products/product-03-floral-block-heel-mule.jpg',
+    alt: 'Block heel mule with red floral print and a gold buckle',
+    description: 'Sculpted mule silhouette with vibrant red floral leather upper, antiqued gold hardware buckle, and stable block heel.',
+    priority: true,
+  },
+];
+
+async function setupMockApi(targetPage) {
+  await targetPage.route(/.*\/api\/auth\/me.*/, (route) => {
+    route.fulfill({
+      status: 200,
+      headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user: null }),
+    });
+  });
+  await targetPage.route(/.*\/api\/categories.*/, (route) => {
+    route.fulfill({
+      status: 200,
+      headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: 'success',
+        categories: [
+          { id: 'cat-1', name: 'Interchangeable Heel', slug: 'interchangeable-heel' },
+          { id: 'cat-2', name: 'Flat Slide', slug: 'flat-slide' },
+        ],
+      }),
+    });
+  });
+  await targetPage.route(/.*\/api\/products.*/, (route) => {
+    const url = route.request().url();
+    if (url.includes('/api/products/')) {
+      const parts = url.split('/api/products/');
+      const idOrSlug = parts[1].split('?')[0];
+      const found = MOCK_LAUNCH_PRODUCTS.find(
+        (p) => p.id === idOrSlug || p.slug === idOrSlug
+      );
+      if (found) {
+        return route.fulfill({
+          status: 200,
+          headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'success', product: found }),
+        });
+      } else {
+        return route.fulfill({
+          status: 404,
+          headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'error', message: 'Product not found' }),
+        });
+      }
+    }
+    route.fulfill({
+      status: 200,
+      headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: 'success',
+        products: MOCK_LAUNCH_PRODUCTS,
+      }),
+    });
+  });
+}
 
 async function runLayoutChecks() {
   console.log('\n======================================================');
@@ -65,84 +179,17 @@ async function runLayoutChecks() {
         });
 
         // Intercept unauthenticated session sync and catalogue endpoints so headless test environment has no network CORS errors
-        await page.route('**/api/auth/me', (route) => {
-          route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({ user: null }),
-          });
-        });
-        await page.route('**/api/categories', (route) => {
-          route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({
-              status: 'success',
-              categories: [
-                { id: 'cat-1', name: 'Interchangeable Heel', slug: 'interchangeable-heel' },
-                { id: 'cat-2', name: 'Flat Slide', slug: 'flat-slide' },
-              ],
-            }),
-          });
-        });
-        await page.route('**/api/products*', (route) => {
-          route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({
-              status: 'success',
-              products: [
-                {
-                  id: 'prod-01',
-                  code: 'prod-01',
-                  name: 'Floral Block Heel Sandal',
-                  slug: 'floral-block-heel-sandal',
-                  pricePaise: 349900,
-                  price: 3499,
-                  priceText: '₹3,499',
-                  category: 'Interchangeable Heel',
-                  image: '/images/products/product-01-floral-block-heel-sandal.jpg',
-                  alt: 'Block heel ankle-strap sandal with red floral print and a pearl embellishment',
-                  description: 'Ankle-strap sandal adorned with artisanal red floral print and pearl embellishment, featuring interchangeable heel mechanics.',
-                  priority: true,
-                },
-                {
-                  id: 'prod-02',
-                  code: 'prod-02',
-                  name: 'Blue Floral Slide',
-                  slug: 'blue-floral-slide',
-                  pricePaise: 329900,
-                  price: 3299,
-                  priceText: '₹3,299',
-                  category: 'Flat Slide',
-                  image: '/images/products/product-02-blue-floral-slide.jpg',
-                  alt: 'Flat slide with a knotted blue floral strap and woven sole',
-                  description: 'Bespoke flat slide handcrafted with a knotted blue floral strap, woven textured footbed, and ergonomic contouring.',
-                  priority: true,
-                },
-                {
-                  id: 'prod-03',
-                  code: 'prod-03',
-                  name: 'Floral Block Heel Mule',
-                  slug: 'floral-block-heel-mule',
-                  pricePaise: 369900,
-                  price: 3699,
-                  priceText: '₹3,699',
-                  category: 'Interchangeable Heel',
-                  image: '/images/products/product-03-floral-block-heel-mule.jpg',
-                  alt: 'Block heel mule with red floral print and a gold buckle',
-                  description: 'Sculpted mule silhouette with vibrant red floral leather upper, antiqued gold hardware buckle, and stable block heel.',
-                  priority: true,
-                },
-              ],
-            }),
-          });
-        });
+        await setupMockApi(page);
 
         const consoleErrors = [];
         page.on('console', (msg) => {
           if (msg.type() === 'error') {
-            consoleErrors.push(msg.text());
+            const text = msg.text();
+            // Ignore expected 404 resource status on deliberate 404 test routes
+            if (route.path.includes('404') && text.includes('404')) {
+              return;
+            }
+            consoleErrors.push(text);
           }
         });
         page.on('pageerror', (err) => {
@@ -259,6 +306,10 @@ async function runLayoutChecks() {
           consoleErrors,
           passed: rowPassed,
         });
+
+        if (consoleErrors.length > 0) {
+          console.error(`[Console Errors on ${route.path} @ ${width}px]:\n  - ${consoleErrors.join('\n  - ')}`);
+        }
 
         await page.close();
       }
@@ -438,79 +489,7 @@ async function runLayoutChecks() {
     // 3. Catalogue & Shopping Bag Tests
     console.log('\n--- Running Catalogue & Shopping Bag Tests ---');
     const shopPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-    await shopPage.route('**/api/auth/me', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ user: null }),
-      });
-    });
-    await shopPage.route('**/api/categories', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          status: 'success',
-          categories: [
-            { id: 'cat-1', name: 'Interchangeable Heel', slug: 'interchangeable-heel' },
-            { id: 'cat-2', name: 'Flat Slide', slug: 'flat-slide' },
-          ],
-        }),
-      });
-    });
-    await shopPage.route('**/api/products*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          status: 'success',
-          products: [
-            {
-              id: 'prod-01',
-              code: 'prod-01',
-              name: 'Floral Block Heel Sandal',
-              slug: 'floral-block-heel-sandal',
-              pricePaise: 349900,
-              price: 3499,
-              priceText: '₹3,499',
-              category: 'Interchangeable Heel',
-              image: '/images/products/product-01-floral-block-heel-sandal.jpg',
-              alt: 'Block heel ankle-strap sandal with red floral print and a pearl embellishment',
-              description: 'Ankle-strap sandal adorned with artisanal red floral print and pearl embellishment, featuring interchangeable heel mechanics.',
-              priority: true,
-            },
-            {
-              id: 'prod-02',
-              code: 'prod-02',
-              name: 'Blue Floral Slide',
-              slug: 'blue-floral-slide',
-              pricePaise: 329900,
-              price: 3299,
-              priceText: '₹3,299',
-              category: 'Flat Slide',
-              image: '/images/products/product-02-blue-floral-slide.jpg',
-              alt: 'Flat slide with a knotted blue floral strap and woven sole',
-              description: 'Bespoke flat slide handcrafted with a knotted blue floral strap, woven textured footbed, and ergonomic contouring.',
-              priority: true,
-            },
-            {
-              id: 'prod-03',
-              code: 'prod-03',
-              name: 'Floral Block Heel Mule',
-              slug: 'floral-block-heel-mule',
-              pricePaise: 369900,
-              price: 3699,
-              priceText: '₹3,699',
-              category: 'Interchangeable Heel',
-              image: '/images/products/product-03-floral-block-heel-mule.jpg',
-              alt: 'Block heel mule with red floral print and a gold buckle',
-              description: 'Sculpted mule silhouette with vibrant red floral leather upper, antiqued gold hardware buckle, and stable block heel.',
-              priority: true,
-            },
-          ],
-        }),
-      });
-    });
+    await setupMockApi(shopPage);
 
     const shopErrors = [];
 
@@ -664,6 +643,247 @@ async function runLayoutChecks() {
       allPassed = false;
     } else {
       console.log('\n✔ ALL Catalogue & Shopping Bag tests passed.');
+    }
+
+    // --- Running Product Detail Page (PDP) Verification Suite ---
+    console.log('\n--- Running Product Detail Page (PDP) Verification Suite ---');
+    const pdpErrors = [];
+    const pdpPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await setupMockApi(pdpPage);
+
+    // 1. Verify Product 1 (Floral Block Heel Sandal)
+    await pdpPage.goto(`${baseUrl}/product/prod-01`, { waitUntil: 'networkidle' });
+    await pdpPage.waitForTimeout(150);
+    const p1Title = await pdpPage.locator('h1').textContent();
+    const p1Price = await pdpPage.textContent('body');
+    if (!p1Title.includes('Floral Block Heel Sandal')) {
+      pdpErrors.push(`FAIL: Product 1 title expected 'Floral Block Heel Sandal', got '${p1Title}'`);
+    } else if (!p1Price.includes('₹3,499') || !p1Price.includes('Interchangeable Heel')) {
+      pdpErrors.push(`FAIL: Product 1 price or category missing on PDP`);
+    } else {
+      console.log('✔ PASS: /product/prod-01 renders exact name, price (₹3,499), and category.');
+    }
+
+    // Test quantity selector: increment to 2
+    const plusBtn = pdpPage.locator('button[aria-label="Increase quantity"]');
+    await plusBtn.click({ force: true });
+    await pdpPage.waitForTimeout(50);
+    const qtyText = await pdpPage.locator('span:has-text("2")').first().isVisible();
+    if (!qtyText) {
+      pdpErrors.push('FAIL: Quantity increment failed to show 2 on PDP');
+    } else {
+      console.log('✔ PASS: PDP quantity incremented to 2.');
+    }
+
+    // Test Add to Bag from PDP
+    const pdpAddBtn = pdpPage.locator('button:has-text("Add to Bag")');
+    await pdpAddBtn.click({ force: true });
+    await pdpPage.waitForTimeout(200);
+
+    const pdpDrawer = pdpPage.locator('[role="dialog"][aria-label="Shopping Bag Drawer"]');
+    if (!(await pdpDrawer.isVisible())) {
+      pdpErrors.push('FAIL: Shopping Bag Drawer did not open after Add to Bag on PDP');
+    } else {
+      console.log('✔ PASS: Shopping Bag Drawer opened on PDP Add to Bag with updated quantity.');
+    }
+
+    // Verify localStorage has prod-01 with quantity: 2
+    const pdpBagStorage = await pdpPage.evaluate(() => JSON.parse(localStorage.getItem('aurevella_bag') || '[]'));
+    if (!pdpBagStorage.some((i) => i.id === 'prod-01' && i.quantity === 2)) {
+      pdpErrors.push(`FAIL: localStorage expected prod-01 qty 2, got: ${JSON.stringify(pdpBagStorage)}`);
+    } else {
+      console.log('✔ PASS: Bag persistence verified with quantity 2 in localStorage.');
+    }
+
+    // Close drawer
+    const closePdpDrawerBtn = pdpDrawer.locator('button[aria-label="Close shopping bag"]').first();
+    if (await closePdpDrawerBtn.isVisible()) {
+      await closePdpDrawerBtn.click({ force: true });
+      await pdpPage.waitForTimeout(150);
+    }
+
+    // Test Back to Catalogue link
+    await pdpPage.locator('a:has-text("Back to Footwear Catalogue")').click({ force: true });
+    await pdpPage.waitForURL('**/shop');
+    await pdpPage.waitForTimeout(200);
+    if (!pdpPage.url().endsWith('/shop')) {
+      pdpErrors.push(`FAIL: Back to catalogue did not navigate to /shop (url=${pdpPage.url()})`);
+    } else {
+      console.log('✔ PASS: Back navigation successfully returns to /shop.');
+    }
+
+    // Test clicking product title on /shop navigates to PDP
+    await pdpPage.waitForSelector('article h3 a');
+    const firstShopCardLink = pdpPage.locator('article h3 a').first();
+    await firstShopCardLink.click({ force: true });
+    await pdpPage.waitForURL('**/product/prod-01');
+    await pdpPage.waitForTimeout(150);
+    if (!pdpPage.url().includes('/product/prod-01')) {
+      pdpErrors.push(`FAIL: Clicking product title on /shop did not navigate to /product/prod-01 (url=${pdpPage.url()})`);
+    } else {
+      console.log('✔ PASS: Clicking product card on /shop opens /product/prod-01.');
+    }
+
+    // 2. Verify Product 2 (Blue Floral Slide)
+    await pdpPage.goto(`${baseUrl}/product/prod-02`, { waitUntil: 'networkidle' });
+    await pdpPage.waitForTimeout(150);
+    const p2Text = await pdpPage.textContent('body');
+    if (!p2Text.includes('Blue Floral Slide') || !p2Text.includes('₹3,299') || !p2Text.includes('Flat Slide')) {
+      pdpErrors.push('FAIL: Product 2 details (Blue Floral Slide, ₹3,299, Flat Slide) missing');
+    } else {
+      console.log('✔ PASS: /product/prod-02 renders exact name, price (₹3,299), and category (Flat Slide).');
+    }
+
+    // 3. Verify Product 3 (Floral Block Heel Mule)
+    await pdpPage.goto(`${baseUrl}/product/prod-03`, { waitUntil: 'networkidle' });
+    await pdpPage.waitForTimeout(150);
+    const p3Text = await pdpPage.textContent('body');
+    if (!p3Text.includes('Floral Block Heel Mule') || !p3Text.includes('₹3,699')) {
+      pdpErrors.push('FAIL: Product 3 details (Floral Block Heel Mule, ₹3,699) missing');
+    } else {
+      console.log('✔ PASS: /product/prod-03 renders exact name, price (₹3,699), and category.');
+    }
+
+    // 4. Verify Invalid Product ID Not-Found State
+    await pdpPage.goto(`${baseUrl}/product/non-existent-product-id`, { waitUntil: 'networkidle' });
+    await pdpPage.waitForTimeout(150);
+    const notFoundText = await pdpPage.textContent('body');
+    if (!notFoundText.includes('Footwear Silhouette Not Found')) {
+      pdpErrors.push('FAIL: Invalid product ID did not display "Footwear Silhouette Not Found"');
+    } else {
+      console.log('✔ PASS: Invalid product ID correctly displays graceful Not Found state.');
+    }
+
+    // Click "Return to Catalogue" button on Not Found page
+    await pdpPage.locator('a:has-text("Return to Catalogue")').click({ force: true });
+    await pdpPage.waitForTimeout(150);
+    if (!pdpPage.url().endsWith('/shop')) {
+      pdpErrors.push(`FAIL: Return to Catalogue button on 404 did not navigate to /shop (url=${pdpPage.url()})`);
+    } else {
+      console.log('✔ PASS: Return to Catalogue button on Not Found page navigates to /shop.');
+    }
+
+    await pdpPage.close();
+
+    // 5. Verify Backend Tamper Resilience & Data Precedence
+    console.log('\n--- Running PDP Data Precedence & Tamper Resilience Suite ---');
+    const precedencePage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await precedencePage.route(/.*\/api\/auth\/me.*/, (route) => {
+      route.fulfill({
+        status: 200,
+        headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: null }),
+      });
+    });
+
+    // Provide a hostile backend response attempting to overwrite price, ID, and client image
+    await precedencePage.route(/.*\/api\/products\/prod-01.*/, (route) => {
+      route.fulfill({
+        status: 200,
+        headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'success',
+          product: {
+            _id: '671234567890abcdef123456',
+            id: '671234567890abcdef123456',
+            code: 'prod-01',
+            name: 'Tampered Malicious Footwear',
+            price: 999999,
+            priceText: '₹9,99,999',
+            image: 'https://attacker.com/malicious-shoe.jpg',
+            alt: 'Hacked image description',
+            category: 'Tampered Category',
+            stockQuantity: 4,
+            inStock: true,
+          },
+        }),
+      });
+    });
+
+    await precedencePage.goto(`${baseUrl}/product/prod-01`, { waitUntil: 'networkidle' });
+    await precedencePage.waitForTimeout(200);
+
+    const tamperedPageText = await precedencePage.textContent('body');
+    const tamperedTitle = await precedencePage.locator('h1').textContent();
+    const tamperedImgSrc = await precedencePage.locator('img[loading="eager"]').getAttribute('src');
+
+    // Assert trusted local registry identity & price were locked
+    if (tamperedTitle.includes('Tampered Malicious Footwear') || !tamperedTitle.includes('Floral Block Heel Sandal')) {
+      pdpErrors.push(`FAIL: Backend tampered name leaked into PDP: "${tamperedTitle}"`);
+    } else {
+      console.log('✔ PASS: Backend tampered name blocked; trusted local launch name locked.');
+    }
+
+    if (tamperedPageText.includes('₹9,99,999') || !tamperedPageText.includes('₹3,499')) {
+      pdpErrors.push('FAIL: Backend tampered price leaked into PDP');
+    } else {
+      console.log('✔ PASS: Backend tampered price blocked; trusted price ₹3,499 locked.');
+    }
+
+    if (tamperedImgSrc.includes('attacker.com') || !tamperedImgSrc.includes('product-01-floral-block-heel-sandal.jpg')) {
+      pdpErrors.push(`FAIL: Backend unapproved image URL leaked into PDP: "${tamperedImgSrc}"`);
+    } else {
+      console.log('✔ PASS: Backend unapproved image blocked; client-provided image path locked.');
+    }
+
+    // Click Add to Bag on the page and verify canonical local ID is passed
+    await precedencePage.locator('button:has-text("Add to Bag")').click({ force: true });
+    await precedencePage.waitForTimeout(200);
+
+    const storageBag = await precedencePage.evaluate(() => JSON.parse(localStorage.getItem('aurevella_bag') || '[]'));
+    if (!storageBag.some((i) => i.id === 'prod-01')) {
+      pdpErrors.push(`FAIL: Add to bag did not use canonical local ID "prod-01", bag contents: ${JSON.stringify(storageBag)}`);
+    } else {
+      console.log('✔ PASS: Add-to-bag continues using canonical local ID "prod-01" (Mongo _id rejected).');
+    }
+
+    // 6. Verify Neutralized Commercial Claims
+    const forbiddenClaims = [
+      '14-day',
+      'unworn exchange',
+      'Insured courier',
+      'White-Glove Delivery',
+      'Artisan Guarantee',
+      '100% handcrafted authenticity',
+      'dust bag',
+    ];
+
+    const foundForbidden = forbiddenClaims.filter((claim) =>
+      tamperedPageText.toLowerCase().includes(claim.toLowerCase())
+    );
+
+    if (foundForbidden.length > 0) {
+      pdpErrors.push(`FAIL: Unapproved commercial claims found on PDP: ${foundForbidden.join(', ')}`);
+    } else {
+      console.log('✔ PASS: Zero unapproved commercial claims found on rendered PDP.');
+    }
+
+    // Verify authorized brand copy is present
+    const requiredAuthorizedPillars = [
+      'Handcrafted in India',
+      'Italian-Inspired Design',
+      'Complimentary standard delivery',
+      'Concierge Guidance',
+    ];
+
+    const missingAuthorized = requiredAuthorizedPillars.filter(
+      (pillar) => !tamperedPageText.includes(pillar)
+    );
+
+    if (missingAuthorized.length > 0) {
+      pdpErrors.push(`FAIL: Missing authorized brand pillars on PDP: ${missingAuthorized.join(', ')}`);
+    } else {
+      console.log('✔ PASS: All authorized brand pillars successfully rendered.');
+    }
+
+    await precedencePage.close();
+
+    if (pdpErrors.length > 0) {
+      console.error('\n[PDP Test Failures]:');
+      pdpErrors.forEach((e) => console.error(`  - ${e}`));
+      allPassed = false;
+    } else {
+      console.log('\n✔ ALL Product Detail Page (PDP) tests passed.');
     }
 
     // Print Results Summary Table

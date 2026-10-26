@@ -1,0 +1,17 @@
+# ==============================================================================
+# AUREVELLA — Apache / LiteSpeed SPA Fallback Configuration
+# ==============================================================================
+# Enables clean client-side routing for React 19 + Vite SPA on Hostinger.
+# Requests for existing static files (JS, CSS, images, fonts) are served directly.
+# All other route requests (/shop, /checkout, /account, /orders, etc.) are rewritten
+# to /index.html so React Router can resolve them client-side.
+# ==============================================================================
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>

@@ -37,7 +37,13 @@ export const ProductCard = ({
   const resolvedName = name || product?.name || '';
   const resolvedPriceText =
     priceText || product?.priceText || product?.priceDisplay || 'Price coming soon';
-  const resolvedLink = link || product?.link || '/shop';
+  const defaultLink = resolvedId ? `/product/${resolvedId}` : '/shop';
+  const resolvedLink =
+    link && link !== '/shop'
+      ? link
+      : product?.link && product.link !== '/shop'
+      ? product.link
+      : defaultLink;
   const resolvedCategory = category || product?.category;
   const resolvedPriority = priority || Boolean(product?.priority);
 
@@ -59,28 +65,30 @@ export const ProductCard = ({
         style={{ aspectRatio: 'var(--product-ratio, 1 / 1)' }}
         aria-label={`Product image slot for ${resolvedName}`}
       >
-        {resolvedImage ? (
-          <img
-            src={resolvedImage}
-            alt={resolvedAlt}
-            width="500"
-            height="500"
-            loading={resolvedPriority ? 'eager' : 'lazy'}
-            onLoad={() => setIsLoaded(true)}
-            className={`w-full h-full aspect-square max-w-full object-cover object-center img-fade-in ${
-              isLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
-          />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center select-none aspect-square">
-            <span className="text-[10px] uppercase tracking-[0.25em] text-[#B8AD9A] bg-[#181210] border border-[#2F1C15] px-2.5 py-1 mb-2">
-              1:1 Ratio
-            </span>
-            <p className="text-xs text-[#B8AD9A] max-w-[200px] leading-relaxed">
-              TODO(client): image
-            </p>
-          </div>
-        )}
+        <Link to={resolvedLink} className="block w-full h-full outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#FEF5E6]">
+          {resolvedImage ? (
+            <img
+              src={resolvedImage}
+              alt={resolvedAlt}
+              width="500"
+              height="500"
+              loading={resolvedPriority ? 'eager' : 'lazy'}
+              onLoad={() => setIsLoaded(true)}
+              className={`w-full h-full aspect-square max-w-full object-cover object-center img-fade-in transition-subtle group-hover:scale-[1.02] ${
+                isLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center select-none aspect-square">
+              <span className="text-[10px] uppercase tracking-[0.25em] text-[#B8AD9A] bg-[#181210] border border-[#2F1C15] px-2.5 py-1 mb-2">
+                1:1 Ratio
+              </span>
+              <p className="text-xs text-[#B8AD9A] max-w-[200px] leading-relaxed">
+                TODO(client): image
+              </p>
+            </div>
+          )}
+        </Link>
       </div>
 
       {/* Product Information */}
@@ -92,7 +100,9 @@ export const ProductCard = ({
             </span>
           )}
           <h3 className="font-serif text-xl sm:text-2xl text-[#FEF5E6] group-hover:text-white transition-subtle mb-3 break-words leading-snug">
-            {resolvedName}
+            <Link to={resolvedLink} className="outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] hover:underline underline-offset-4">
+              {resolvedName}
+            </Link>
           </h3>
         </div>
 

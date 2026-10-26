@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { ShoppingBag, MessageSquare, ArrowUpRight, Check, SlidersHorizontal } from 'lucide-react';
 import { PRODUCTS, CATEGORIES } from '../data/products.js';
 import { fetchProducts, fetchCategories } from '../utils/api.js';
@@ -170,14 +171,19 @@ export const Shop = () => {
                 className="w-full bg-[#120D0C] border-b border-[#2F1C15] overflow-hidden relative aspect-square"
                 style={{ aspectRatio: 'var(--product-ratio, 1 / 1)' }}
               >
-                <img
-                  src={product.image}
-                  alt={product.alt}
-                  width="500"
-                  height="500"
-                  loading={product.priority ? 'eager' : 'lazy'}
-                  className="w-full h-full aspect-square max-w-full object-cover object-center img-fade-in"
-                />
+                <Link
+                  to={`/product/${product.id}`}
+                  className="block w-full h-full outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#FEF5E6]"
+                >
+                  <img
+                    src={product.image}
+                    alt={product.alt}
+                    width="500"
+                    height="500"
+                    loading={product.priority ? 'eager' : 'lazy'}
+                    className="w-full h-full aspect-square max-w-full object-cover object-center img-fade-in transition-subtle group-hover:scale-[1.02]"
+                  />
+                </Link>
               </div>
 
               {/* Product Info */}
@@ -187,7 +193,12 @@ export const Shop = () => {
                     {product.category}
                   </span>
                   <h3 className="font-serif text-xl sm:text-2xl text-[#FEF5E6] group-hover:text-white transition-subtle mb-2 break-words leading-snug">
-                    {product.name}
+                    <Link
+                      to={`/product/${product.id}`}
+                      className="outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] hover:underline underline-offset-4"
+                    >
+                      {product.name}
+                    </Link>
                   </h3>
                   <p className="text-xs text-[#B8AD9A] line-clamp-2 leading-relaxed mb-4">
                     {product.description}

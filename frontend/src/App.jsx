@@ -6,6 +6,7 @@ import AppShell from './components/AppShell.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import Home from './pages/Home.jsx';
 import Shop from './pages/Shop.jsx';
+import ProductDetail from './pages/ProductDetail.jsx';
 import BagPage from './pages/BagPage.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
@@ -26,6 +27,10 @@ const AppRoutes = () => {
 
         {/* Product Catalogue */}
         <Route path="/shop" element={<Shop />} />
+
+        {/* Product Detail Page */}
+        <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/shop/:id" element={<ProductDetail />} />
 
         {/* Dedicated Shopping Bag Page & Cart Alias */}
         <Route path="/bag" element={<BagPage />} />

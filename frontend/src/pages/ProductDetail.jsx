@@ -134,7 +134,7 @@ export const ProductDetail = () => {
 
   const handleAddToBag = () => {
     if (!product) return;
-    const success = addToBag(product.id, quantity);
+    const success = addToBag(product.id, quantity, product);
     if (success) {
       setIsAdded(true);
       setTimeout(() => setIsAdded(false), 2000);

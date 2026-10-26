@@ -267,7 +267,7 @@ npm run dev             # Starts Vite development server at http://localhost:517
 The repository contains automated verification suites for responsive layout, fail-closed offline payment isolation, and database regression:
 
 ### 1. Headless Browser Layout & Form Audit (Frontend)
-Executes Playwright across 15 routes on 5 responsive viewports (360px, 390px, 768px, 1024px, 1440px), checking for horizontal overflow, broken images, touch target sizing, CLS, and form lifecycle cleanups:
+Executes Playwright across 19 routes on 5 responsive viewports (360px, 390px, 768px, 1024px, 1440px), checking for horizontal overflow, broken images, touch target sizing, CLS, and form lifecycle cleanups:
 ```bash
 cd frontend
 npm run check:layout
@@ -286,8 +286,8 @@ Runs against dedicated local database `127.0.0.1:27017/aurevella_test` with offl
 cd backend
 npm run test:phase5      # 17/17 tests: payment creation, verification & refunds
 npm run test:phase6-1    # 18/18 tests: catalogue browsing, category filters & stock bounds
-npm run test:phase6-2    # 26/26 tests: payment gateway isolation, ACID transactions & concurrency
-npm run test:phase7      # 31/31 tests: bespoke checkout flow, quotes & address isolation
+npm run test:phase6-2    # 33/33 tests: payment gateway isolation, ACID transactions & concurrency
+npm run test:phase7      # 15/15 tests: bespoke checkout flow, quotes & address isolation
 npm run test:phase11     # 37/37 tests: secure admin dashboard, product CRUD & order fulfillment
 ```
 

@@ -7,6 +7,7 @@
     "start": "node server.js",
     "check-env": "node scripts/checkEnv.js",
     "seed:products": "node src/utils/seedProducts.js",
+    "seed:admin": "node src/utils/seedAdmin.js",
     "migrate:payment-index": "node scripts/migratePaymentIdIndex.js",
     "test:phase5": "node scripts/testPhase5.js",
     "test:phase6-1": "node scripts/testPhase6_1.js",

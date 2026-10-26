@@ -109,6 +109,18 @@ async function runPhase5TestSuite() {
     // ----------------------------------------------------
     console.log('\n[Suite 2] Testing Public Catalogue API Endpoints...');
 
+    // Safety Guard: Refuse destructive cleanup if NODE_ENV is production or connected to non-test database
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('[SAFETY HALT] Refusing to clean records: NODE_ENV is "production".');
+    }
+    const currentDb = mongoose.connection.name || '';
+    if (!currentDb.endsWith('_test') && !currentDb.endsWith('-test') && currentDb !== 'test') {
+      throw new Error(`[SAFETY HALT] Refusing to clean records from non-test database: "${currentDb}".`);
+    }
+
+    // Clean any stray non-launch products in test database to guarantee pristine launch catalogue isolation
+    await Product.deleteMany({ code: { $nin: ['prod-01', 'prod-02', 'prod-03'] } });
+
     // 2A. GET /api/categories
     const catRes = await fetch(`${baseUrl}/api/categories`);
     const catData = await catRes.json();

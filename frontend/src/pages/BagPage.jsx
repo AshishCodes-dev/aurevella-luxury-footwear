@@ -7,7 +7,15 @@ import useDocumentTitle from '../utils/useDocumentTitle.js';
 
 export const BagPage = () => {
   useDocumentTitle('Shopping Bag — AUREVELLA');
-  const { items, totalCount, subtotalText, updateQuantity, removeFromBag } = useBag();
+  const {
+    items,
+    totalCount,
+    subtotalText,
+    hasUnavailableItems,
+    removeUnavailableItems,
+    updateQuantity,
+    removeFromBag,
+  } = useBag();
 
   const getWhatsAppReservationUrl = () => {
     if (items.length === 0) return siteConfig.contact.whatsapp.url;
@@ -50,6 +58,18 @@ export const BagPage = () => {
 
       {items.length === 0 ? (
         <div className="bg-[#181210] border border-[#2F1C15] p-12 sm:p-20 text-center max-w-xl mx-auto">
+          {hasUnavailableItems && (
+            <div className="mb-6 p-3 bg-amber-950/40 border border-amber-900/60 text-amber-200 text-xs flex items-center justify-between text-left">
+              <span>One or more items in your selection are no longer available.</span>
+              <button
+                type="button"
+                onClick={removeUnavailableItems}
+                className="underline hover:text-white ml-2 text-[11px] uppercase tracking-wider font-medium shrink-0"
+              >
+                Remove Unavailable
+              </button>
+            </div>
+          )}
           <div className="w-16 h-16 rounded-full bg-[#0F0A09] border border-[#2F1C15] flex items-center justify-center mx-auto mb-6 text-[#B8AD9A]">
             <ShoppingBag size={28} />
           </div>
@@ -70,6 +90,18 @@ export const BagPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           {/* Items List */}
           <div className="lg:col-span-2 space-y-4">
+            {hasUnavailableItems && (
+              <div className="p-3 bg-amber-950/40 border border-amber-900/60 text-amber-200 text-xs flex items-center justify-between">
+                <span>One or more items in your selection are currently unavailable.</span>
+                <button
+                  type="button"
+                  onClick={removeUnavailableItems}
+                  className="underline hover:text-white ml-2 text-[11px] uppercase tracking-wider font-medium"
+                >
+                  Remove Unavailable
+                </button>
+              </div>
+            )}
             <ul className="divide-y divide-[#2F1C15] bg-[#181210] border border-[#2F1C15] p-6 sm:p-8">
               {items.map((item) => (
                 <li key={item.id} className="py-6 flex flex-col sm:flex-row gap-6 first:pt-0 last:pb-0">

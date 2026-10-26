@@ -68,7 +68,8 @@ export const Shop = () => {
   }, [products, selectedCategory, sortBy]);
 
   const handleAddToBag = (productId) => {
-    const success = addToBag(productId, 1);
+    const productObj = products.find((p) => p.id === productId || p.code === productId);
+    const success = addToBag(productId, 1, productObj);
     if (success) {
       setAddedProductId(productId);
       setTimeout(() => setAddedProductId(null), 1500);

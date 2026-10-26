@@ -915,7 +915,30 @@ async function runPhase11TestSuite() {
     console.error('\n[Test Suite Error]:', err);
     record('Test Suite Execution', false, err.message);
   } finally {
-    // Teardown
+    // Teardown: Safely clean up only Phase 11 test records from test database
+    try {
+      const activeDb = mongoose.connection.name || '';
+      const isTestDb = activeDb === 'test' || activeDb.endsWith('_test') || activeDb.endsWith('-test');
+      if (mongoose.connection.readyState === 1 && process.env.NODE_ENV !== 'production' && isTestDb) {
+        await Product.deleteMany({
+          $or: [
+            { slug: { $in: ['p11-heel-01', 'p11-slide-02', 'p11-mule-03', 'p11-velvet-opera-pump', 'duplicate-code-product'] } },
+            { code: { $in: ['prod-p11-01', 'prod-p11-02', 'prod-p11-03', 'prod-p11-04'] } },
+          ],
+        });
+        await Order.deleteMany({
+          $or: [
+            { orderNumber: { $in: ['AV-P11-TEST-0001', 'AV-P11-TEST-0002', 'AV-P11-TEST-0003', 'AV-P11-CONCUR-0001'] } },
+          ],
+        });
+        await Category.deleteOne({ slug: 'heels-p11' });
+        await User.deleteMany({
+          email: { $in: ['atelier_admin_p11@aurevella.com', 'patron_p11@aurevella.com'] },
+        });
+      }
+    } catch (cleanupErr) {
+      console.warn('[Teardown Warning]: Failed to clean Phase 11 test artifacts:', cleanupErr.message);
+    }
     resetCustomRazorpayInstance();
     server.close();
     await mongoose.connection.close();

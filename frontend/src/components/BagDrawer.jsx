@@ -10,6 +10,8 @@ export const BagDrawer = () => {
     totalCount,
     subtotal,
     subtotalText,
+    hasUnavailableItems,
+    removeUnavailableItems,
     isBagOpen,
     closeBag,
     updateQuantity,
@@ -126,7 +128,20 @@ export const BagDrawer = () => {
                 </button>
               </div>
             ) : (
-              <ul className="divide-y divide-[#2F1C15]" aria-label="Items in bag">
+              <>
+                {hasUnavailableItems && (
+                  <div className="p-3 bg-amber-950/40 border border-amber-900/60 text-amber-200 text-xs flex items-center justify-between">
+                    <span>An item in your selection is no longer available.</span>
+                    <button
+                      type="button"
+                      onClick={removeUnavailableItems}
+                      className="underline hover:text-white ml-2 text-[11px] uppercase tracking-wider font-medium"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+                <ul className="divide-y divide-[#2F1C15]" aria-label="Items in bag">
                 {items.map((item) => (
                   <li key={item.id} className="py-5 flex gap-4 first:pt-0 last:pb-0">
                     {/* Thumbnail */}
@@ -197,6 +212,7 @@ export const BagDrawer = () => {
                   </li>
                 ))}
               </ul>
+              </>
             )}
           </div>
 

@@ -49,7 +49,7 @@ export const ProductCard = ({
 
   const handleAddToBag = () => {
     if (resolvedId && bag?.addToBag) {
-      const ok = bag.addToBag(resolvedId, 1);
+      const ok = bag.addToBag(resolvedId, 1, product);
       if (ok) {
         setJustAdded(true);
         setTimeout(() => setJustAdded(false), 1500);

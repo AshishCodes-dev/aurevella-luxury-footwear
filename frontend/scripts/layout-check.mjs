@@ -1526,6 +1526,36 @@ async function runLayoutChecks() {
     await custPage.close();
     await custContext.close();
 
+    // 3. Authorized Admin role user successfully accesses /admin dashboard
+    const adminContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const adminPage = await adminContext.newPage();
+    await setupMockApi(adminPage);
+    await adminPage.route('**/api/auth/me', (route) => {
+      route.fulfill({
+        status: 200,
+        headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user: {
+            uid: 'admin-uid-01',
+            email: 'admin@aurevella.com',
+            name: 'Authorized Executive Admin',
+            role: 'admin',
+            isActive: true,
+          },
+        }),
+      });
+    });
+    await adminPage.goto(`${baseUrl}/admin`, { waitUntil: 'networkidle' });
+    await adminPage.waitForTimeout(300);
+    const adminBody = await adminPage.textContent('body');
+    if (adminBody.includes('Atelier Management Portal') && adminBody.includes('Overview') && !adminBody.includes('Access Denied')) {
+      console.log('✔ PASS: Authorized admin role successfully loaded /admin dashboard without access-denied block.');
+    } else {
+      formErrors.push('FAIL: Authorized admin was blocked or did not render admin dashboard properly');
+    }
+    await adminPage.close();
+    await adminContext.close();
+
     // --- Running Suite 12: Editorial & Brand Pages Navigation & Link Integrity ---
     console.log('\n--- Running Suite 12: Editorial & Brand Pages Navigation & Link Integrity ---');
     const edContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });

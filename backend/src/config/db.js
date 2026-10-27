@@ -1,16 +1,58 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 
-export const connectDB = async () => {
-  const uri = process.env.MONGODB_URI;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const localEnvPath = path.resolve(__dirname, '../../.env.local');
+
+// Safely load local development override if .env.local exists, without modifying .env
+if (fs.existsSync(localEnvPath)) {
+  dotenv.config({ path: localEnvPath, override: true });
+}
+
+/**
+ * Resolves the active MongoDB connection URI.
+ * Priority:
+ * 1. Explicit override passed to function
+ * 2. If USE_LOCAL_DB === 'true', uses MONGODB_LOCAL_URI or 'mongodb://127.0.0.1:27017/aurevella_dev'
+ * 3. Default: process.env.MONGODB_URI from backend/.env
+ */
+export const getActiveMongoUri = (overrideUri) => {
+  if (overrideUri && typeof overrideUri === 'string' && overrideUri.trim()) {
+    return overrideUri.trim();
+  }
+  if (process.env.USE_LOCAL_DB === 'true') {
+    return (
+      (process.env.MONGODB_LOCAL_URI && process.env.MONGODB_LOCAL_URI.trim()) ||
+      'mongodb://127.0.0.1:27017/aurevella_dev'
+    );
+  }
+  return (process.env.MONGODB_URI && process.env.MONGODB_URI.trim()) || '';
+};
+
+export const connectDB = async (overrideUri) => {
+  const uri = getActiveMongoUri(overrideUri);
 
   if (!uri || uri.trim() === '') {
-    console.error('Error: MONGODB_URI is missing or empty. Please set MONGODB_URI in backend/.env');
+    console.error(
+      'Error: MONGODB_URI is missing or empty. Please set MONGODB_URI in backend/.env or configure local development.'
+    );
     process.exit(1);
   }
 
   try {
     const conn = await mongoose.connect(uri);
-    console.log(`MongoDB connected: ${conn.connection.host}`);
+    const isLocal =
+      conn.connection.host === '127.0.0.1' || conn.connection.host === 'localhost';
+    console.log(
+      `MongoDB connected: ${conn.connection.host}/${conn.connection.name} (${
+        isLocal ? 'isolated local' : 'remote cluster'
+      })`
+    );
+    return conn;
   } catch (error) {
     console.error(`MongoDB connection error: ${error.message}`);
     process.exit(1);
@@ -214,7 +256,10 @@ export const connectTestDB = async () => {
     }
 
     // 2. Reject ANY host belonging to the primary/production cluster (blocks production-cluster reuse)
-    const sharesHost = parsedPrimary.hosts.some((h) => parsedTest.hosts.includes(h));
+    const isLocalHost = (h) => h === '127.0.0.1' || h === 'localhost' || h === '::1';
+    const sharesHost = parsedPrimary.hosts.some(
+      (h) => !isLocalHost(h) && parsedTest.hosts.includes(h)
+    );
     if (sharesHost) {
       const errorMsg =
         '[SAFETY HALT] MONGODB_TEST_URI targets a cluster or host associated with primary MONGODB_URI.\n' +

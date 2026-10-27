@@ -347,46 +347,55 @@ export const AdminOverview = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#2F1C15]/40 text-[#FEF5E6]">
-                {recentOrders.map((ord) => (
-                  <tr key={ord.id} className="hover:bg-[#181210] transition-subtle">
-                    <td className="py-3.5 px-3 font-mono font-medium text-[#FEF5E6]">
-                      {ord.orderNumber}
-                    </td>
-                    <td className="py-3.5 px-3 text-[#B8AD9A]">
-                      {new Date(ord.createdAt).toLocaleDateString('en-IN', {
+                {recentOrders.map((ord) => {
+                  const statusKey = ord.status || ord.fulfillmentStatus || 'pending';
+                  const itemsCount = ord.itemsCount ?? ord.items?.length ?? 0;
+                  const totalDisplay = ord.totalText || ord.totalFormatted || (ord.totalPaise ? `₹${(ord.totalPaise / 100).toLocaleString('en-IN')}` : '₹0');
+                  const dateDisplay = ord.createdAt
+                    ? new Date(ord.createdAt).toLocaleDateString('en-IN', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric',
-                      })}
-                    </td>
-                    <td className="py-3.5 px-3">
-                      <span className="block font-medium">{ord.customerName}</span>
-                      {ord.customerEmail && (
-                        <span className="text-[10px] text-[#B8AD9A] block">{ord.customerEmail}</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-3 text-[#B8AD9A]">{ord.itemsCount} pair{ord.itemsCount > 1 ? 's' : ''}</td>
-                    <td className="py-3.5 px-3 font-medium text-[#FEF5E6]">{ord.totalText}</td>
-                    <td className="py-3.5 px-3">
-                      <span
-                        className={`inline-block px-2.5 py-0.5 text-[10px] uppercase tracking-wider font-semibold border ${getStatusBadge(
-                          ord.status
-                        )}`}
-                      >
-                        {ord.status.replace(/_/g, ' ')}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => onSelectOrder(ord.orderNumber)}
-                        className="text-xs uppercase tracking-wider text-[#B8AD9A] hover:text-[#FEF5E6] underline underline-offset-4"
-                      >
-                        Details
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      })
+                    : '—';
+
+                  return (
+                    <tr key={ord.id || ord._id || ord.orderNumber} className="hover:bg-[#181210] transition-subtle">
+                      <td className="py-3.5 px-3 font-mono font-medium text-[#FEF5E6]">
+                        {ord.orderNumber || ord.id || '—'}
+                      </td>
+                      <td className="py-3.5 px-3 text-[#B8AD9A]">
+                        {dateDisplay}
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <span className="block font-medium">{ord.customerName || 'Guest Customer'}</span>
+                        {ord.customerEmail && (
+                          <span className="text-[10px] text-[#B8AD9A] block">{ord.customerEmail}</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-3 text-[#B8AD9A]">{itemsCount} pair{itemsCount === 1 ? '' : 's'}</td>
+                      <td className="py-3.5 px-3 font-medium text-[#FEF5E6]">{totalDisplay}</td>
+                      <td className="py-3.5 px-3">
+                        <span
+                          className={`inline-block px-2.5 py-0.5 text-[10px] uppercase tracking-wider font-semibold border ${getStatusBadge(
+                            statusKey
+                          )}`}
+                        >
+                          {String(statusKey).replace(/_/g, ' ')}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => onSelectOrder(ord.orderNumber || ord.id)}
+                          className="text-xs uppercase tracking-wider text-[#B8AD9A] hover:text-[#FEF5E6] underline underline-offset-4"
+                        >
+                          Details
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

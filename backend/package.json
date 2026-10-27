@@ -14,7 +14,8 @@
     "test:phase6-2": "node scripts/testPhase6_2.js",
     "test:phase7": "node scripts/testPhase7.js",
     "test:phase11": "node scripts/testPhase11.js",
-    "test:phase14": "node scripts/testPhase14.js"
+    "test:phase14": "node scripts/testPhase14.js",
+    "test:admin-safety": "node scripts/testSeedAdminSafety.js"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",

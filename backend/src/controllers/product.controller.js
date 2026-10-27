@@ -31,7 +31,7 @@ export const getCategories = async (req, res) => {
  */
 export const getProducts = async (req, res) => {
   try {
-    const { category, sort } = req.query;
+    const { category, sort, search, q } = req.query;
     const filter = { isActive: true };
 
     // 1. Category Filtering
@@ -56,7 +56,47 @@ export const getProducts = async (req, res) => {
       filter.category = matchedCategory._id;
     }
 
-    // 2. Safe Allowlisted Sorting
+    // 2. Safe Search Filtering across name, description, code, slug, and category
+    const rawSearch = typeof search === 'string' ? search : typeof q === 'string' ? q : '';
+    const trimmedSearch = rawSearch.trim().slice(0, 100);
+
+    if (trimmedSearch) {
+      // Escape regex special characters to prevent ReDoS or query injection
+      const escapedSearch = trimmedSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const searchRegex = new RegExp(escapedSearch, 'i');
+
+      // Check if any active category matches the search term
+      const matchingCategories = await Category.find(
+        {
+          $or: [{ name: searchRegex }, { slug: searchRegex }],
+          isActive: true,
+        },
+        '_id'
+      ).lean();
+      const matchingCatIds = matchingCategories.map((c) => c._id);
+
+      const searchConditions = [
+        { name: searchRegex },
+        { description: searchRegex },
+        { code: searchRegex },
+        { slug: searchRegex },
+      ];
+
+      if (matchingCatIds.length > 0) {
+        searchConditions.push({ category: { $in: matchingCatIds } });
+      }
+
+      // If category filter is already active, combine using $and
+      if (filter.category) {
+        const catId = filter.category;
+        delete filter.category;
+        filter.$and = [{ category: catId }, { $or: searchConditions }];
+      } else {
+        filter.$or = searchConditions;
+      }
+    }
+
+    // 3. Safe Allowlisted Sorting
     const sortMap = {
       featured: { priority: -1, createdAt: -1 },
       'price-asc': { pricePaise: 1 },

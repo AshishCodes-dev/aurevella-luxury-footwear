@@ -96,6 +96,14 @@ const MOCK_LAUNCH_PRODUCTS = [
 ];
 
 async function setupMockApi(targetPage) {
+  // Intercept external Firebase auth requests so test runs deterministically offline without internet latency
+  await targetPage.route(/.*identitytoolkit\.googleapis\.com.*/, (route) => {
+    route.fulfill({
+      status: 400,
+      headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: { message: 'MOCK_OFFLINE' } }),
+    });
+  });
   await targetPage.route(/.*\/api\/auth\/me.*/, (route) => {
     route.fulfill({
       status: 200,
@@ -1345,7 +1353,7 @@ async function runLayoutChecks() {
       }
     });
 
-    await addrPage.route('**/api/users/addresses/*', (route) => {
+    await addrPage.route('**/api/users/addresses/**', (route) => {
       const url = route.request().url();
       const method = route.request().method();
       const idMatch = url.match(/\/addresses\/([^/?#]+)/);

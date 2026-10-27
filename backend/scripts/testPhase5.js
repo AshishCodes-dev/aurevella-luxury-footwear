@@ -208,6 +208,172 @@ async function runPhase5TestSuite() {
       `Status ${notFoundRes.status}, message: "${notFoundData.message}"`
     );
 
+    // 2I. GET /api/products?search=mule (Search by Name / Silhouette)
+    const searchMuleRes = await fetch(`${baseUrl}/api/products?search=mule`);
+    const searchMuleData = await searchMuleRes.json();
+    const searchMuleOk =
+      searchMuleRes.status === 200 &&
+      searchMuleData.count === 1 &&
+      searchMuleData.products?.[0]?.code === 'prod-03';
+    record(
+      'GET /api/products?search=mule: Finds specific silhouette "Floral Block Heel Mule"',
+      searchMuleOk,
+      `Count: ${searchMuleData.count}, Matched: "${searchMuleData.products?.[0]?.name}"`
+    );
+
+    // 2J. GET /api/products?search=FLORAL (Search Case-Insensitivity)
+    const searchFloralRes = await fetch(`${baseUrl}/api/products?search=FLORAL`);
+    const searchFloralData = await searchFloralRes.json();
+    const searchFloralOk =
+      searchFloralRes.status === 200 && searchFloralData.count === 3;
+    record(
+      'GET /api/products?search=FLORAL: Case-insensitive search matches all 3 floral models',
+      searchFloralOk,
+      `Count: ${searchFloralData.count} (expected 3)`
+    );
+
+    // 2K. GET /api/products?search=prod-02 (Search by Model Code)
+    const searchCodeRes = await fetch(`${baseUrl}/api/products?search=prod-02`);
+    const searchCodeData = await searchCodeRes.json();
+    const searchCodeOk =
+      searchCodeRes.status === 200 &&
+      searchCodeData.count === 1 &&
+      searchCodeData.products?.[0]?.code === 'prod-02';
+    record(
+      'GET /api/products?search=prod-02: Matches exact model code',
+      searchCodeOk,
+      `Matched code: "${searchCodeData.products?.[0]?.code}"`
+    );
+
+    // 2L. GET /api/products?category=flat-slide&search=mule (Combined Filter Interaction)
+    const comboRes = await fetch(`${baseUrl}/api/products?category=flat-slide&search=mule`);
+    const comboData = await comboRes.json();
+    const comboOk = comboRes.status === 200 && comboData.count === 0 && Array.isArray(comboData.products);
+    record(
+      'GET /api/products?category=flat-slide&search=mule: Intersects category and search cleanly (0 results)',
+      comboOk,
+      `Status ${comboRes.status}, count: ${comboData.count}`
+    );
+
+    // 2M. GET /api/products?search=nonexistent-query-999 (No Matches Empty Array)
+    const emptySearchRes = await fetch(`${baseUrl}/api/products?search=nonexistent-query-999`);
+    const emptySearchData = await emptySearchRes.json();
+    const emptySearchOk = emptySearchRes.status === 200 && emptySearchData.count === 0 && Array.isArray(emptySearchData.products);
+    record(
+      'GET /api/products?search=nonexistent-query-999: Returns graceful empty results without error',
+      emptySearchOk,
+      `Status: ${emptySearchRes.status}, count: ${emptySearchData.count}`
+    );
+
+    // 2N. GET /api/products?search=[test]+(escaped)* (ReDoS / Injection Safety)
+    const regexSafeRes = await fetch(`${baseUrl}/api/products?search=${encodeURIComponent('[test]+(escaped)*')}`);
+    const regexSafeData = await regexSafeRes.json();
+    const regexSafeOk = regexSafeRes.status === 200 && Array.isArray(regexSafeData.products);
+    record(
+      'GET /api/products?search=special_chars: Handles special regex characters safely without crash',
+      regexSafeOk,
+      `Status: ${regexSafeRes.status}, count: ${regexSafeData.count}`
+    );
+
+    // 2O. GET /api/products?search=Interchangeable Heel (Exact Category Name Search)
+    const catNameRes = await fetch(`${baseUrl}/api/products?search=${encodeURIComponent('Interchangeable Heel')}`);
+    const catNameData = await catNameRes.json();
+    const catNameCodes = catNameData.products?.map((p) => p.code) || [];
+    const catNameOk =
+      catNameRes.status === 200 &&
+      catNameData.count === 2 &&
+      catNameCodes.includes('prod-01') &&
+      catNameCodes.includes('prod-03') &&
+      !catNameCodes.includes('prod-02');
+    record(
+      'GET /api/products?search=Interchangeable Heel: Category-name search matches products via Category relationship',
+      catNameOk,
+      `Count: ${catNameData.count}, Codes: ${catNameCodes.join(', ')}`
+    );
+
+    // 2P. GET /api/products?search=Interchangeable (Category Term Absent from Product Fields)
+    // "Floral Block Heel Mule" (prod-03) does NOT contain "interchangeable" in name, description, code, or slug.
+    // It must match strictly because its category references the "Interchangeable Heel" Category document.
+    const catRelRes = await fetch(`${baseUrl}/api/products?search=Interchangeable`);
+    const catRelData = await catRelRes.json();
+    const catRelCodes = catRelData.products?.map((p) => p.code) || [];
+    const prod03Included = catRelCodes.includes('prod-03');
+    const catRelOk =
+      catRelRes.status === 200 &&
+      catRelData.count === 2 &&
+      prod03Included &&
+      !catRelCodes.includes('prod-02');
+    record(
+      'GET /api/products?search=Interchangeable: Matches prod-03 strictly via category ref (absent from product fields)',
+      catRelOk,
+      `Count: ${catRelData.count}, prod-03 matched via category ref: ${prod03Included}`
+    );
+
+    // 2Q. GET /api/products?search=Flat Slide (Category Name Search for Slide Silhouette)
+    const slideCatRes = await fetch(`${baseUrl}/api/products?search=${encodeURIComponent('Flat Slide')}`);
+    const slideCatData = await slideCatRes.json();
+    const slideCatCodes = slideCatData.products?.map((p) => p.code) || [];
+    const slideCatOk =
+      slideCatRes.status === 200 &&
+      slideCatData.count === 1 &&
+      slideCatCodes[0] === 'prod-02';
+    record(
+      'GET /api/products?search=Flat Slide: Category search matches exact slide category product',
+      slideCatOk,
+      `Count: ${slideCatData.count}, Matched: "${slideCatData.products?.[0]?.name}"`
+    );
+
+    // 2R. Category Filter + Category Search Coexistence (Clean Intersection)
+    const catMatchRes = await fetch(`${baseUrl}/api/products?category=interchangeable-heel&search=${encodeURIComponent('Interchangeable Heel')}`);
+    const catMatchData = await catMatchRes.json();
+    const catMismatchRes = await fetch(`${baseUrl}/api/products?category=flat-slide&search=${encodeURIComponent('Interchangeable Heel')}`);
+    const catMismatchData = await catMismatchRes.json();
+    const comboCatOk =
+      catMatchRes.status === 200 &&
+      catMatchData.count === 2 &&
+      catMismatchRes.status === 200 &&
+      catMismatchData.count === 0;
+    record(
+      'GET /api/products?category=...&search=...: Category filter and category search intersect cleanly',
+      comboCatOk,
+      `Matching combo count: ${catMatchData.count}, Mismatching combo count: ${catMismatchData.count}`
+    );
+
+    // 2S. Inactive Product Exclusion from Category Search
+    const heelCategory = await Category.findOne({ slug: 'interchangeable-heel' });
+    let tempInactiveProduct = null;
+    let inactiveExcluded = false;
+    try {
+      tempInactiveProduct = await Product.create({
+        code: 'prod-temp-inactive',
+        name: 'Archived Heel Prototype',
+        slug: 'archived-heel-prototype',
+        category: heelCategory._id,
+        pricePaise: 499900,
+        description: 'Historical archive model not available for commission.',
+        image: '/images/products/product-01-floral-block-heel-sandal.jpg',
+        stockQuantity: 5,
+        isActive: false, // Inactive
+      });
+
+      const inactiveCheckRes = await fetch(`${baseUrl}/api/products?search=${encodeURIComponent('Interchangeable Heel')}`);
+      const inactiveCheckData = await inactiveCheckRes.json();
+      const returnedCodes = inactiveCheckData.products?.map((p) => p.code) || [];
+      inactiveExcluded =
+        inactiveCheckRes.status === 200 &&
+        inactiveCheckData.count === 2 &&
+        !returnedCodes.includes('prod-temp-inactive');
+    } finally {
+      if (tempInactiveProduct) {
+        await Product.deleteOne({ _id: tempInactiveProduct._id });
+      }
+    }
+    record(
+      'GET /api/products?search=...: Inactive products remain strictly excluded from category search',
+      inactiveExcluded,
+      `Inactive model returned: false, active count maintained: 2`
+    );
+
     // ----------------------------------------------------
     // 3. Customer Address API & Ownership Isolation
     // ----------------------------------------------------

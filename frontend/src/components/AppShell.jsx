@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, ArrowUpRight, ShoppingBag } from 'lucide-react';
+import { Menu, X, ArrowUpRight, ShoppingBag, Search } from 'lucide-react';
 import Logo from './Logo.jsx';
 import { siteConfig } from '../content/site.js';
 import Button from './ui/button.jsx';
@@ -12,6 +12,7 @@ export const AppShell = ({ children }) => {
   const { user, isAuthenticated, logout } = useAuth();
   const { totalCount, openBag } = useBag();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSearchInput, setMobileSearchInput] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -89,7 +90,7 @@ export const AppShell = ({ children }) => {
   };
 
   const navLinkClasses = ({ isActive }) =>
-    `text-[11px] sm:text-xs uppercase tracking-[0.22em] font-medium min-h-[44px] inline-flex items-center px-3.5 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] ${
+    `text-[11px] xl:text-xs uppercase tracking-[0.14em] xl:tracking-[0.22em] font-medium min-h-[44px] inline-flex items-center px-2 lg:px-2.5 xl:px-3.5 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] ${
       isActive
         ? 'text-[#FEF5E6] font-semibold border-b border-[#FEF5E6]'
         : 'text-[#B8AD9A] hover:text-[#FEF5E6]'
@@ -114,7 +115,7 @@ export const AppShell = ({ children }) => {
 
       {/* Sleek Sticky Header */}
       <header className="border-b border-[#2F1C15] bg-[#0F0A09]/95 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] sm:h-20 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] sm:h-20 flex items-center justify-between gap-2 lg:gap-4">
           {/* Brand Logo: header variant (mark + live text) */}
           <div className="flex items-center min-w-0">
             <Logo variant="header" />
@@ -123,7 +124,7 @@ export const AppShell = ({ children }) => {
           {/* Desktop Navigation */}
           <nav
             aria-label="Primary navigation"
-            className="hidden lg:flex items-center space-x-1 xl:space-x-2"
+            className="hidden lg:flex items-center space-x-0.5 xl:space-x-1"
           >
             {siteConfig.navLinks.map((item) => (
               <NavLink key={item.href} to={item.href} className={navLinkClasses} end={item.href === '/'}>
@@ -133,25 +134,25 @@ export const AppShell = ({ children }) => {
           </nav>
 
           {/* Account, Shopping Bag & Mobile Menu Toggle */}
-          <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0">
+          <div className="flex items-center space-x-1 sm:space-x-1.5 xl:space-x-3 shrink-0">
             {isAuthenticated ? (
-              <div className="hidden sm:flex items-center space-x-2">
+              <div className="hidden sm:flex items-center space-x-1.5 xl:space-x-2">
                 <Link
                   to="/account"
-                  className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                  className="text-[11px] sm:text-xs uppercase tracking-[0.16em] xl:tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-1.5 xl:px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
                 >
                   Account ({user?.role === 'admin' ? 'Admin' : user?.name?.split(' ')[0] || 'User'})
                 </Link>
                 <Link
                   to="/orders"
-                  className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                  className="text-[11px] sm:text-xs uppercase tracking-[0.16em] xl:tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-1.5 xl:px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
                 >
                   Orders
                 </Link>
                 {user?.role === 'admin' && (
                   <Link
                     to="/admin"
-                    className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-[#FEF5E6] bg-[#241B18] border border-[#2F1C15] hover:border-[#FEF5E6]/40 transition-subtle min-h-[44px] inline-flex items-center px-2.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                    className="text-[11px] sm:text-xs uppercase tracking-[0.16em] xl:tracking-[0.2em] text-[#FEF5E6] bg-[#241B18] border border-[#2F1C15] hover:border-[#FEF5E6]/40 transition-subtle min-h-[44px] inline-flex items-center px-2 xl:px-2.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
                   >
                     Atelier Admin
                   </Link>
@@ -160,37 +161,47 @@ export const AppShell = ({ children }) => {
                   variant="ghost"
                   size="sm"
                   onClick={handleLogout}
-                  className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6]"
+                  className="text-[11px] sm:text-xs uppercase tracking-[0.16em] xl:tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] px-1.5 xl:px-2"
                 >
                   Sign Out
                 </Button>
               </div>
             ) : (
-              <div className="hidden sm:flex items-center space-x-2">
+              <div className="hidden sm:flex items-center space-x-1.5 xl:space-x-2">
                 <Link
                   to="/login"
-                  className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-3 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                  className="text-[11px] sm:text-xs uppercase tracking-[0.16em] xl:tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-2 xl:px-3 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/signup"
-                  className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-[#0F0A09] bg-[#FEF5E6] hover:bg-[#FFFFFF] transition-subtle min-h-[38px] inline-flex items-center px-4 font-semibold outline-none focus-visible:ring-1 focus-visible:ring-white shadow-sm"
+                  className="text-[11px] sm:text-xs uppercase tracking-[0.16em] xl:tracking-[0.2em] text-[#0F0A09] bg-[#FEF5E6] hover:bg-[#FFFFFF] transition-subtle min-h-[38px] inline-flex items-center px-2.5 xl:px-4 font-semibold outline-none focus-visible:ring-1 focus-visible:ring-white shadow-sm"
                 >
                   Sign Up
                 </Link>
               </div>
             )}
 
+            {/* Search Trigger (Header) */}
+            <Link
+              to="/shop"
+              aria-label="Search atelier footwear catalogue"
+              className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs uppercase tracking-[0.18em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] px-2 xl:px-2.5 py-1.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] select-none"
+            >
+              <Search size={16} />
+              <span className="hidden xl:inline font-medium">Search</span>
+            </Link>
+
             {/* Shopping Bag Button (Header Desktop & Mobile) */}
             <button
               type="button"
               onClick={openBag}
               aria-label={`Open shopping bag with ${totalCount} items`}
-              className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs uppercase tracking-[0.18em] text-[#FEF5E6] hover:text-white transition-subtle min-h-[44px] px-2.5 py-1.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] bg-[#181210] border border-[#2F1C15] hover:border-[#FEF5E6]/40 select-none"
+              className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs uppercase tracking-[0.18em] text-[#FEF5E6] hover:text-white transition-subtle min-h-[44px] px-2 xl:px-2.5 py-1.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] bg-[#181210] border border-[#2F1C15] hover:border-[#FEF5E6]/40 select-none"
             >
               <ShoppingBag size={16} />
-              <span className="hidden sm:inline font-medium">Bag</span>
+              <span className="hidden xl:inline font-medium">Bag</span>
               <span className="text-[10px] font-semibold bg-[#0F0A09] text-[#FEF5E6] px-1.5 py-0.5 border border-[#2F1C15] min-w-[20px] text-center">
                 {totalCount}
               </span>
@@ -237,6 +248,33 @@ export const AppShell = ({ children }) => {
               <X size={24} />
             </button>
           </div>
+
+          {/* Mobile Search Form */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const term = mobileSearchInput.trim();
+              setMobileMenuOpen(false);
+              navigate(term ? `/shop?search=${encodeURIComponent(term)}` : '/shop');
+            }}
+            className="pt-4 pb-2"
+          >
+            <div className="relative flex items-center">
+              <label htmlFor="mobile-nav-search-input" className="sr-only">
+                Search atelier collection
+              </label>
+              <Search size={16} className="absolute left-3 text-[#B8AD9A] pointer-events-none" />
+              <input
+                id="mobile-nav-search-input"
+                type="search"
+                aria-label="Search catalogue"
+                value={mobileSearchInput}
+                onChange={(e) => setMobileSearchInput(e.target.value)}
+                placeholder="Search collection (e.g. mule, slide)..."
+                className="w-full bg-[#181210] border border-[#2F1C15] focus:border-[#FEF5E6] text-xs text-[#FEF5E6] placeholder-[#B8AD9A]/60 pl-9 pr-4 py-2.5 outline-none transition-subtle focus:ring-1 focus:ring-[#FEF5E6]"
+              />
+            </div>
+          </form>
 
           {/* Drawer Nav Links */}
           <nav aria-label="Mobile Navigation" className="flex-1 py-6 space-y-2">

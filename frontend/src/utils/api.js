@@ -65,6 +65,9 @@ export const fetchProducts = async (params = {}) => {
   if (params.sort) {
     query.set('sort', params.sort);
   }
+  if (params.search && typeof params.search === 'string' && params.search.trim()) {
+    query.set('search', params.search.trim());
+  }
   const queryString = query.toString();
   const endpoint = queryString ? `/api/products?${queryString}` : '/api/products';
   return apiFetch(endpoint);

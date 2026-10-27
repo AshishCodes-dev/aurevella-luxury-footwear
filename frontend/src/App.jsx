@@ -15,6 +15,14 @@ import Account from './pages/Account.jsx';
 import Checkout from './pages/Checkout.jsx';
 import Orders from './pages/Orders.jsx';
 import AdminDashboard from './pages/admin/AdminDashboard.jsx';
+import Collections from './pages/Collections.jsx';
+import LimitedEdition from './pages/LimitedEdition.jsx';
+import About from './pages/About.jsx';
+import Contact from './pages/Contact.jsx';
+import PrivacyPolicy from './pages/PrivacyPolicy.jsx';
+import TermsConditions from './pages/TermsConditions.jsx';
+import ShippingPolicy from './pages/ShippingPolicy.jsx';
+import ReturnsPolicy from './pages/ReturnsPolicy.jsx';
 import PlaceholderPage from './pages/PlaceholderPage.jsx';
 
 const AppRoutes = () => {
@@ -73,90 +81,17 @@ const AppRoutes = () => {
           }
         />
 
-        {/* Curated Collections & Placeholders */}
-        <Route
-          path="/collections"
-          element={
-            <PlaceholderPage
-              title="Curated Collections"
-              eyebrow="Seasonal Releases"
-              description="Distinct footwear capsule releases, from formal black-tie Oxfords to unlined summer loafers crafted for refined comfort."
-            />
-          }
-        />
-        <Route
-          path="/limited-edition"
-          element={
-            <PlaceholderPage
-              title="Limited Edition Series"
-              eyebrow="Numbered Drops"
-              description="Individually numbered small-batch creations featuring museum calfskin and antique patinas. Limited strictly to 50 pairs per series."
-            />
-          }
-        />
-        <Route
-          path="/about"
-          element={
-            <PlaceholderPage
-              title="About Aurevella"
-              eyebrow="Heritage & Atelier"
-              showLogo={true}
-              description="AUREVELLA brings Italian-inspired elegance to footwear, crafted in India and made by hand. Our signature interchangeable heels are designed around one idea: Luxury, Reimagined."
-            />
-          }
-        />
-        <Route
-          path="/contact"
-          element={
-            <PlaceholderPage
-              title="Contact & Concierge"
-              eyebrow="Atelier Service"
-              description="Reach our concierge team via WhatsApp, Instagram, or email for bespoke inquiries, custom fits, and order status updates."
-            />
-          }
-        />
+        {/* Curated Editorial Collections & Brand Pages */}
+        <Route path="/collections" element={<Collections />} />
+        <Route path="/limited-edition" element={<LimitedEdition />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
 
-        {/* Legal & Policy Placeholders */}
-        <Route
-          path="/privacy"
-          element={
-            <PlaceholderPage
-              title="Privacy Policy"
-              eyebrow="Client Protection"
-              description="Our comprehensive guidelines on customer data protection, order confidentiality, and secure payment processing."
-            />
-          }
-        />
-        <Route
-          path="/terms"
-          element={
-            <PlaceholderPage
-              title="Terms & Conditions"
-              eyebrow="Client Agreement"
-              description="Official purchasing terms, merchant agreements, warranty terms, and site usage policies."
-            />
-          }
-        />
-        <Route
-          path="/shipping-policy"
-          element={
-            <PlaceholderPage
-              title="Shipping & Dispatch"
-              eyebrow="White Glove Delivery"
-              description="Insured door-to-door courier delivery across India, packaged in bespoke wooden storage boxes with cedar shoe trees."
-            />
-          }
-        />
-        <Route
-          path="/returns-policy"
-          element={
-            <PlaceholderPage
-              title="Returns & Exchanges"
-              eyebrow="Client Guarantee"
-              description="Our seamless 14-day sizing exchange and return policy for unworn handcrafted footwear."
-            />
-          }
-        />
+        {/* Legal & Atelier Policies */}
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsConditions />} />
+        <Route path="/shipping-policy" element={<ShippingPolicy />} />
+        <Route path="/returns-policy" element={<ReturnsPolicy />} />
 
         {/* 404 Fallback */}
         <Route

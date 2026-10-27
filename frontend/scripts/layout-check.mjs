@@ -538,6 +538,39 @@ async function runLayoutChecks() {
     await authPage.close();
     await authContext.close();
 
+    // Test 2E: Mobile navigation drawer closes automatically on navigation
+    console.log('\n--- Running Mobile Navigation Drawer Lifecycle Test ---');
+    const mobilePage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await setupMockApi(mobilePage);
+
+    await mobilePage.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
+    const hamburgerBtn = mobilePage.locator('button[aria-label="Open mobile navigation"]');
+    await hamburgerBtn.click({ force: true });
+    await mobilePage.waitForTimeout(100);
+
+    const mobileDrawer = mobilePage.locator('[role="dialog"][aria-label="Mobile Navigation Drawer"]');
+    const isDrawerOpen = await mobileDrawer.isVisible();
+    if (!isDrawerOpen) {
+      formErrors.push('FAIL: Mobile drawer did not open on hamburger click');
+    } else {
+      console.log('✔ PASS: Mobile navigation drawer opened on hamburger click.');
+    }
+
+    // Click "Shop" link inside drawer
+    const shopNavLink = mobileDrawer.locator('a[href="/shop"]').first();
+    await shopNavLink.click({ force: true });
+    await mobilePage.waitForURL(`${baseUrl}/shop`);
+    await mobilePage.waitForTimeout(150);
+
+    const isDrawerClosedAfterNav = !(await mobileDrawer.isVisible());
+    if (!isDrawerClosedAfterNav) {
+      formErrors.push('FAIL: Mobile drawer remained open after navigating to /shop');
+    } else {
+      console.log('✔ PASS: Mobile navigation drawer closed cleanly upon route navigation to /shop.');
+    }
+
+    await mobilePage.close();
+
     // 3. Catalogue & Shopping Bag Tests
     console.log('\n--- Running Catalogue & Shopping Bag Tests ---');
     const shopPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
@@ -1245,6 +1278,291 @@ async function runLayoutChecks() {
     } else {
       console.log('\n✔ ALL Product Detail Page (PDP) tests passed.');
     }
+
+    // --- Running Suite 10: Customer Address Lifecycle on /account ---
+    console.log('\n--- Running Suite 10: Customer Address Lifecycle on /account ---');
+    const addrContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const addrPage = await addrContext.newPage();
+    await setupMockApi(addrPage);
+
+    let mockAddresses = [
+      {
+        id: 'addr-mock-initial',
+        recipientName: 'Aria Sharma',
+        phone: '+91 9876543210',
+        addressLine1: 'Villa 14, Royal Palms',
+        addressLine2: '',
+        city: 'Mumbai',
+        state: 'Maharashtra',
+        postalCode: '400001',
+        country: 'India',
+        isDefault: true,
+      },
+    ];
+
+    // Authenticated customer user
+    await addrPage.route('**/api/auth/me', (route) => {
+      route.fulfill({
+        status: 200,
+        headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user: {
+            uid: 'cust-addr-test',
+            email: 'aria@aurevella.com',
+            name: 'Aria Sharma',
+            role: 'customer',
+            isActive: true,
+          },
+        }),
+      });
+    });
+
+    // Address endpoints
+    await addrPage.route('**/api/users/addresses', (route) => {
+      if (route.request().method() === 'GET') {
+        route.fulfill({
+          status: 200,
+          headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'success', addresses: mockAddresses }),
+        });
+      } else if (route.request().method() === 'POST') {
+        const payload = JSON.parse(route.request().postData());
+        const newAddr = {
+          id: `addr-mock-${Date.now()}`,
+          ...payload,
+        };
+        if (newAddr.isDefault) {
+          mockAddresses.forEach((a) => (a.isDefault = false));
+        }
+        mockAddresses.push(newAddr);
+        route.fulfill({
+          status: 201,
+          headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'success', address: newAddr }),
+        });
+      } else {
+        route.fallback();
+      }
+    });
+
+    await addrPage.route('**/api/users/addresses/*', (route) => {
+      const url = route.request().url();
+      const method = route.request().method();
+      const idMatch = url.match(/\/addresses\/([^/?#]+)/);
+      const addrId = idMatch ? idMatch[1] : null;
+
+      if (url.endsWith('/default') && method === 'PATCH') {
+        mockAddresses.forEach((a) => (a.isDefault = a.id === addrId));
+        const updated = mockAddresses.find((a) => a.id === addrId);
+        route.fulfill({
+          status: 200,
+          headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'success', address: updated }),
+        });
+      } else if (method === 'PUT') {
+        const payload = JSON.parse(route.request().postData());
+        const idx = mockAddresses.findIndex((a) => a.id === addrId);
+        if (idx !== -1) {
+          if (payload.isDefault) {
+            mockAddresses.forEach((a) => (a.isDefault = false));
+          }
+          mockAddresses[idx] = { ...mockAddresses[idx], ...payload };
+          route.fulfill({
+            status: 200,
+            headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'success', address: mockAddresses[idx] }),
+          });
+        } else {
+          route.fulfill({ status: 404, headers: getCorsHeaders(route) });
+        }
+      } else if (method === 'DELETE') {
+        const idx = mockAddresses.findIndex((a) => a.id === addrId);
+        if (idx !== -1) {
+          mockAddresses.splice(idx, 1);
+          if (mockAddresses.length > 0 && !mockAddresses.some((a) => a.isDefault)) {
+            mockAddresses[0].isDefault = true;
+          }
+          route.fulfill({
+            status: 200,
+            headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'success', message: 'Address removed' }),
+          });
+        } else {
+          route.fulfill({ status: 404, headers: getCorsHeaders(route) });
+        }
+      } else {
+        route.fallback();
+      }
+    });
+
+    // Navigate to /account
+    await addrPage.goto(`${baseUrl}/account`, { waitUntil: 'networkidle' });
+    await addrPage.waitForTimeout(300);
+
+    // Check initial address rendered with default badge
+    const initialRecipient = addrPage.locator('text=Aria Sharma').first();
+    if (await initialRecipient.isVisible()) {
+      console.log('✔ PASS: Initial delivery address rendered on /account with Default Address badge.');
+    } else {
+      formErrors.push('FAIL: Initial delivery address was not visible on /account');
+    }
+
+    // 1. Add Address
+    const addBtn = addrPage.locator('button:has-text("Add Address")');
+    await addBtn.click({ force: true });
+    await addrPage.fill('#addr-recipient', 'Meera Kapoor');
+    await addrPage.fill('#addr-phone', '+91 9123456789');
+    await addrPage.fill('#addr-line1', 'Penthouse 7B, Aurevella Enclave');
+    await addrPage.fill('#addr-city', 'Bangalore');
+    await addrPage.fill('#addr-state', 'Karnataka');
+    await addrPage.fill('#addr-pin', '560001');
+    await addrPage.locator('button[type="submit"]:has-text("Save Address")').click({ force: true });
+    await addrPage.waitForTimeout(300);
+
+    const newRecipient = addrPage.locator('text=Meera Kapoor').first();
+    if (await newRecipient.isVisible()) {
+      console.log('✔ PASS: Customer successfully created and saved new delivery address.');
+    } else {
+      formErrors.push('FAIL: New address was not created or rendered in address list');
+    }
+
+    // 2. Set Default
+    const setDefaultBtn = addrPage.locator('div:has-text("Meera Kapoor") button:has-text("Set Default")').first();
+    if (await setDefaultBtn.isVisible()) {
+      await setDefaultBtn.click({ force: true });
+      await addrPage.waitForTimeout(300);
+      console.log('✔ PASS: Customer successfully changed primary default delivery address.');
+    } else {
+      formErrors.push('FAIL: "Set Default" button was not visible on newly created non-default address');
+    }
+
+    // 3. Edit Address
+    const editBtn = addrPage.locator('div:has-text("Meera Kapoor") button[aria-label="Edit address"]').first();
+    if (await editBtn.isVisible()) {
+      await editBtn.click({ force: true });
+      await addrPage.fill('#addr-line1', 'Suite 909, Luxury Penthouse');
+      await addrPage.locator('button[type="submit"]:has-text("Update Address")').click({ force: true });
+      await addrPage.waitForTimeout(300);
+      const updatedLine = addrPage.locator('text=Suite 909, Luxury Penthouse').first();
+      if (await updatedLine.isVisible()) {
+        console.log('✔ PASS: Customer successfully edited existing delivery address.');
+      } else {
+        formErrors.push('FAIL: Updated street address was not rendered after edit submission');
+      }
+    } else {
+      formErrors.push('FAIL: Edit address button was not visible on address card');
+    }
+
+    // 4. Delete Address
+    addrPage.on('dialog', (dialog) => dialog.accept());
+    const deleteBtn = addrPage.locator('div:has-text("Suite 909, Luxury Penthouse") button[aria-label="Delete address"]').first();
+    if (await deleteBtn.isVisible()) {
+      await deleteBtn.click({ force: true });
+      await addrPage.waitForTimeout(300);
+      const deletedLine = addrPage.locator('text=Suite 909, Luxury Penthouse');
+      if ((await deletedLine.count()) === 0) {
+        console.log('✔ PASS: Customer successfully removed delivery address with dialog confirmation.');
+      } else {
+        formErrors.push('FAIL: Deleted address remained visible in customer address list');
+      }
+    } else {
+      formErrors.push('FAIL: Delete address button was not visible on address card');
+    }
+
+    await addrPage.close();
+    await addrContext.close();
+
+    // --- Running Suite 11: Non-Admin Access Control on /admin ---
+    console.log('\n--- Running Suite 11: Non-Admin Access Control on /admin ---');
+    // 1. Unauthenticated user redirected to login
+    const unauthContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const unauthPage = await unauthContext.newPage();
+    await setupMockApi(unauthPage);
+    await unauthPage.route('**/api/auth/me', (route) => {
+      route.fulfill({
+        status: 401,
+        headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'error', message: 'Unauthenticated' }),
+      });
+    });
+    await unauthPage.goto(`${baseUrl}/admin`, { waitUntil: 'networkidle' });
+    await unauthPage.waitForTimeout(300);
+    const currentUrl = unauthPage.url();
+    if (currentUrl.includes('/login')) {
+      console.log('✔ PASS: Unauthenticated access to /admin redirected to /login.');
+    } else {
+      formErrors.push(`FAIL: Unauthenticated access to /admin did not redirect to login, was at ${currentUrl}`);
+    }
+    await unauthPage.close();
+    await unauthContext.close();
+
+    // 2. Customer role user blocked with Access Denied
+    const custContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const custPage = await custContext.newPage();
+    await setupMockApi(custPage);
+    await custPage.route('**/api/auth/me', (route) => {
+      route.fulfill({
+        status: 200,
+        headers: { ...getCorsHeaders(route), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user: {
+            uid: 'customer-uid-99',
+            email: 'customer@aurevella.com',
+            name: 'Regular Customer',
+            role: 'customer',
+            isActive: true,
+          },
+        }),
+      });
+    });
+    await custPage.goto(`${baseUrl}/admin`, { waitUntil: 'networkidle' });
+    await custPage.waitForTimeout(300);
+    const custBody = await custPage.textContent('body');
+    if (custBody.includes('Access Denied') && custBody.includes('Administrator privileges are required')) {
+      console.log('✔ PASS: Customer role blocked from /admin with explicit "Access Denied" guard.');
+    } else {
+      formErrors.push('FAIL: Customer role was not blocked with "Access Denied" on /admin');
+    }
+    await custPage.close();
+    await custContext.close();
+
+    // --- Running Suite 12: Editorial & Brand Pages Navigation & Link Integrity ---
+    console.log('\n--- Running Suite 12: Editorial & Brand Pages Navigation & Link Integrity ---');
+    const edContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const edPage = await edContext.newPage();
+    await setupMockApi(edPage);
+
+    const editorialRoutes = [
+      { path: '/collections', heading: 'Curated Collections', linkToTest: 'a[href*="/shop?category=interchangeable-heel"]' },
+      { path: '/limited-edition', heading: 'The Limited Edition Drops', linkToTest: 'a[href="/product/prod-03"]' },
+      { path: '/about', heading: 'Where Continental Architecture Meets Indian Craftsmanship', linkToTest: 'a[href="/shop"]' },
+      { path: '/contact', heading: 'Contact & Concierge', linkToTest: 'a[href="mailto:marketing@myaurevella.in"]' },
+      { path: '/shipping-policy', heading: 'Shipping & Dispatch Policy', linkToTest: 'a[href="mailto:marketing@myaurevella.in"]' },
+      { path: '/returns-policy', heading: 'Returns & Sizing Exchanges', linkToTest: 'a[href*="wa.me"]' },
+      { path: '/privacy', heading: 'Privacy Policy', linkToTest: 'a[href="mailto:marketing@myaurevella.in"]' },
+      { path: '/terms', heading: 'Terms & Conditions', linkToTest: null },
+    ];
+
+    for (const ed of editorialRoutes) {
+      await edPage.goto(`${baseUrl}${ed.path}`, { waitUntil: 'networkidle' });
+      await edPage.waitForTimeout(100);
+      const content = await edPage.textContent('body');
+      if (content.includes(ed.heading)) {
+        console.log(`✔ PASS: ${ed.path} rendered expected title/heading.`);
+      } else {
+        formErrors.push(`FAIL: ${ed.path} did not contain heading "${ed.heading}"`);
+      }
+      if (ed.linkToTest) {
+        const linkEl = edPage.locator(ed.linkToTest).first();
+        if (await linkEl.isVisible()) {
+          console.log(`✔ PASS: ${ed.path} key action link (${ed.linkToTest}) rendered visibly.`);
+        } else {
+          formErrors.push(`FAIL: ${ed.path} key action link (${ed.linkToTest}) was not visible`);
+        }
+      }
+    }
+    await edPage.close();
+    await edContext.close();
 
     // Print Results Summary Table
     console.log('\n======================================================');

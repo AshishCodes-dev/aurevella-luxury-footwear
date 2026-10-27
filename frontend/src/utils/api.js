@@ -90,6 +90,25 @@ export const createUserAddress = async (addressData) => {
   });
 };
 
+export const updateUserAddress = async (id, addressData) => {
+  return apiFetch(`/api/users/addresses/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: addressData,
+  });
+};
+
+export const deleteUserAddress = async (id) => {
+  return apiFetch(`/api/users/addresses/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+};
+
+export const setDefaultUserAddress = async (id) => {
+  return apiFetch(`/api/users/addresses/${encodeURIComponent(id)}/default`, {
+    method: 'PATCH',
+  });
+};
+
 // Order & Checkout API Helpers
 export const fetchOrderQuote = async ({ items, addressId = null }) => {
   return apiFetch('/api/orders/quote', {

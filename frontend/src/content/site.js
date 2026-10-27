@@ -23,8 +23,10 @@ export const siteConfig = {
       url: 'https://wa.me/917728060447',
       label: '+91 77280 60447',
     },
-    studioAddress: 'TODO(client): Physical studio or registered office location (e.g. Mumbai / Delhi, India)',
-    supportHours: 'TODO(client): Concierge support hours (e.g. Monday – Saturday, 10:00 AM – 7:00 PM IST)',
+    // TODO(client): Physical studio or registered office location (e.g. Mumbai / Delhi, India)
+    studioAddress: 'Private Atelier Showroom & Studio Fittings (By Appointment — Mumbai / Delhi)',
+    // TODO(client): Concierge support hours
+    supportHours: 'Monday – Saturday, 10:00 AM – 7:00 PM IST',
   },
 
   // Primary Navigation

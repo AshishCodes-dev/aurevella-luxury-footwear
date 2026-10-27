@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, ArrowUpRight, ShoppingBag } from 'lucide-react';
 import Logo from './Logo.jsx';
 import { siteConfig } from '../content/site.js';
@@ -13,6 +13,7 @@ export const AppShell = ({ children }) => {
   const { totalCount, openBag } = useBag();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const drawerRef = useRef(null);
   const menuButtonRef = useRef(null);
@@ -20,7 +21,7 @@ export const AppShell = ({ children }) => {
   // Close mobile drawer on route change
   useEffect(() => {
     setMobileMenuOpen(false);
-  }, [navigate]);
+  }, [location.pathname]);
 
   // Handle Escape key to close mobile drawer
   useEffect(() => {
@@ -221,7 +222,9 @@ export const AppShell = ({ children }) => {
         >
           {/* Drawer Header */}
           <div className="flex items-center justify-between pb-6 border-b border-[#2F1C15]">
-            <Logo variant="header" />
+            <div onClick={() => setMobileMenuOpen(false)}>
+              <Logo variant="header" />
+            </div>
             <button
               type="button"
               onClick={() => {
@@ -241,6 +244,7 @@ export const AppShell = ({ children }) => {
               <NavLink
                 key={item.href}
                 to={item.href}
+                onClick={() => setMobileMenuOpen(false)}
                 className={mobileNavLinkClasses}
                 end={item.href === '/'}
               >
@@ -274,12 +278,14 @@ export const AppShell = ({ children }) => {
               <div className="space-y-3">
                 <Link
                   to="/account"
+                  onClick={() => setMobileMenuOpen(false)}
                   className="min-h-[44px] flex items-center justify-center uppercase tracking-[0.2em] text-xs bg-[#181210] border border-[#2F1C15] text-[#FEF5E6] hover:bg-[#241B18] transition-subtle"
                 >
                   My Account
                 </Link>
                 <Link
                   to="/orders"
+                  onClick={() => setMobileMenuOpen(false)}
                   className="min-h-[44px] flex items-center justify-center uppercase tracking-[0.2em] text-xs bg-[#181210] border border-[#2F1C15] text-[#FEF5E6] hover:bg-[#241B18] transition-subtle"
                 >
                   My Orders & Commissions
@@ -301,12 +307,14 @@ export const AppShell = ({ children }) => {
               <div className="grid grid-cols-2 gap-3">
                 <Link
                   to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
                   className="min-h-[44px] flex items-center justify-center uppercase tracking-[0.2em] text-xs bg-[#181210] border border-[#2F1C15] text-[#FEF5E6] hover:bg-[#241B18] transition-subtle"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/signup"
+                  onClick={() => setMobileMenuOpen(false)}
                   className="min-h-[44px] flex items-center justify-center uppercase tracking-[0.2em] text-xs bg-[#FEF5E6] text-[#0F0A09] hover:bg-[#FFFFFF] transition-subtle font-semibold"
                 >
                   Sign Up

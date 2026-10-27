@@ -83,8 +83,9 @@ export const ProductCard = ({
               <span className="text-[10px] uppercase tracking-[0.25em] text-[#B8AD9A] bg-[#181210] border border-[#2F1C15] px-2.5 py-1 mb-2">
                 1:1 Ratio
               </span>
+              {/* TODO(client): image */}
               <p className="text-xs text-[#B8AD9A] max-w-[200px] leading-relaxed">
-                TODO(client): image
+                Atelier Image Pending
               </p>
             </div>
           )}

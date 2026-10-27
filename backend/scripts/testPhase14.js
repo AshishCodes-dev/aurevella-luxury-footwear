@@ -12,6 +12,7 @@ import {
   OrderValidationError,
 } from '../src/utils/orderPricing.js';
 import { processPaymentSuccessAndDeductInventory } from '../src/services/paymentInventory.service.js';
+import { ensureLaunchCatalogue, syncLaunchProducts } from '../src/utils/seedProducts.js';
 
 async function runPhase14TestSuite() {
   console.log('====================================================');
@@ -351,6 +352,95 @@ async function runPhase14TestSuite() {
       aggregateStockErr ? aggregateStockErr.message : 'Allowed exceeding aggregate stock'
     );
 
+    // 3F (REGRESSION): Validates and calculates canonical launch product prod-03 (Floral Block Heel Mule)
+    const prod03Priced = await validateAndCalculateOrderItems([
+      { id: 'prod-03', quantity: 1, size: 'EU 38' },
+    ]);
+    record(
+      'OrderPricing: Successfully validates and quotes canonical model "prod-03"',
+      prod03Priced.items.length === 1 &&
+        prod03Priced.items[0].productCode === 'prod-03' &&
+        prod03Priced.items[0].name === 'Floral Block Heel Mule' &&
+        prod03Priced.items[0].pricePaise === 369900 &&
+        prod03Priced.totalPaise === 369900,
+      `Calculated: ₹${prod03Priced.totalPaise / 100} (${prod03Priced.items[0].name})`
+    );
+
+    // 3G (REGRESSION): Case-insensitive resolution for product identifiers ("PROD-03")
+    const prod03CaseInsensitive = await validateAndCalculateOrderItems([
+      { id: 'PROD-03', quantity: 1, size: 'EU 39' },
+    ]);
+    record(
+      'OrderPricing: Resolves uppercase product identifier "PROD-03" cleanly',
+      prod03CaseInsensitive.items.length === 1 &&
+        prod03CaseInsensitive.items[0].productCode === 'prod-03' &&
+        prod03CaseInsensitive.items[0].size === 'EU 39',
+      `Resolved code: ${prod03CaseInsensitive.items[0].productCode}`
+    );
+
+    // 3H (REGRESSION): Strictly rejects truly missing product ID with exact atelier catalogue advisory
+    let missingProdErr = null;
+    try {
+      await validateAndCalculateOrderItems([
+        { id: 'prod-missing-999', quantity: 1, size: 'EU 38' },
+      ]);
+    } catch (e) {
+      missingProdErr = e;
+    }
+    record(
+      'OrderPricing: Strictly rejects non-existent product with unsuppressed catalogue advisory',
+      missingProdErr instanceof OrderValidationError &&
+        missingProdErr.statusCode === 400 &&
+        missingProdErr.message === 'Product identifier "prod-missing-999" does not exist in atelier catalogue',
+      missingProdErr ? missingProdErr.message : 'Permitted non-existent product'
+    );
+
+    // 3I (REGRESSION): Non-destructive auto-sync preserves custom prices and inventory on existing products
+    const originalProd01 = await Product.findOne({ code: 'prod-01' });
+    const syncTestOrigPrice = originalProd01.pricePaise;
+    const syncTestOrigStock = originalProd01.stockQuantity;
+
+    // Simulate an admin price change and inventory decrement
+    await Product.updateOne({ code: 'prod-01' }, { $set: { pricePaise: 999900, stockQuantity: 7 } });
+    await syncLaunchProducts({ logger: { log: () => {} }, overwrite: false });
+
+    const postSyncProd01 = await Product.findOne({ code: 'prod-01' });
+    const pricePreserved = postSyncProd01.pricePaise === 999900;
+    const stockPreserved = postSyncProd01.stockQuantity === 7;
+
+    record(
+      'Catalogue Auto-Sync: Preserves existing product price and stock without overwrite',
+      pricePreserved && stockPreserved,
+      `Price preserved: ${pricePreserved} (₹${postSyncProd01.pricePaise / 100}), Stock preserved: ${stockPreserved} (${postSyncProd01.stockQuantity})`
+    );
+
+    // Revert prod-01 back to original values
+    await Product.updateOne({ code: 'prod-01' }, { $set: { pricePaise: syncTestOrigPrice, stockQuantity: syncTestOrigStock } });
+
+    // 3J (REGRESSION): Deactivated launch products are preserved and NOT force-reactivated
+    await Product.updateOne({ code: 'prod-02' }, { $set: { isActive: false } });
+    const ensureResult = await ensureLaunchCatalogue({ logger: { log: () => {} } });
+    const postCheckProd02 = await Product.findOne({ code: 'prod-02' });
+
+    record(
+      'Catalogue Auto-Sync: Preserves deactivated status and does not force re-activation',
+      ensureResult === false && postCheckProd02.isActive === false,
+      `Ensure returned: ${ensureResult}, isActive remained: ${postCheckProd02.isActive}`
+    );
+
+    // Revert prod-02 back to active
+    await Product.updateOne({ code: 'prod-02' }, { $set: { isActive: true } });
+
+    // 3K (REGRESSION): Idempotency check on repeated ensureLaunchCatalogue runs
+    const secondRunResult = await ensureLaunchCatalogue({ logger: { log: () => {} } });
+    const prod03Count = await Product.countDocuments({ code: 'prod-03' });
+
+    record(
+      'Catalogue Auto-Sync: Idempotent on repeated runs with zero duplicate documents',
+      secondRunResult === false && prod03Count === 1,
+      `Second run returned: ${secondRunResult}, prod-03 count: ${prod03Count}`
+    );
+
     // ----------------------------------------------------
     // Suite 4: End-to-End API Integration
     // ----------------------------------------------------
@@ -550,8 +640,11 @@ async function runPhase14TestSuite() {
       await User.deleteOne({ _id: testUser._id });
     }
 
-    server.close();
-    await mongoose.connection.close();
+    if (typeof server.closeAllConnections === 'function') {
+      server.closeAllConnections();
+    }
+    await new Promise((resolve) => server.close(resolve));
+    await mongoose.disconnect();
   }
 
   // Print Summary Table
@@ -569,7 +662,6 @@ async function runPhase14TestSuite() {
     process.exit(1);
   } else {
     console.log('All Phase 14 Test Suite checks PASSED.\n');
-    process.exit(0);
   }
 }
 

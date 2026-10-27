@@ -96,9 +96,10 @@ export const validateAndCalculateOrderItems = async (rawItems) => {
     }
 
     const isObjectId = mongoose.Types.ObjectId.isValid(trimmedId);
+    const idLower = trimmedId.toLowerCase();
     const productQuery = isObjectId
-      ? { $or: [{ _id: trimmedId }, { code: trimmedId }, { slug: trimmedId.toLowerCase() }] }
-      : { $or: [{ code: trimmedId }, { slug: trimmedId.toLowerCase() }] };
+      ? { $or: [{ _id: trimmedId }, { code: trimmedId }, { code: idLower }, { slug: idLower }] }
+      : { $or: [{ code: trimmedId }, { code: idLower }, { slug: idLower }] };
 
     const product = await Product.findOne(productQuery);
 

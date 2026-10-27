@@ -1,10 +1,12 @@
 import 'dotenv/config';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import mongoose from 'mongoose';
 import { connectDB } from '../config/db.js';
 import Category from '../models/Category.js';
 import Product from '../models/Product.js';
 
-const LAUNCH_CATEGORIES = [
+export const LAUNCH_CATEGORIES = [
   {
     name: 'Interchangeable Heel',
     slug: 'interchangeable-heel',
@@ -21,7 +23,7 @@ const LAUNCH_CATEGORIES = [
   },
 ];
 
-const LAUNCH_PRODUCTS = [
+export const LAUNCH_PRODUCTS = [
   {
     code: 'prod-01',
     name: 'Floral Block Heel Sandal',
@@ -36,6 +38,7 @@ const LAUNCH_PRODUCTS = [
     stockQuantity: 25,
     isActive: true,
     priority: true,
+    sizes: ['EU 36', 'EU 37', 'EU 38', 'EU 39', 'EU 40', 'EU 41'],
   },
   {
     code: 'prod-02',
@@ -51,6 +54,7 @@ const LAUNCH_PRODUCTS = [
     stockQuantity: 30,
     isActive: true,
     priority: true,
+    sizes: ['EU 36', 'EU 37', 'EU 38', 'EU 39', 'EU 40', 'EU 41'],
   },
   {
     code: 'prod-03',
@@ -66,63 +70,168 @@ const LAUNCH_PRODUCTS = [
     stockQuantity: 20,
     isActive: true,
     priority: true,
+    sizes: ['EU 36', 'EU 37', 'EU 38', 'EU 39', 'EU 40', 'EU 41'],
   },
 ];
 
-export const seedProducts = async () => {
+/**
+ * Idempotently synchronizes launch categories and products into the active database.
+ * Does not disconnect the database, allowing safe invocation during server startup or test setup.
+ *
+ * Non-destructive by default (overwrite = false):
+ * - If a category or product already exists, all existing client-managed data (names, prices,
+ *   images, stock quantities, and active/inactive status) are strictly preserved.
+ * - Only missing categories and products are inserted.
+ *
+ * @param {Object} [options]
+ * @param {Object} [options.logger=console]
+ * @param {boolean} [options.overwrite=false] - When false, never overwrites existing products or categories.
+ * @returns {Promise<{ categoriesCount: number, productsCount: number }>}
+ */
+export const syncLaunchProducts = async ({ logger = console, overwrite = false } = {}) => {
+  // 1. Synchronize Categories safely
+  const categoryMap = new Map();
+  for (const catData of LAUNCH_CATEGORIES) {
+    let category = await Category.findOne({ slug: catData.slug });
+
+    if (!category) {
+      category = await Category.create(catData);
+      if (logger?.log) {
+        logger.log(`[Category] Created missing category: ${category.name} (${category.slug}) -> ID: ${category._id}`);
+      }
+    } else if (overwrite) {
+      category = await Category.findOneAndUpdate(
+        { slug: catData.slug },
+        { $set: catData },
+        { new: true, runValidators: true }
+      );
+      if (logger?.log) {
+        logger.log(`[Category] Updated: ${category.name} (${category.slug}) -> ID: ${category._id}`);
+      }
+    } else {
+      if (logger?.log) {
+        logger.log(`[Category] Preserved existing category: ${category.name} (${category.slug})`);
+      }
+    }
+    categoryMap.set(catData.slug, category._id);
+  }
+
+  // 2. Synchronize Products safely
+  for (const prodData of LAUNCH_PRODUCTS) {
+    const categoryId = categoryMap.get(prodData.categorySlug);
+    if (!categoryId) {
+      throw new Error(`Category not found for slug: ${prodData.categorySlug}`);
+    }
+
+    const productPayload = {
+      code: prodData.code,
+      name: prodData.name,
+      slug: prodData.slug,
+      category: categoryId,
+      pricePaise: prodData.pricePaise,
+      description: prodData.description,
+      image: prodData.image,
+      images: prodData.images,
+      alt: prodData.alt,
+      stockQuantity: prodData.stockQuantity,
+      isActive: prodData.isActive,
+      priority: prodData.priority,
+      sizes: prodData.sizes || ['EU 36', 'EU 37', 'EU 38', 'EU 39', 'EU 40', 'EU 41'],
+    };
+
+    const existingProduct = await Product.findOne({
+      $or: [{ code: prodData.code }, { slug: prodData.slug }],
+    });
+
+    if (!existingProduct) {
+      const created = await Product.create(productPayload);
+      if (logger?.log) {
+        logger.log(
+          `[Product] Created missing launch model: ${created.name} (${created.code}) | ₹${created.pricePaise / 100} | Stock: ${created.stockQuantity}`
+        );
+      }
+    } else if (overwrite) {
+      const updated = await Product.findOneAndUpdate(
+        { _id: existingProduct._id },
+        { $set: productPayload },
+        { new: true, runValidators: true }
+      );
+      if (logger?.log) {
+        logger.log(
+          `[Product] Updated: ${updated.name} (${updated.code}) | ₹${updated.pricePaise / 100} | Stock: ${updated.stockQuantity}`
+        );
+      }
+    } else {
+      // Non-destructive: Preserve existing name, price, stock, images, and isActive status
+      if (logger?.log) {
+        logger.log(
+          `[Product] Preserved existing product: ${existingProduct.name} (${existingProduct.code || prodData.code}) — price, stock, images, and active status unchanged.`
+        );
+      }
+    }
+  }
+
+  return {
+    categoriesCount: LAUNCH_CATEGORIES.length,
+    productsCount: LAUNCH_PRODUCTS.length,
+  };
+};
+
+/**
+ * Ensures all canonical launch models (prod-01, prod-02, prod-03) exist in the active database.
+ * If any model is missing, synchronizes only the missing items non-destructively.
+ *
+ * Guarantees:
+ * 1. Checks presence by code or slug regardless of isActive status (never re-activates deactivated items).
+ * 2. Never overwrites existing product prices, inventory, images, or custom descriptions.
+ * 3. 100% idempotent on repeated server boots.
+ *
+ * @param {Object} [options]
+ * @param {Object} [options.logger=console]
+ * @returns {Promise<boolean>} True if sync was executed, false if already complete.
+ */
+export const ensureLaunchCatalogue = async ({ logger = console } = {}) => {
+  const existingProducts = await Product.find(
+    {
+      $or: [
+        { code: { $in: LAUNCH_PRODUCTS.map((p) => p.code) } },
+        { slug: { $in: LAUNCH_PRODUCTS.map((p) => p.slug) } },
+      ],
+    },
+    'code slug'
+  ).lean();
+
+  const existingIdentifiers = new Set([
+    ...existingProducts.map((p) => p.code).filter(Boolean),
+    ...existingProducts.map((p) => p.slug).filter(Boolean),
+  ]);
+
+  const hasMissingLaunchModel = LAUNCH_PRODUCTS.some(
+    (p) => !existingIdentifiers.has(p.code) && !existingIdentifiers.has(p.slug)
+  );
+
+  if (hasMissingLaunchModel) {
+    if (logger?.log) {
+      logger.log('[Catalogue] Canonical launch models incomplete in database. Synchronizing missing items safely (non-destructive)...');
+    }
+    await syncLaunchProducts({ logger, overwrite: false });
+    if (logger?.log) {
+      logger.log('[Catalogue] Canonical models (prod-01, prod-02, prod-03) verified in atelier catalogue.');
+    }
+    return true;
+  }
+  return false;
+};
+
+export const seedProducts = async ({ overwrite = false } = {}) => {
   console.log('==============================================');
   console.log('   AUREVELLA — Product & Category Seeder     ');
   console.log('==============================================\n');
 
   try {
     await connectDB();
-
-    // 1. Upsert Categories
-    const categoryMap = new Map();
-    for (const catData of LAUNCH_CATEGORIES) {
-      const category = await Category.findOneAndUpdate(
-        { slug: catData.slug },
-        { $set: catData },
-        { upsert: true, new: true, runValidators: true }
-      );
-      categoryMap.set(catData.slug, category._id);
-      console.log(`[Category] Synced: ${category.name} (${category.slug}) -> ID: ${category._id}`);
-    }
-
-    // 2. Upsert Products
-    for (const prodData of LAUNCH_PRODUCTS) {
-      const categoryId = categoryMap.get(prodData.categorySlug);
-      if (!categoryId) {
-        throw new Error(`Category not found for slug: ${prodData.categorySlug}`);
-      }
-
-      const productPayload = {
-        code: prodData.code,
-        name: prodData.name,
-        slug: prodData.slug,
-        category: categoryId,
-        pricePaise: prodData.pricePaise,
-        description: prodData.description,
-        image: prodData.image,
-        images: prodData.images,
-        alt: prodData.alt,
-        stockQuantity: prodData.stockQuantity,
-        isActive: prodData.isActive,
-        priority: prodData.priority,
-      };
-
-      const product = await Product.findOneAndUpdate(
-        { slug: prodData.slug },
-        { $set: productPayload },
-        { upsert: true, new: true, runValidators: true }
-      );
-
-      console.log(
-        `[Product] Synced: ${product.name} | ₹${product.pricePaise / 100} (${product.pricePaise} paise) | Stock: ${product.stockQuantity}`
-      );
-    }
-
-    console.log('\n✔ SUCCESS: All 2 categories and 3 launch products seeded idempotently.');
+    await syncLaunchProducts({ logger: console, overwrite });
+    console.log('\n✔ SUCCESS: Launch catalogue synchronization completed.');
   } catch (error) {
     console.error('\n❌ FAILED to seed products:', error.message);
     throw error;
@@ -132,9 +241,23 @@ export const seedProducts = async () => {
   }
 };
 
-// Execute if run directly from CLI
-if (process.argv[1] && process.argv[1].endsWith('seedProducts.js')) {
-  seedProducts()
+/**
+ * Direct execution guard for Node.js ESM.
+ */
+export const isDirectExecution = (importMetaUrl = import.meta.url, argv1 = process.argv[1]) => {
+  if (!argv1 || typeof argv1 !== 'string') return false;
+  try {
+    const currentFilePath = path.resolve(fileURLToPath(importMetaUrl));
+    const executedFilePath = path.resolve(argv1);
+    return currentFilePath.toLowerCase() === executedFilePath.toLowerCase();
+  } catch (_) {
+    return false;
+  }
+};
+
+if (isDirectExecution()) {
+  const forceOverwrite = process.argv.includes('--force') || process.argv.includes('--overwrite');
+  seedProducts({ overwrite: forceOverwrite })
     .then(() => process.exit(0))
     .catch(() => process.exit(1));
 }

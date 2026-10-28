@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '../utils/zodResolver.js';
 import { z } from 'zod';
@@ -29,6 +29,7 @@ export const Signup = () => {
   const { signupWithEmail, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const formRef = useRef(null);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -53,12 +54,32 @@ export const Signup = () => {
     mode: 'onSubmit',
   });
 
-  // Ensure sensitive password state is purged upon unmount
+  // Clear fields upon mount and unmount to prevent credential persistence
   useEffect(() => {
+    reset({ name: '', email: '', password: '', confirmPassword: '' });
+    if (formRef.current) {
+      formRef.current.reset();
+    }
+    const nameEl = document.getElementById('name');
+    const emailEl = document.getElementById('email');
+    const passEl = document.getElementById('password');
+    const confirmPassEl = document.getElementById('confirmPassword');
+    if (nameEl) nameEl.value = '';
+    if (emailEl) emailEl.value = '';
+    if (passEl) passEl.value = '';
+    if (confirmPassEl) confirmPassEl.value = '';
+
     return () => {
       reset({ name: '', email: '', password: '', confirmPassword: '' });
+      if (formRef.current) {
+        formRef.current.reset();
+      }
+      if (nameEl) nameEl.value = '';
+      if (emailEl) emailEl.value = '';
+      if (passEl) passEl.value = '';
+      if (confirmPassEl) confirmPassEl.value = '';
     };
-  }, [reset]);
+  }, []);
 
   const onSubmit = async (data) => {
     const { name, email, password } = data;
@@ -69,6 +90,17 @@ export const Signup = () => {
       await signupWithEmail(name, email, password);
       // Immediately clear passwords and form state upon successful registration before navigating
       reset({ name: '', email: '', password: '', confirmPassword: '' });
+      if (formRef.current) {
+        formRef.current.reset();
+      }
+      const nameEl = document.getElementById('name');
+      const emailEl = document.getElementById('email');
+      const passEl = document.getElementById('password');
+      const confirmPassEl = document.getElementById('confirmPassword');
+      if (nameEl) nameEl.value = '';
+      if (emailEl) emailEl.value = '';
+      if (passEl) passEl.value = '';
+      if (confirmPassEl) confirmPassEl.value = '';
       navigate('/account', { replace: true });
     } catch (err) {
       console.error('Signup error:', err);
@@ -97,6 +129,9 @@ export const Signup = () => {
     try {
       await loginWithGoogle();
       reset({ name: '', email: '', password: '', confirmPassword: '' });
+      if (formRef.current) {
+        formRef.current.reset();
+      }
       navigate('/account', { replace: true });
     } catch (err) {
       console.error('Google Sign In error:', err);
@@ -133,7 +168,7 @@ export const Signup = () => {
               </div>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate autoComplete="on">
+            <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate autoComplete="on">
               <div>
                 <Label htmlFor="name">Full Name</Label>
                 <Input

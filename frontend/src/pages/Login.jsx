@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '../utils/zodResolver.js';
 import { z } from 'zod';
@@ -22,6 +22,7 @@ export const Login = () => {
   const { loginWithEmail, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const formRef = useRef(null);
 
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState(null);
@@ -45,12 +46,26 @@ export const Login = () => {
     mode: 'onSubmit',
   });
 
-  // Ensure sensitive password state is purged upon unmount
+  // Clear both email and password upon mount and unmount to guarantee empty fields after logout
   useEffect(() => {
+    reset({ email: '', password: '' });
+    if (formRef.current) {
+      formRef.current.reset();
+    }
+    const emailEl = document.getElementById('email');
+    const passEl = document.getElementById('password');
+    if (emailEl) emailEl.value = '';
+    if (passEl) passEl.value = '';
+
     return () => {
       reset({ email: '', password: '' });
+      if (formRef.current) {
+        formRef.current.reset();
+      }
+      if (emailEl) emailEl.value = '';
+      if (passEl) passEl.value = '';
     };
-  }, [reset]);
+  }, []);
 
   const onSubmit = async (data) => {
     setFormError(null);
@@ -60,11 +75,20 @@ export const Login = () => {
       await loginWithEmail(data.email, data.password);
       // Clean sensitive password and form state before navigating
       reset({ email: '', password: '' });
+      if (formRef.current) {
+        formRef.current.reset();
+      }
+      const emailEl = document.getElementById('email');
+      const passEl = document.getElementById('password');
+      if (emailEl) emailEl.value = '';
+      if (passEl) passEl.value = '';
       navigate(from, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
       // On failed login: restore email only, keep password empty
       setValue('password', '');
+      const passEl = document.getElementById('password');
+      if (passEl) passEl.value = '';
       setTimeout(() => setFocus('password'), 0);
 
       let msg = err.message || 'Authentication failed. Please verify your credentials.';
@@ -86,11 +110,16 @@ export const Login = () => {
 
   const handleGoogleSignIn = async () => {
     setValue('password', '');
+    const passEl = document.getElementById('password');
+    if (passEl) passEl.value = '';
     setFormError(null);
     setIsSubmitting(true);
     try {
       await loginWithGoogle();
       reset({ email: '', password: '' });
+      if (formRef.current) {
+        formRef.current.reset();
+      }
       navigate(from, { replace: true });
     } catch (err) {
       console.error('Google Sign In error:', err);
@@ -127,7 +156,7 @@ export const Login = () => {
               </div>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate autoComplete="on">
+            <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate autoComplete="on">
               <div>
                 <Label htmlFor="email">Email Address</Label>
                 <Controller

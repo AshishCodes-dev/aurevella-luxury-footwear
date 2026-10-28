@@ -131,9 +131,17 @@ export const BagPage = () => {
                           Size: {item.size}
                         </span>
                       ) : (
-                        <span className="inline-block mt-1.5 px-2.5 py-0.5 text-[10px] uppercase tracking-wider text-amber-300/80 bg-amber-950/30 border border-amber-900/40">
-                          Size not selected
-                        </span>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                          <span className="inline-block px-2.5 py-0.5 text-[10px] uppercase tracking-wider text-amber-300/80 bg-amber-950/30 border border-amber-900/40">
+                            Size not selected
+                          </span>
+                          <Link
+                            to={`/product/${item.id}`}
+                            className="text-[10px] uppercase tracking-wider text-[#FEF5E6] underline hover:text-white transition-colors"
+                          >
+                            Select Size &rarr;
+                          </Link>
+                        </div>
                       )}
                     </div>
 

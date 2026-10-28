@@ -71,11 +71,11 @@ export const About = () => {
 
           <div className="bg-[#181210] border border-[#2F1C15] p-8 text-center space-y-4">
             <img
-              src="/brand/aurevella-logo.svg"
-              alt="AUREVELLA Atelier Logo"
-              width="160"
-              height="40"
-              className="h-10 mx-auto opacity-90"
+              src="/brand/aurevella-wordmark.png"
+              alt="AUREVELLA Atelier"
+              width="240"
+              height="45"
+              className="h-9 sm:h-10 mx-auto object-contain opacity-90"
             />
             <blockquote className="font-serif text-xl sm:text-2xl text-[#FEF5E6] italic pt-4">
               &ldquo;Luxury, Reimagined.&rdquo;

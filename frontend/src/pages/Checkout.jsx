@@ -676,8 +676,22 @@ export const Checkout = () => {
         <div className="mb-8 p-4 bg-amber-950/40 border border-amber-800 text-amber-200 text-xs sm:text-sm flex items-start gap-3 animate-fade-in" role="alert">
           <AlertCircle size={18} className="shrink-0 mt-0.5 text-amber-400" />
           <div className="flex-1 leading-relaxed">
-            <strong className="block mb-0.5 text-amber-300 font-medium">Availability Advisory:</strong>
-            {quoteError}
+            <strong className="block mb-0.5 text-amber-300 font-medium">
+              {quoteError.toLowerCase().includes('auth') || quoteError.toLowerCase().includes('sign in')
+                ? 'Authentication Required:'
+                : 'Pricing & Availability Advisory:'}
+            </strong>
+            <p>{quoteError}</p>
+            {(quoteError.toLowerCase().includes('auth') || quoteError.toLowerCase().includes('sign in')) && (
+              <div className="mt-2.5">
+                <Link
+                  to="/login?redirect=/checkout"
+                  className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[#FEF5E6] hover:text-white underline font-medium transition-subtle"
+                >
+                  Sign In to Continue Checkout &rarr;
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -39,15 +39,15 @@ export const Logo = ({ variant = 'header', className = '', asLink = true }) => {
 
   // Header / Default variant
   const headerLogo = (
-    <div className={`inline-flex items-center gap-2.5 sm:gap-3 select-none min-w-0 ${className}`.trim()}>
+    <div className={`inline-flex items-center gap-2 sm:gap-2.5 select-none shrink-0 ${className}`.trim()}>
       <img
         src="/brand/aurevella-mark.png"
         alt=""
         width="40"
         height="40"
-        className="h-9 w-9 sm:h-10 sm:w-10 aspect-square object-contain shrink-0"
+        className="h-8 w-8 sm:h-9 sm:w-9 xl:h-10 xl:w-10 aspect-square object-contain shrink-0"
       />
-      <span className="font-serif text-lg sm:text-2xl tracking-[0.14em] sm:tracking-[0.22em] text-[#FEF5E6] group-hover:text-white transition-subtle truncate">
+      <span className="font-serif text-base sm:text-lg xl:text-2xl tracking-[0.12em] sm:tracking-[0.16em] xl:tracking-[0.2em] text-[#FEF5E6] group-hover:text-white transition-subtle whitespace-nowrap">
         AUREVELLA
       </span>
     </div>
@@ -61,7 +61,7 @@ export const Logo = ({ variant = 'header', className = '', asLink = true }) => {
     <Link
       to="/"
       aria-label="AUREVELLA home"
-      className="inline-flex items-center group outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F0A09] min-w-0"
+      className="inline-flex items-center group outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F0A09] shrink-0"
     >
       {headerLogo}
     </Link>

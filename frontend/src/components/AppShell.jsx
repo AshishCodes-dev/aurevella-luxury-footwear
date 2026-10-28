@@ -90,7 +90,7 @@ export const AppShell = ({ children }) => {
   };
 
   const navLinkClasses = ({ isActive }) =>
-    `text-[11px] xl:text-xs uppercase tracking-[0.14em] xl:tracking-[0.22em] font-medium min-h-[44px] inline-flex items-center px-2 lg:px-2.5 xl:px-3.5 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] ${
+    `text-[11px] xl:text-xs uppercase tracking-[0.14em] xl:tracking-[0.22em] font-medium min-h-[44px] inline-flex items-center px-1.5 lg:px-2 xl:px-3.5 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] ${
       isActive
         ? 'text-[#FEF5E6] font-semibold border-b border-[#FEF5E6]'
         : 'text-[#B8AD9A] hover:text-[#FEF5E6]'
@@ -115,9 +115,9 @@ export const AppShell = ({ children }) => {
 
       {/* Sleek Sticky Header */}
       <header className="border-b border-[#2F1C15] bg-[#0F0A09]/95 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] sm:h-20 flex items-center justify-between gap-2 lg:gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 xl:px-8 h-[72px] sm:h-20 flex items-center justify-between gap-1.5 xl:gap-4">
           {/* Brand Logo: header variant (mark + live text) */}
-          <div className="flex items-center min-w-0">
+          <div className="flex items-center shrink-0">
             <Logo variant="header" />
           </div>
 
@@ -134,49 +134,51 @@ export const AppShell = ({ children }) => {
           </nav>
 
           {/* Account, Shopping Bag & Mobile Menu Toggle */}
-          <div className="flex items-center space-x-1 sm:space-x-1.5 xl:space-x-3 shrink-0">
+          <div className="flex items-center space-x-1 sm:space-x-1.5 xl:space-x-2.5 shrink-0">
             {isAuthenticated ? (
-              <div className="hidden sm:flex items-center space-x-1.5 xl:space-x-2">
+              <div className="hidden sm:flex items-center space-x-1 xl:space-x-2">
                 <Link
                   to="/account"
-                  className="text-[11px] sm:text-xs uppercase tracking-[0.16em] xl:tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-1.5 xl:px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                  className="text-[11px] sm:text-xs uppercase tracking-[0.14em] xl:tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-1.5 xl:px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
                 >
-                  Account ({user?.role === 'admin' ? 'Admin' : user?.name?.split(' ')[0] || 'User'})
+                  <span className="lg:hidden xl:inline">Account ({user?.role === 'admin' ? 'Admin' : user?.name?.split(' ')[0] || 'User'})</span>
+                  <span className="hidden lg:inline xl:hidden">Account</span>
                 </Link>
                 <Link
                   to="/orders"
-                  className="text-[11px] sm:text-xs uppercase tracking-[0.16em] xl:tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-1.5 xl:px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                  className="hidden xl:inline-flex text-[11px] sm:text-xs uppercase tracking-[0.14em] xl:tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] items-center px-1.5 xl:px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
                 >
                   Orders
                 </Link>
                 {user?.role === 'admin' && (
                   <Link
                     to="/admin"
-                    className="text-[11px] sm:text-xs uppercase tracking-[0.16em] xl:tracking-[0.2em] text-[#FEF5E6] bg-[#241B18] border border-[#2F1C15] hover:border-[#FEF5E6]/40 transition-subtle min-h-[44px] inline-flex items-center px-2 xl:px-2.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                    className="text-[11px] sm:text-xs uppercase tracking-[0.14em] xl:tracking-[0.2em] text-[#FEF5E6] bg-[#241B18] border border-[#2F1C15] hover:border-[#FEF5E6]/40 transition-subtle min-h-[44px] inline-flex items-center px-2 xl:px-2.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
                   >
-                    Atelier Admin
+                    <span className="hidden xl:inline">Atelier Admin</span>
+                    <span className="xl:hidden">Admin</span>
                   </Link>
                 )}
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleLogout}
-                  className="text-[11px] sm:text-xs uppercase tracking-[0.16em] xl:tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] px-1.5 xl:px-2"
+                  className="text-[11px] sm:text-xs uppercase tracking-[0.14em] xl:tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] px-1.5 xl:px-2"
                 >
                   Sign Out
                 </Button>
               </div>
             ) : (
-              <div className="hidden sm:flex items-center space-x-1.5 xl:space-x-2">
+              <div className="hidden sm:flex items-center space-x-1 xl:space-x-2">
                 <Link
                   to="/login"
-                  className="text-[11px] sm:text-xs uppercase tracking-[0.16em] xl:tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-2 xl:px-3 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                  className="text-[11px] xl:text-xs uppercase tracking-[0.14em] xl:tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-1.5 xl:px-3 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/signup"
-                  className="text-[11px] sm:text-xs uppercase tracking-[0.16em] xl:tracking-[0.2em] text-[#0F0A09] bg-[#FEF5E6] hover:bg-[#FFFFFF] transition-subtle min-h-[38px] inline-flex items-center px-2.5 xl:px-4 font-semibold outline-none focus-visible:ring-1 focus-visible:ring-white shadow-sm"
+                  className="text-[11px] xl:text-xs uppercase tracking-[0.14em] xl:tracking-[0.2em] text-[#0F0A09] bg-[#FEF5E6] hover:bg-[#FFFFFF] transition-subtle min-h-[38px] inline-flex items-center px-2 xl:px-4 font-semibold outline-none focus-visible:ring-1 focus-visible:ring-white shadow-sm"
                 >
                   Sign Up
                 </Link>

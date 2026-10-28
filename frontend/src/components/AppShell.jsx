@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, ArrowUpRight, ShoppingBag, Search } from 'lucide-react';
+import { Menu, X, ArrowUpRight, ShoppingBag, Search, User, ShieldCheck } from 'lucide-react';
 import Logo from './Logo.jsx';
 import { siteConfig } from '../content/site.js';
 import Button from './ui/button.jsx';
@@ -36,16 +36,18 @@ export const AppShell = ({ children }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [mobileMenuOpen]);
 
-  // Lock body scroll when mobile drawer is open
+  // Lock body & document scroll reliably when mobile drawer is open
   useEffect(() => {
     if (mobileMenuOpen) {
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+      const originalBodyOverflow = document.body.style.overflow;
+      document.documentElement.style.overflow = 'hidden';
       document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
+      return () => {
+        document.documentElement.style.overflow = originalHtmlOverflow;
+        document.body.style.overflow = originalBodyOverflow;
+      };
     }
-    return () => {
-      document.body.style.overflow = '';
-    };
   }, [mobileMenuOpen]);
 
   // Focus trap inside mobile drawer
@@ -90,9 +92,9 @@ export const AppShell = ({ children }) => {
   };
 
   const navLinkClasses = ({ isActive }) =>
-    `text-[11px] xl:text-xs uppercase tracking-[0.14em] xl:tracking-[0.22em] font-medium min-h-[44px] inline-flex items-center px-1.5 lg:px-2 xl:px-3.5 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] ${
+    `text-[11px] xl:text-xs uppercase tracking-[0.14em] xl:tracking-[0.2em] font-medium min-h-[44px] inline-flex items-center px-1.5 lg:px-2 xl:px-3 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] ${
       isActive
-        ? 'text-[#FEF5E6] font-semibold border-b border-[#FEF5E6]'
+        ? 'text-[#FEF5E6] font-semibold border-b-2 border-[#FEF5E6]'
         : 'text-[#B8AD9A] hover:text-[#FEF5E6]'
     }`;
 
@@ -115,7 +117,7 @@ export const AppShell = ({ children }) => {
 
       {/* Sleek Sticky Header */}
       <header className="border-b border-[#2F1C15] bg-[#0F0A09]/95 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 xl:px-8 h-[72px] sm:h-20 flex items-center justify-between gap-1.5 xl:gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] sm:h-20 flex items-center justify-between gap-3 xl:gap-6">
           {/* Brand Logo: header variant (mark + live text) */}
           <div className="flex items-center shrink-0">
             <Logo variant="header" />
@@ -133,63 +135,13 @@ export const AppShell = ({ children }) => {
             ))}
           </nav>
 
-          {/* Account, Shopping Bag & Mobile Menu Toggle */}
-          <div className="flex items-center space-x-1 sm:space-x-1.5 xl:space-x-2.5 shrink-0">
-            {isAuthenticated ? (
-              <div className="hidden sm:flex items-center space-x-1 xl:space-x-2">
-                <Link
-                  to="/account"
-                  className="text-[11px] sm:text-xs uppercase tracking-[0.14em] xl:tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-1.5 xl:px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
-                >
-                  <span className="lg:hidden xl:inline">Account ({user?.role === 'admin' ? 'Admin' : user?.name?.split(' ')[0] || 'User'})</span>
-                  <span className="hidden lg:inline xl:hidden">Account</span>
-                </Link>
-                <Link
-                  to="/orders"
-                  className="hidden xl:inline-flex text-[11px] sm:text-xs uppercase tracking-[0.14em] xl:tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] items-center px-1.5 xl:px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
-                >
-                  Orders
-                </Link>
-                {user?.role === 'admin' && (
-                  <Link
-                    to="/admin"
-                    className="text-[11px] sm:text-xs uppercase tracking-[0.14em] xl:tracking-[0.2em] text-[#FEF5E6] bg-[#241B18] border border-[#2F1C15] hover:border-[#FEF5E6]/40 transition-subtle min-h-[44px] inline-flex items-center px-2 xl:px-2.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
-                  >
-                    <span className="hidden xl:inline">Atelier Admin</span>
-                    <span className="xl:hidden">Admin</span>
-                  </Link>
-                )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleLogout}
-                  className="text-[11px] sm:text-xs uppercase tracking-[0.14em] xl:tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] px-1.5 xl:px-2"
-                >
-                  Sign Out
-                </Button>
-              </div>
-            ) : (
-              <div className="hidden sm:flex items-center space-x-1 xl:space-x-2">
-                <Link
-                  to="/login"
-                  className="text-[11px] xl:text-xs uppercase tracking-[0.14em] xl:tracking-[0.2em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-1.5 xl:px-3 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/signup"
-                  className="text-[11px] xl:text-xs uppercase tracking-[0.14em] xl:tracking-[0.2em] text-[#0F0A09] bg-[#FEF5E6] hover:bg-[#FFFFFF] transition-subtle min-h-[38px] inline-flex items-center px-2 xl:px-4 font-semibold outline-none focus-visible:ring-1 focus-visible:ring-white shadow-sm"
-                >
-                  Sign Up
-                </Link>
-              </div>
-            )}
-
-            {/* Search Trigger (Header) */}
+          {/* Right Utility Suite: Search, Bag, Account, Admin */}
+          <div className="flex items-center gap-1.5 sm:gap-2 xl:gap-3 shrink-0">
+            {/* Search Trigger */}
             <Link
               to="/shop"
               aria-label="Search atelier footwear catalogue"
-              className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs uppercase tracking-[0.18em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] px-2 xl:px-2.5 py-1.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] select-none"
+              className="min-h-[44px] inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.16em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle px-2 xl:px-2.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] select-none"
             >
               <Search size={16} />
               <span className="hidden xl:inline font-medium">Search</span>
@@ -200,14 +152,79 @@ export const AppShell = ({ children }) => {
               type="button"
               onClick={openBag}
               aria-label={`Open shopping bag with ${totalCount} items`}
-              className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs uppercase tracking-[0.18em] text-[#FEF5E6] hover:text-white transition-subtle min-h-[44px] px-2 xl:px-2.5 py-1.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] bg-[#181210] border border-[#2F1C15] hover:border-[#FEF5E6]/40 select-none"
+              className="min-h-[44px] inline-flex items-center gap-2 px-2.5 sm:px-3 py-1.5 bg-[#181210] border border-[#2F1C15] hover:border-[#FEF5E6]/40 text-[#FEF5E6] transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] select-none"
             >
               <ShoppingBag size={16} />
-              <span className="hidden xl:inline font-medium">Bag</span>
-              <span className="text-[10px] font-semibold bg-[#0F0A09] text-[#FEF5E6] px-1.5 py-0.5 border border-[#2F1C15] min-w-[20px] text-center">
+              <span className="hidden sm:inline text-xs uppercase tracking-[0.16em] font-medium">Bag</span>
+              <span className="text-[10px] font-semibold bg-[#2F1C15] text-[#FEF5E6] px-1.5 py-0.5 border border-[#3D261C] min-w-[20px] text-center">
                 {totalCount}
               </span>
             </button>
+
+            {/* Subtle Divider */}
+            <span className="hidden sm:block h-5 w-px bg-[#2F1C15] mx-0.5" aria-hidden="true" />
+
+            {/* Account & Authentication Suite */}
+            {isAuthenticated ? (
+              <div className="hidden sm:flex items-center gap-1 xl:gap-2">
+                {/* Admin Entry Badge (Compact & Prestigious - only for admin role) */}
+                {user?.role === 'admin' && (
+                  <Link
+                    to="/admin"
+                    aria-label="Atelier Admin Portal"
+                    className="min-h-[38px] inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] uppercase tracking-[0.16em] text-amber-300 hover:text-amber-200 bg-amber-950/30 border border-amber-800/50 hover:border-amber-600/70 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-amber-400 font-medium"
+                  >
+                    <ShieldCheck size={13} className="text-amber-400 shrink-0" />
+                    <span>Admin</span>
+                  </Link>
+                )}
+
+                {/* Account Link */}
+                <Link
+                  to="/account"
+                  aria-label="Customer Account"
+                  className="text-xs uppercase tracking-[0.16em] text-[#B8AD9A] hover:text-[#FEF5E6] min-h-[44px] inline-flex items-center gap-1.5 px-2 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                >
+                  <User size={15} className="shrink-0" />
+                  <span className="hidden xl:inline">{user?.name ? user.name.split(' ')[0] : 'Account'}</span>
+                  <span className="xl:hidden">Account</span>
+                </Link>
+
+                {/* Orders Link (Shown on wide desktop) */}
+                <Link
+                  to="/orders"
+                  aria-label="Order History"
+                  className="hidden 2xl:inline-flex text-xs uppercase tracking-[0.16em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] items-center px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                >
+                  Orders
+                </Link>
+
+                {/* Sign Out Action */}
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  aria-label="Sign out"
+                  className="text-xs uppercase tracking-[0.16em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <div className="hidden sm:flex items-center gap-1.5 xl:gap-2">
+                <Link
+                  to="/login"
+                  className="text-xs uppercase tracking-[0.16em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-2 xl:px-2.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/signup"
+                  className="text-xs uppercase tracking-[0.16em] text-[#0F0A09] bg-[#FEF5E6] hover:bg-[#FFFFFF] transition-subtle min-h-[38px] inline-flex items-center px-3 xl:px-4 font-semibold outline-none focus-visible:ring-1 focus-visible:ring-white shadow-sm"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
 
             {/* Mobile Hamburger Button (min 44px) */}
             <button

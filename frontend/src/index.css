@@ -103,6 +103,35 @@ img, svg {
   animation: spin 0.8s linear infinite;
 }
 
+/* Custom Luxury Dark-Theme Scrollbars (Compatible with Chromium, WebKit, and Firefox) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3D261C #0F0A09;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0F0A09;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3D261C;
+  border-radius: 4px;
+  border: 2px solid #0F0A09;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #5A3A2C;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: #B8AD9A;
+}
+
 /* PREFERS-REDUCED-MOTION: Strictly disable all transitions and animations when requested */
 @media (prefers-reduced-motion: reduce) {
   *,

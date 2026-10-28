@@ -33,17 +33,23 @@ export const BagDrawer = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isBagOpen, closeBag]);
 
-  // Lock body scroll when drawer is open
+  // Lock body & document scroll reliably when drawer is open
   useEffect(() => {
     if (isBagOpen) {
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+      const originalBodyOverflow = document.body.style.overflow;
+
+      document.documentElement.style.overflow = 'hidden';
       document.body.style.overflow = 'hidden';
-      setTimeout(() => closeBtnRef.current?.focus(), 50);
-    } else {
-      document.body.style.overflow = '';
+
+      const timer = setTimeout(() => closeBtnRef.current?.focus(), 50);
+
+      return () => {
+        clearTimeout(timer);
+        document.documentElement.style.overflow = originalHtmlOverflow;
+        document.body.style.overflow = originalBodyOverflow;
+      };
     }
-    return () => {
-      document.body.style.overflow = '';
-    };
   }, [isBagOpen]);
 
   // Build WhatsApp reservation message
@@ -75,13 +81,13 @@ export const BagDrawer = () => {
         aria-hidden="true"
       />
 
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-4 sm:pl-10">
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-4 sm:pl-10 pointer-events-none">
         <div
           ref={drawerRef}
-          className="w-screen max-w-md bg-[#0F0A09] border-l border-[#2F1C15] flex flex-col shadow-2xl animate-fade-in"
+          className="w-screen max-w-md h-full max-h-[100dvh] bg-[#0F0A09] border-l border-[#2F1C15] flex flex-col shadow-2xl animate-fade-in pointer-events-auto overflow-hidden"
         >
           {/* Header */}
-          <div className="p-6 border-b border-[#2F1C15] flex items-center justify-between bg-[#181210]/60">
+          <div className="p-5 sm:p-6 border-b border-[#2F1C15] flex items-center justify-between bg-[#181210]/80 shrink-0">
             <div className="flex items-center gap-2.5">
               <ShoppingBag size={20} className="text-[#FEF5E6]" />
               <h2 className="font-serif text-xl sm:text-2xl text-[#FEF5E6] tracking-wide">
@@ -103,8 +109,8 @@ export const BagDrawer = () => {
             </button>
           </div>
 
-          {/* Drawer Body */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Drawer Body - Single intentional scroll container */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-6 overscroll-contain">
             {items.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center py-16 px-4">
                 <div className="w-16 h-16 rounded-full bg-[#181210] border border-[#2F1C15] flex items-center justify-center mb-5 text-[#B8AD9A]">
@@ -236,7 +242,7 @@ export const BagDrawer = () => {
 
           {/* Drawer Footer (Only when bag has items) */}
           {items.length > 0 && (
-            <div className="p-6 border-t border-[#2F1C15] bg-[#181210] space-y-4">
+            <div className="p-5 sm:p-6 border-t border-[#2F1C15] bg-[#181210] space-y-3.5 shrink-0">
               {/* Subtotal */}
               <div className="flex items-center justify-between text-sm">
                 <span className="text-xs uppercase tracking-[0.2em] text-[#B8AD9A]">

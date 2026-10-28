@@ -79,10 +79,7 @@ export const Shop = () => {
       try {
         const [catData, prodData] = await Promise.all([
           fetchCategories().catch(() => null),
-          fetchProducts({
-            category: selectedCategory !== 'All' ? selectedCategory : undefined,
-            search: searchQuery.trim() || undefined,
-          }).catch(() => null),
+          fetchProducts().catch(() => null),
         ]);
 
         if (!isMounted) return;
@@ -105,7 +102,7 @@ export const Shop = () => {
     return () => {
       isMounted = false;
     };
-  }, [selectedCategory, searchQuery]);
+  }, []);
 
   // Filter products based on active category, search query, and sorting
   const filteredProducts = useMemo(() => {
@@ -127,7 +124,8 @@ export const Shop = () => {
       list = list.filter((p) => {
         const nameMatch = p.name?.toLowerCase().includes(qLower);
         const descMatch = p.description?.toLowerCase().includes(qLower);
-        const codeMatch = p.code?.toLowerCase().includes(qLower);
+        const idMatch = p.id?.toLowerCase().includes(qLower);
+        const codeMatch = p.code?.toLowerCase().includes(qLower) || idMatch;
         const slugMatch = p.slug?.toLowerCase().includes(qLower);
         const catName = typeof p.category === 'string' ? p.category : p.category?.name;
         const catSlug = typeof p.category === 'object' ? p.category?.slug : p.categorySlug;

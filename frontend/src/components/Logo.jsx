@@ -47,7 +47,7 @@ export const Logo = ({ variant = 'header', className = '', asLink = true }) => {
         height="40"
         className="h-8 w-8 sm:h-9 sm:w-9 xl:h-10 xl:w-10 aspect-square object-contain shrink-0"
       />
-      <span className="font-serif text-base sm:text-lg xl:text-2xl tracking-[0.12em] sm:tracking-[0.16em] xl:tracking-[0.2em] text-[#FEF5E6] group-hover:text-white transition-subtle whitespace-nowrap">
+      <span className="font-serif text-base sm:text-lg xl:text-xl 2xl:text-2xl tracking-[0.12em] sm:tracking-[0.16em] xl:tracking-[0.18em] 2xl:tracking-[0.2em] text-[#FEF5E6] group-hover:text-white transition-subtle whitespace-nowrap">
         AUREVELLA
       </span>
     </div>

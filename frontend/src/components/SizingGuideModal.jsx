@@ -18,6 +18,9 @@ export const SizingGuideModal = ({ isOpen, onClose, productName = '' }) => {
     if (!isOpen) return;
 
     previousActiveElementRef.current = document.activeElement;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
 
     // Focus close button on open
@@ -58,7 +61,8 @@ export const SizingGuideModal = ({ isOpen, onClose, productName = '' }) => {
     return () => {
       clearTimeout(timer);
       window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      document.body.style.overflow = originalBodyOverflow;
       if (previousActiveElementRef.current && typeof previousActiveElementRef.current.focus === 'function') {
         previousActiveElementRef.current.focus();
       }

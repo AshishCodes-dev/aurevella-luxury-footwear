@@ -45,7 +45,7 @@ export const siteConfig = {
       { label: 'All Footwear', href: '/shop' },
       { label: 'Collections', href: '/collections' },
       { label: 'Limited Edition', href: '/limited-edition' },
-      { label: 'Customization', href: '/shop#customization' }, // TODO(client): Customization policy and lead time
+      { label: 'Customization', href: '/contact' }, // TODO(client): Customization policy and lead time
     ],
     company: [
       { label: 'Our Story', href: '/about' },

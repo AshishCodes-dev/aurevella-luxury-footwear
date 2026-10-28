@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { zodResolver } from '../utils/zodResolver.js';
 import { z } from 'zod';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
@@ -15,10 +15,10 @@ import { Alert } from '../components/ui/alert.jsx';
 
 const signupSchema = z
   .object({
-    name: z.string().min(2, 'Name must be at least 2 characters').max(80),
-    email: z.string().email('Please enter a valid email address'),
+    name: z.string().trim().min(2, 'Name must be at least 2 characters').max(80),
+    email: z.string().min(1, 'Email address is required').email('Please enter a valid email address'),
     password: z.string().min(6, 'Password must be at least 6 characters'),
-    confirmPassword: z.string(),
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords do not match',
@@ -29,7 +29,6 @@ export const Signup = () => {
   const { signupWithEmail, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const formRef = useRef(null);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -54,63 +53,28 @@ export const Signup = () => {
     mode: 'onSubmit',
   });
 
-  // Thorough form state & DOM cleanup function
-  const clearSensitiveFields = useCallback(() => {
-    setValue('password', '');
-    setValue('confirmPassword', '');
-    setValue('name', '');
-    setValue('email', '');
-    reset({ name: '', email: '', password: '', confirmPassword: '' });
-    if (formRef.current) {
-      formRef.current.reset();
-    }
-  }, [reset, setValue]);
-
-  // Ensure form fields and native DOM are clean whenever this screen mounts, unmounts, or route changes
+  // Ensure sensitive password state is purged upon unmount
   useEffect(() => {
-    clearSensitiveFields();
-
-    // Delayed cleanup to prevent browser password manager / autofill heuristics from prefilling on mount
-    const timer = setTimeout(() => {
-      const emailEl = document.getElementById('email');
-      const passEl = document.getElementById('password');
-      const confirmEl = document.getElementById('confirmPassword');
-      const activeEl = document.activeElement;
-      if (activeEl !== emailEl && activeEl !== passEl && activeEl !== confirmEl) {
-        clearSensitiveFields();
-      }
-    }, 100);
-
     return () => {
-      clearTimeout(timer);
-      clearSensitiveFields();
+      reset({ name: '', email: '', password: '', confirmPassword: '' });
     };
-  }, [clearSensitiveFields, location.key]);
+  }, [reset]);
 
   const onSubmit = async (data) => {
     const { name, email, password } = data;
-
-    // Immediately clear all fields so the box is empty the moment registration is clicked
-    clearSensitiveFields();
     setFormError(null);
     setIsSubmitting(true);
 
     try {
       await signupWithEmail(name, email, password);
       // Immediately clear passwords and form state upon successful registration before navigating
-      clearSensitiveFields();
+      reset({ name: '', email: '', password: '', confirmPassword: '' });
       navigate('/account', { replace: true });
     } catch (err) {
       console.error('Signup error:', err);
       // On failed signup: restore name and email, clear both password fields
-      setValue('name', name);
-      setValue('email', email);
       setValue('password', '');
       setValue('confirmPassword', '');
-      const pwdEl = document.getElementById('password');
-      if (pwdEl) pwdEl.value = '';
-      const confirmEl = document.getElementById('confirmPassword');
-      if (confirmEl) confirmEl.value = '';
       setTimeout(() => setFocus('password'), 0);
 
       let msg = err.message || 'Registration failed. Please check your details.';
@@ -126,12 +90,13 @@ export const Signup = () => {
   };
 
   const handleGoogleSignIn = async () => {
-    clearSensitiveFields();
+    setValue('password', '');
+    setValue('confirmPassword', '');
     setFormError(null);
     setIsSubmitting(true);
     try {
       await loginWithGoogle();
-      clearSensitiveFields();
+      reset({ name: '', email: '', password: '', confirmPassword: '' });
       navigate('/account', { replace: true });
     } catch (err) {
       console.error('Google Sign In error:', err);
@@ -168,26 +133,7 @@ export const Signup = () => {
               </div>
             )}
 
-            <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate autoComplete="off">
-              {/* Hidden dummy fields to consume automatic browser password manager autofill on load */}
-              <input
-                type="text"
-                name="prevent_autofill_email"
-                tabIndex={-1}
-                aria-hidden="true"
-                autoComplete="username"
-                className="sr-only"
-                style={{ position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1, pointerEvents: 'none' }}
-              />
-              <input
-                type="password"
-                name="prevent_autofill_pwd"
-                tabIndex={-1}
-                aria-hidden="true"
-                autoComplete="new-password"
-                className="sr-only"
-                style={{ position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1, pointerEvents: 'none' }}
-              />
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate autoComplete="on">
               <div>
                 <Label htmlFor="name">Full Name</Label>
                 <Input

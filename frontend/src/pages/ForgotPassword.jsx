@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { zodResolver } from '../utils/zodResolver.js';
 import { z } from 'zod';
 import { Link } from 'react-router-dom';
 
@@ -12,7 +12,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Alert } from '../components/ui/alert.jsx';
 
 const forgotPasswordSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  email: z.string().min(1, 'Email address is required').email('Please enter a valid email address'),
 });
 
 export const ForgotPassword = () => {

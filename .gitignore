@@ -48,3 +48,5 @@ firebase.json
 # Test Artifacts & Screenshots
 .layout-shots/
 frontend/.layout-shots/
+.visual-audit-shots/
+frontend/.visual-audit-shots/

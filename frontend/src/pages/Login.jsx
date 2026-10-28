@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { zodResolver } from '../utils/zodResolver.js';
 import { z } from 'zod';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
@@ -14,7 +14,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Alert } from '../components/ui/alert.jsx';
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  email: z.string().min(1, 'Email address is required').email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
@@ -22,7 +22,6 @@ export const Login = () => {
   const { loginWithEmail, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const formRef = useRef(null);
 
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState(null);
@@ -46,56 +45,25 @@ export const Login = () => {
     mode: 'onSubmit',
   });
 
-  // Thorough form state cleanup function
-  const clearSensitiveFields = useCallback(() => {
-    reset({ email: '', password: '' });
-    if (formRef.current) {
-      formRef.current.reset();
-    }
-    const emailEl = document.getElementById('email');
-    const passEl = document.getElementById('password');
-    if (emailEl) emailEl.value = '';
-    if (passEl) passEl.value = '';
+  // Ensure sensitive password state is purged upon unmount
+  useEffect(() => {
+    return () => {
+      reset({ email: '', password: '' });
+    };
   }, [reset]);
 
-  // Ensure form fields are clean whenever this screen mounts, unmounts, or route changes
-  useEffect(() => {
-    clearSensitiveFields();
-
-    // Delayed cleanup to prevent browser password manager / autofill heuristics from prefilling on mount
-    const timer = setTimeout(() => {
-      const emailEl = document.getElementById('email');
-      const passEl = document.getElementById('password');
-      const activeEl = document.activeElement;
-      if (activeEl !== emailEl && activeEl !== passEl) {
-        clearSensitiveFields();
-      }
-    }, 100);
-
-    return () => {
-      clearTimeout(timer);
-      clearSensitiveFields();
-    };
-  }, [clearSensitiveFields, location.key]);
-
   const onSubmit = async (data) => {
-    const emailToSubmit = data.email;
-    const passwordToSubmit = data.password;
-
-    // Immediately clear both input fields so the box is empty the moment login is clicked
-    clearSensitiveFields();
     setFormError(null);
     setIsSubmitting(true);
 
     try {
-      await loginWithEmail(emailToSubmit, passwordToSubmit);
-      // Ensure form state remains completely clear before navigating
-      clearSensitiveFields();
+      await loginWithEmail(data.email, data.password);
+      // Clean sensitive password and form state before navigating
+      reset({ email: '', password: '' });
       navigate(from, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
       // On failed login: restore email only, keep password empty
-      setValue('email', emailToSubmit);
       setValue('password', '');
       setTimeout(() => setFocus('password'), 0);
 
@@ -117,12 +85,12 @@ export const Login = () => {
   };
 
   const handleGoogleSignIn = async () => {
-    clearSensitiveFields();
+    setValue('password', '');
     setFormError(null);
     setIsSubmitting(true);
     try {
       await loginWithGoogle();
-      clearSensitiveFields();
+      reset({ email: '', password: '' });
       navigate(from, { replace: true });
     } catch (err) {
       console.error('Google Sign In error:', err);
@@ -159,26 +127,7 @@ export const Login = () => {
               </div>
             )}
 
-            <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate autoComplete="off">
-              {/* Hidden dummy fields to consume automatic browser password manager autofill on load */}
-              <input
-                type="text"
-                name="prevent_autofill_email"
-                tabIndex={-1}
-                aria-hidden="true"
-                autoComplete="username"
-                className="sr-only"
-                style={{ position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1, pointerEvents: 'none' }}
-              />
-              <input
-                type="password"
-                name="prevent_autofill_pwd"
-                tabIndex={-1}
-                aria-hidden="true"
-                autoComplete="current-password"
-                className="sr-only"
-                style={{ position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1, pointerEvents: 'none' }}
-              />
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate autoComplete="on">
               <div>
                 <Label htmlFor="email">Email Address</Label>
                 <Controller

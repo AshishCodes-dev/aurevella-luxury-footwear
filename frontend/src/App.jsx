@@ -71,7 +71,7 @@ const AppRoutes = () => {
         {/* Authentication Routes (Keyed with authEpoch to guarantee fresh remount & clean form state on logout) */}
         <Route path="/login" element={<Login key={`login-${authEpoch}`} />} />
         <Route path="/signup" element={<Signup key={`signup-${authEpoch}`} />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/forgot-password" element={<ForgotPassword key={`forgot-${authEpoch}`} />} />
         <Route
           path="/account"
           element={

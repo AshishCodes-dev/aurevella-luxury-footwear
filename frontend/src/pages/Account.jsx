@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { zodResolver } from '../utils/zodResolver.js';
 import { z } from 'zod';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Plus, Check, Trash2, Edit2, ShieldCheck, X } from 'lucide-react';

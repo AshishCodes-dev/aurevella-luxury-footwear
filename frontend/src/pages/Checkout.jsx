@@ -327,7 +327,6 @@ export const Checkout = () => {
         },
         modal: {
           ondismiss: () => {
-            console.log('Razorpay modal closed by client');
             setPaymentStatus('cancelled');
             setIsSubmitting(false);
           },

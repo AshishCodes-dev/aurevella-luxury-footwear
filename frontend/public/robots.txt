@@ -1,0 +1,30 @@
+# AUREVELLA — Robots Exclusion Protocol
+# https://myaurevella.in
+# Note for client: If production domain differs, update the sitemap URL below.
+
+User-agent: *
+Allow: /
+Allow: /shop
+Allow: /product/
+Allow: /collections
+Allow: /limited-edition
+Allow: /about
+Allow: /contact
+Allow: /shipping-policy
+Allow: /returns-policy
+Allow: /privacy
+Allow: /terms
+
+# Disallow private customer, authentication, and administration surfaces
+Disallow: /admin
+Disallow: /admin/
+Disallow: /account
+Disallow: /account/
+Disallow: /checkout
+Disallow: /checkout/
+Disallow: /orders
+Disallow: /orders/
+Disallow: /bag
+Disallow: /bag/
+
+Sitemap: https://myaurevella.in/sitemap.xml

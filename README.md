@@ -29,9 +29,13 @@ AureVeLla/
 │   │   ├── testPhase6_1.js             # Phase 6.1 catalogue & variant regression suite
 │   │   ├── testPhase6_2.js             # Phase 6.2 payment isolation & ACID transaction suite
 │   │   ├── testPhase7.js               # Phase 7 checkout & order history regression suite
-│   │   └── testPhase11.js              # Phase 11 secure admin dashboard & order management suite
+│   │   ├── testPhase11.js              # Phase 11 secure admin dashboard & order management suite
+│   │   ├── testPhase14.js              # Phase 14 authentication lifecycle & route guard suite
+│   │   ├── testSeedAdminSafety.js      # Admin seeder safety guards & schema validation suite
+│   │   └── testLoop2Hardening.js       # Multi-origin CORS, rate limiters & error masking suite
 │   ├── src/
 │   │   ├── config/
+│   │   │   ├── corsOrigins.js          # Multi-origin parser & allowed origin resolver
 │   │   │   ├── db.js                   # Mongoose connection & URI parser
 │   │   │   ├── firebase.js             # Firebase Admin SDK initialization
 │   │   │   └── razorpay.js             # Razorpay SDK instance & offline test double factory
@@ -43,8 +47,11 @@ AureVeLla/
 │   │   │   ├── payment.controller.js   # Payment creation, verification & webhooks
 │   │   │   └── product.controller.js   # Product catalogue & category handlers
 │   │   ├── middleware/
+│   │   │   ├── adminAuth.js            # Admin authorization guard
 │   │   │   ├── auth.js                 # JWT authenticate & authorizeAdmin guards
 │   │   │   ├── csrfGuard.js            # Custom X-Aurevella-Request & Origin header defense
+│   │   │   ├── errorHandler.js         # Production-safe error masking & centralized logging
+│   │   │   ├── rateLimiter.js          # Tiered rate limiting with payment webhook exemption
 │   │   │   ├── sanitize.js             # NoSQL query injection sanitizer
 │   │   │   └── validate.js             # Zod request schema validator
 │   │   ├── models/
@@ -74,7 +81,9 @@ AureVeLla/
 │   ├── public/
 │   │   ├── .htaccess                   # Apache/LiteSpeed SPA rewrite fallback for Hostinger
 │   │   ├── brand/                      # Official client logos, circular marks & icons
-│   │   └── images/products/            # 1:1 client footwear launch photography
+│   │   ├── images/products/            # 1:1 client footwear launch photography
+│   │   ├── robots.txt                  # Search engine crawler policies
+│   │   └── sitemap.xml                 # XML sitemap index of canonical brand pages
 │   ├── scripts/
 │   │   └── layout-check.mjs            # Playwright headless browser layout & form audit
 │   ├── src/
@@ -117,6 +126,7 @@ AureVeLla/
 │   ├── package.json                    # Frontend dependencies & build scripts
 │   └── vite.config.js                  # Vite bundler configuration with Tailwind CSS v4
 ├── docs/                               # Comprehensive project architectural specifications
+│   └── archive/                        # Historical phase logs & visual/UX audit reports
 ├── .gitignore                          # Strict secret, log, and build output exclusions
 └── README.md                           # Master project documentation
 ```
@@ -204,7 +214,9 @@ Environment files (`.env`) contain secrets and infrastructure configuration. The
 | :--- | :--- |
 | `PORT` | Listening port for Express HTTP server (e.g. `5000` or host `$PORT`) |
 | `NODE_ENV` | Environment mode (`development` or `production`) |
-| `CLIENT_URL` | Exact allowed origin for CORS and CSRF guards (e.g. `https://myaurevella.in`) |
+| `CLIENT_URL` | Primary allowed origin for CORS and CSRF guards (e.g. `https://myaurevella.in`) |
+| `ALLOWED_ORIGINS` | Comma-separated list of allowed origins (e.g. `https://myaurevella.in,https://www.myaurevella.in,http://localhost:5173`) |
+| `TRUST_PROXY` | Reverse-proxy hop count or trust flag (`true`, `false`, or hop count) for IP resolution & rate limiting |
 | `MONGODB_URI` | MongoDB Atlas replica set connection string (`mongodb+srv://...`) |
 | `MONGODB_TEST_URI` | Dedicated local test database URI (`127.0.0.1:27017/aurevella_test`) |
 | `JWT_SECRET` | Cryptographic secret for signing session tokens (min 32 characters) |
@@ -284,11 +296,14 @@ node scripts/testOfflineMock.js
 Runs against dedicated local database `127.0.0.1:27017/aurevella_test` with offline payment test doubles:
 ```bash
 cd backend
-npm run test:phase5      # 17/17 tests: payment creation, verification & refunds
-npm run test:phase6-1    # 18/18 tests: catalogue browsing, category filters & stock bounds
-npm run test:phase6-2    # 33/33 tests: payment gateway isolation, ACID transactions & concurrency
-npm run test:phase7      # 15/15 tests: bespoke checkout flow, quotes & address isolation
-npm run test:phase11     # 37/37 tests: secure admin dashboard, product CRUD & order fulfillment
+npm run test:phase5         # 17/17 tests: payment creation, verification & refunds
+npm run test:phase6-1       # 18/18 tests: catalogue browsing, category filters & stock bounds
+npm run test:phase6-2       # 33/33 tests: payment gateway isolation, ACID transactions & concurrency
+npm run test:phase7         # 15/15 tests: bespoke checkout flow, quotes & address isolation
+npm run test:phase11        # 37/37 tests: secure admin dashboard, product CRUD & order fulfillment
+npm run test:phase14        # 27/27 tests: authentication lifecycle, user state & route protection
+npm run test:admin-safety   # 10/10 tests: admin seeder safety guards & real Mongoose schema validations
+npm run test:hardening      # 16/16 tests: multi-origin CORS, rate limiters & error masking
 ```
 
 ---

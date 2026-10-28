@@ -18,4 +18,5 @@
 | **[SECURITY_PLAN.md](SECURITY_PLAN.md)** | Security Architecture & Defense Controls | httpOnly cookie JWT sessions, bcrypt hashing, Razorpay HMAC verification, rate limiting, and threat modeling matrix. |
 | **[TESTING_PLAN.md](TESTING_PLAN.md)** | Quality Assurance & Verification Suite | End-to-end test checklists (TC, TA, TP, TN, TR, TL), negative edge cases, bug reporting template, and sign-off gates. |
 | **[DESIGN_SYSTEM.md](DESIGN_SYSTEM.md)** | Luxury Visual Language & Token Specs | Color palettes, typography scale (Cormorant Garamond/Inter), button/card components, and responsive layout rules. |
-| **[PHASE_LOG.md](PHASE_LOG.md)** | Execution Logs & Phase History | Chronological record of phase execution, command logs, environment verification, test results, and Git commits. |
+| **[archive/PHASE_LOG.md](archive/PHASE_LOG.md)** | Historical Execution Logs & Phase History | Chronological record of phase execution, command logs, environment verification, test results, and Git commits. |
+| **[archive/quality-audit/](archive/quality-audit/)** | Quality & UX Audit Archives | Master audit reports and visual UX verification archives. |

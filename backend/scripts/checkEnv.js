@@ -35,12 +35,16 @@ if (mongoUri && mongoUri.trim().length > 0) {
   fail('MONGODB_URI', 'Missing or empty');
 }
 
-// 2. CLIENT_URL
+// 2. CLIENT_URL & ALLOWED_ORIGINS
+const allowedOrigins = process.env.ALLOWED_ORIGINS;
 const clientUrl = process.env.CLIENT_URL;
-if (clientUrl && clientUrl.trim().length > 0) {
-  pass('CLIENT_URL', 'Set and non-empty');
+if (allowedOrigins && allowedOrigins.trim().length > 0) {
+  const count = allowedOrigins.split(',').filter((o) => o.trim().length > 0).length;
+  pass('ALLOWED_ORIGINS', `Set (${count} origins configured)`);
+} else if (clientUrl && clientUrl.trim().length > 0) {
+  pass('CLIENT_URL', 'Set and non-empty (fallback for ALLOWED_ORIGINS)');
 } else {
-  fail('CLIENT_URL', 'Missing or empty');
+  fail('CLIENT_URL / ALLOWED_ORIGINS', 'Missing or empty: Neither CLIENT_URL nor ALLOWED_ORIGINS is configured');
 }
 
 // 3. JWT_SECRET

@@ -2,6 +2,7 @@ import express from 'express';
 import { z } from 'zod';
 import { authenticate, authorizeAdmin } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { adminLimiter } from '../middleware/rateLimiter.js';
 import {
   getDashboardStats,
   getAdminProducts,
@@ -16,8 +17,8 @@ import {
 
 const router = express.Router();
 
-// Strict Security Requirement: All admin endpoints enforce both authentication and admin authorization
-router.use(authenticate, authorizeAdmin);
+// Strict Security Requirement: All admin endpoints enforce authentication, admin authorization, and rate limiting
+router.use(authenticate, authorizeAdmin, adminLimiter);
 
 // Diagnostic Ping
 router.get('/ping', (req, res) => {

@@ -5,8 +5,10 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose';
 
+import { getAllowedOrigins } from './config/corsOrigins.js';
 import { csrfGuard } from './middleware/csrfGuard.js';
 import { sanitize } from './middleware/sanitize.js';
+import { globalApiLimiter } from './middleware/rateLimiter.js';
 import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import productRoutes, { getCategories } from './routes/product.routes.js';
@@ -15,6 +17,23 @@ import orderRoutes from './routes/order.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 
 const app = express();
+
+// Trust Proxy Configuration
+// Configured via TRUST_PROXY env var (e.g. 'true', integer number of hops like '1', or specific string)
+const rawTrustProxy = process.env.TRUST_PROXY;
+if (rawTrustProxy !== undefined && rawTrustProxy !== '') {
+  if (rawTrustProxy === 'true') {
+    app.set('trust proxy', 1);
+  } else if (!isNaN(Number(rawTrustProxy))) {
+    app.set('trust proxy', Number(rawTrustProxy));
+  } else if (rawTrustProxy === 'false') {
+    app.set('trust proxy', false);
+  } else {
+    app.set('trust proxy', rawTrustProxy);
+  }
+} else {
+  app.set('trust proxy', false);
+}
 
 // Security headers
 app.use(helmet());
@@ -38,12 +57,12 @@ app.use(express.urlencoded({ extended: true }));
 // NoSQL Injection Sanitize Middleware
 app.use(sanitize);
 
-// CORS setup: allow ONLY the origin in CLIENT_URL
+// CORS setup: allow origins listed in ALLOWED_ORIGINS (or fallback to CLIENT_URL)
 const corsOptions = {
   origin: (origin, callback) => {
-    const allowedOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
-    // Allow non-browser requests (no origin header) or exact match with CLIENT_URL
-    if (!origin || origin === allowedOrigin) {
+    const allowedOrigins = getAllowedOrigins();
+    // Allow non-browser requests (no origin header) or exact match with one of allowedOrigins
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       const err = new Error(`Not allowed by CORS. Origin: ${origin}`);
@@ -57,6 +76,9 @@ app.use(cors(corsOptions));
 
 // Custom CSRF and Origin Guard on mutating methods
 app.use(csrfGuard);
+
+// Global API rate limiting (exempts /api/payments/webhook)
+app.use('/api', globalApiLimiter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -86,14 +108,25 @@ app.use((req, res, next) => {
   });
 });
 
-// Central Error Handler (never leaks stack trace in production)
+// Central Error Handler (never leaks stack trace in production; masks 500 error messages in production)
 app.use((err, req, res, next) => {
-  const statusCode = err.status || 500;
+  const statusCode = err.status || err.statusCode || 500;
   const isProduction = process.env.NODE_ENV === 'production';
+
+  // Server-side logging for unhandled server errors (status >= 500)
+  if (statusCode >= 500) {
+    console.error('[Unhandled Server Error]:', err);
+  }
+
+  // Safe client response message
+  let clientMessage = err.message || 'Internal Server Error';
+  if (statusCode >= 500 && isProduction) {
+    clientMessage = 'An unexpected server error occurred. Please try again later.';
+  }
 
   res.status(statusCode).json({
     status: 'error',
-    message: err.message || 'Internal Server Error',
+    message: clientMessage,
     ...(isProduction ? {} : { stack: err.stack }),
   });
 });

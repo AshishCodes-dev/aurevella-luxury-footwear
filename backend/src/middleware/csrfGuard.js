@@ -1,3 +1,5 @@
+import { getAllowedOrigins } from '../config/corsOrigins.js';
+
 export const csrfGuard = (req, res, next) => {
   const mutatingMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
@@ -7,7 +9,8 @@ export const csrfGuard = (req, res, next) => {
   }
 
   // Exempt external webhooks
-  if (req.originalUrl === '/api/payments/webhook' || req.path === '/api/payments/webhook') {
+  const url = req.originalUrl || req.path || '';
+  if (url.startsWith('/api/payments/webhook')) {
     return next();
   }
 
@@ -22,10 +25,9 @@ export const csrfGuard = (req, res, next) => {
 
   // Verify Origin header if present
   const origin = req.headers['origin'];
-  const allowedOrigin = process.env.CLIENT_URL;
-
-  if (origin && allowedOrigin) {
-    if (origin !== allowedOrigin) {
+  if (origin) {
+    const allowedOrigins = getAllowedOrigins();
+    if (!allowedOrigins.includes(origin)) {
       return res.status(403).json({
         status: 'error',
         message: 'Forbidden: Request origin does not match allowed client origin',

@@ -1,12 +1,51 @@
 # ==============================================================================
-# AUREVELLA — Apache / LiteSpeed SPA Fallback Configuration
-# ==============================================================================
-# Enables clean client-side routing for React 19 + Vite SPA on Hostinger.
-# Requests for existing static files (JS, CSS, images, fonts) are served directly.
-# All other route requests (/shop, /checkout, /account, /orders, etc.) are rewritten
-# to /index.html so React Router can resolve them client-side.
+# AUREVELLA — Production Apache / LiteSpeed Configuration (Hostinger)
 # ==============================================================================
 
+# 1. Enforce HTTPS Redirection
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# 2. Gzip / Deflate Compression
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript
+  AddOutputFilterByType DEFLATE application/javascript application/x-javascript application/json application/xml
+  AddOutputFilterByType DEFLATE image/svg+xml font/woff font/woff2
+</IfModule>
+
+# 3. Cache-Control & Expiration Policies
+<IfModule mod_headers.c>
+  # HTML: Never cache index.html so frontend updates are immediate
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+
+  # Immutable Hashed Assets (Vite outputs /assets/* with content hash)
+  <FilesMatch "\.(js|css)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  # Static Media (Images, Fonts, Icons)
+  <FilesMatch "\.(ico|jpg|jpeg|png|gif|svg|webp|woff|woff2|ttf|eot)$">
+    Header set Cache-Control "public, max-age=2592000"
+  </FilesMatch>
+
+  # Frontend Security Headers
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# 4. SPA Fallback Routing
+# Serves real files directly (/robots.txt, /sitemap.xml, /assets/*)
+# Rewrites all client-side routes (/shop, /product/*, /checkout, etc.) to /index.html
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /

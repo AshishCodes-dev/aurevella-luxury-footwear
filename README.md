@@ -304,7 +304,21 @@ npm run test:phase11        # 37/37 tests: secure admin dashboard, product CRUD 
 npm run test:phase14        # 27/27 tests: authentication lifecycle, user state & route protection
 npm run test:admin-safety   # 10/10 tests: admin seeder safety guards & real Mongoose schema validations
 npm run test:hardening      # 16/16 tests: multi-origin CORS, rate limiters & error masking
+npm run test:contact        # 24/24 tests: public contact submission, honeypot bot defense, rate limiting & admin dossier
 ```
+
+### 4. Contact Form & Concierge Inquiries Architecture
+- **Public API (`POST /api/contact`)**:
+  - Protected with custom CSRF header check (`X-Aurevella-Request: 1`) and strict Origin verification.
+  - Dedicated rate limiter (`contactLimiter`): 5 submissions per 15 minutes per IP (returns 429 upon exhaustion).
+  - Anti-Bot Honeypot Defense (`hp_field`): Spambots completing the hidden field receive a silent 200 OK without writing to MongoDB or triggering alerts.
+  - NoSQL Injection Sanitizer: Automatically strips Mongo operators (`$`, `.`) from payloads.
+  - Strict Zod Validation: Validates patron name (2-80 chars), email format, optional E.164 phone number, optional subject (up to 120 chars), and message body (10-2000 chars).
+- **Admin Inquiries Management (`/admin?tab=inquiries`)**:
+  - Secured behind admin authentication (`authenticate`) and role-based access control (`authorizeAdmin`).
+  - `GET /api/admin/inquiries`: Paginated inquiry listing sorted newest first, searchable by customer name, email, or subject, and filterable by status (`new`, `read`, `replied`).
+  - `GET /api/admin/inquiries/:id`: Full dossier modal view with complete patron message and metadata.
+  - `PATCH /api/admin/inquiries/:id/status`: Controlled status updates (`new` $\rightarrow$ `read` $\rightarrow$ `replied`) with strict validation.
 
 ---
 

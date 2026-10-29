@@ -14,6 +14,11 @@ import {
   getAdminOrderById,
   updateOrderFulfillment,
 } from '../controllers/admin.controller.js';
+import {
+  getAdminInquiries,
+  getAdminInquiryById,
+  updateAdminInquiryStatus,
+} from '../controllers/contact.controller.js';
 
 const router = express.Router();
 
@@ -114,6 +119,14 @@ const updateOrderFulfillmentSchema = z.object({
   }),
 });
 
+const updateInquiryStatusSchema = z.object({
+  body: z.object({
+    status: z.enum(['new', 'read', 'replied'], {
+      required_error: 'Valid status is required (new, read, or replied)',
+    }),
+  }),
+});
+
 // --- Admin Routes ---
 
 // Dashboard Analytics & Metrics
@@ -130,5 +143,10 @@ router.patch('/products/:id/stock', validate(updateProductStockSchema), updatePr
 router.get('/orders', getAdminOrders);
 router.get('/orders/:idOrNumber', getAdminOrderById);
 router.patch('/orders/:idOrNumber/fulfillment', validate(updateOrderFulfillmentSchema), updateOrderFulfillment);
+
+// Client Inquiries Management
+router.get('/inquiries', getAdminInquiries);
+router.get('/inquiries/:id', getAdminInquiryById);
+router.patch('/inquiries/:id/status', validate(updateInquiryStatusSchema), updateAdminInquiryStatus);
 
 export default router;

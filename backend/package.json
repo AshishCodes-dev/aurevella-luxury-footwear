@@ -16,7 +16,8 @@
     "test:phase11": "node scripts/testPhase11.js",
     "test:phase14": "node scripts/testPhase14.js",
     "test:admin-safety": "node scripts/testSeedAdminSafety.js",
-    "test:hardening": "node scripts/testLoop2Hardening.js"
+    "test:hardening": "node scripts/testLoop2Hardening.js",
+    "test:contact": "node scripts/testContact.js"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",

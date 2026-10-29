@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { MessageCircle, Mail, Clock, MapPin, Send, CheckCircle2 } from 'lucide-react';
 import useDocumentTitle from '../utils/useDocumentTitle.js';
 import siteConfig from '../content/site.js';
+import { submitContactInquiry } from '../utils/api.js';
 import { Button } from '../components/ui/button.jsx';
 import { Input } from '../components/ui/input.jsx';
 import { Label } from '../components/ui/label.jsx';
+import { Alert } from '../components/ui/alert.jsx';
 
 const InstagramIcon = ({ size = 18, className = '' }) => (
   <svg
@@ -28,23 +30,66 @@ export const Contact = () => {
   useDocumentTitle('Contact & Concierge');
 
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [submittedEmail, setSubmittedEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
     topic: 'sizing',
     message: '',
+    hp_field: '',
   });
 
-  const handleSubmit = (e) => {
+  const topicMap = {
+    sizing: 'Fit & Sizing Consultation',
+    order_status: 'Order & Commission Tracking',
+    limited_edition: 'Limited Edition Reservation',
+    exchange_return: 'Sizing Exchange or Return',
+    wholesale_press: 'Press & Private Wholesale',
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
     setIsSubmitting(true);
-    // Simulate swift client inquiry routing
-    setTimeout(() => {
+
+    try {
+      const payload = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim() || null,
+        subject: topicMap[formData.topic] || formData.topic || 'General Inquiry',
+        message: formData.message.trim(),
+        hp_field: formData.hp_field ? formData.hp_field.trim() : undefined,
+      };
+
+      const res = await submitContactInquiry(payload);
+      if (res?.status === 'success') {
+        setSubmittedEmail(formData.email);
+        setFormSubmitted(true);
+        // Reset form inputs only upon successful transmission
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          topic: 'sizing',
+          message: '',
+          hp_field: '',
+        });
+      } else {
+        setError(res?.message || 'Failed to submit inquiry. Please try again.');
+      }
+    } catch (err) {
+      if (err.status === 429) {
+        setError('Too many contact inquiries from this IP. Please wait 15 minutes before submitting again.');
+      } else {
+        setError(err.message || 'An unexpected error occurred while transmitting your inquiry. Please try again later.');
+      }
+    } finally {
       setIsSubmitting(false);
-      setFormSubmitted(true);
-    }, 600);
+    }
   };
 
   const channels = [
@@ -155,7 +200,7 @@ export const Contact = () => {
                 <CheckCircle2 size={36} className="text-emerald-400 mx-auto" />
                 <h3 className="font-serif text-xl text-[#FEF5E6]">Inquiry Received</h3>
                 <p className="text-xs text-[#B8AD9A] max-w-md mx-auto leading-relaxed">
-                  Thank you for contacting AUREVELLA. An atelier concierge has received your request and will reach out to <strong className="text-[#FEF5E6]">{formData.email}</strong> shortly.
+                  Thank you for contacting AUREVELLA. An atelier concierge has received your request and will reach out to <strong className="text-[#FEF5E6]">{submittedEmail || formData.email}</strong> shortly.
                 </p>
                 <Button
                   type="button"
@@ -168,6 +213,25 @@ export const Contact = () => {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
+                {error && (
+                  <Alert variant="error" className="mb-4">
+                    {error}
+                  </Alert>
+                )}
+
+                {/* Anti-Bot Honeypot: Hidden from human visitors */}
+                <div aria-hidden="true" style={{ display: 'none', position: 'absolute', left: '-9999px' }}>
+                  <label htmlFor="contact-hp">Website URL</label>
+                  <input
+                    id="contact-hp"
+                    type="text"
+                    name="hp_field"
+                    tabIndex="-1"
+                    autoComplete="off"
+                    value={formData.hp_field}
+                    onChange={(e) => setFormData({ ...formData, hp_field: e.target.value })}
+                  />
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="contact-name">Your Full Name *</Label>

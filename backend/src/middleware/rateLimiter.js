@@ -65,3 +65,17 @@ export const adminLimiter = rateLimit({
     message: 'Admin request rate limit exceeded. Please try again later.',
   },
 });
+
+// Contact Form Submissions Limiter (5 requests per 15 min per IP)
+export const contactLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5, // 5 inquiries per 15 minutes
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  skip: () => process.env.DISABLE_RATE_LIMITER === 'true',
+  message: {
+    status: 'error',
+    message: 'Too many contact inquiries from this IP. Please wait 15 minutes before submitting again.',
+  },
+});
+

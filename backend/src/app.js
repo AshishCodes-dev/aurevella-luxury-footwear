@@ -16,6 +16,7 @@ import productRoutes, { getCategories } from './routes/product.routes.js';
 import userRoutes from './routes/user.routes.js';
 import orderRoutes from './routes/order.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
+import contactRoutes from './routes/contact.routes.js';
 
 const app = express();
 
@@ -100,6 +101,7 @@ app.get('/api/categories', getCategories);
 app.use('/api/users', userRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/contact', contactRoutes);
 
 // 404 Handler
 app.use((req, res, next) => {

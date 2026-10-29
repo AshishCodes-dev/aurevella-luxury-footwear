@@ -32,7 +32,9 @@ AureVeLla/
 │   │   ├── testPhase11.js              # Phase 11 secure admin dashboard & order management suite
 │   │   ├── testPhase14.js              # Phase 14 authentication lifecycle & route guard suite
 │   │   ├── testSeedAdminSafety.js      # Admin seeder safety guards & schema validation suite
-│   │   └── testLoop2Hardening.js       # Multi-origin CORS, rate limiters & error masking suite
+│   │   ├── testLoop2Hardening.js       # Multi-origin CORS, rate limiters & error masking suite
+│   │   ├── testContact.js              # Contact form rate limiting, honeypot & dossier suite
+│   │   └── testRoutesSecurity.js       # Complete 34-route authentication, admin guard & CSRF verification suite
 │   ├── src/
 │   │   ├── config/
 │   │   │   ├── corsOrigins.js          # Multi-origin parser & allowed origin resolver
@@ -305,6 +307,7 @@ npm run test:phase14        # 27/27 tests: authentication lifecycle, user state 
 npm run test:admin-safety   # 10/10 tests: admin seeder safety guards & real Mongoose schema validations
 npm run test:hardening      # 16/16 tests: multi-origin CORS, rate limiters & error masking
 npm run test:contact        # 24/24 tests: public contact submission, honeypot bot defense, rate limiting & admin dossier
+npm run test:routes         # 62/62 tests: route enumeration, 401/403 admin auth, tenant isolation & CSRF defense
 ```
 
 ### 4. Contact Form & Concierge Inquiries Architecture
@@ -323,6 +326,8 @@ npm run test:contact        # 24/24 tests: public contact submission, honeypot b
 ---
 
 ## 🚀 Deployment Considerations (Hostinger)
+
+> For the complete step-by-step production runbook, environment variable checklist, MongoDB Atlas requirements, and post-deploy smoke test runbook, see **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
 
 1. **SPA Route Fallback**:
    [`frontend/public/.htaccess`](frontend/public/.htaccess) contains the Apache/LiteSpeed URL rewrite rules. When deploying `frontend/dist/` to Hostinger's `public_html/`, direct page refreshes on `/shop`, `/checkout`, `/account`, `/orders`, and `/admin` will properly serve `index.html`.

@@ -160,7 +160,7 @@ export const AdminProducts = () => {
       name: '',
       slug: '',
       code: '',
-      categoryId: categories[0]?._id || '',
+      categoryId: categories[0]?.id || categories[0]?._id || '',
       priceRupees: '',
       description: '',
       image: '',
@@ -182,7 +182,25 @@ export const AdminProducts = () => {
       name: prod.name || '',
       slug: prod.slug || '',
       code: prod.code || '',
-      categoryId: prod.category?._id || prod.category?.id || prod.category || '',
+      categoryId:
+        prod.categoryId ||
+        prod.category?._id ||
+        prod.category?.id ||
+        (categories.find(
+          (c) =>
+            c.name === prod.category ||
+            c.slug === prod.category ||
+            c.id === prod.category ||
+            c._id === prod.category
+        )?.id ||
+          categories.find(
+            (c) =>
+              c.name === prod.category ||
+              c.slug === prod.category ||
+              c.id === prod.category ||
+              c._id === prod.category
+          )?._id ||
+          ''),
       priceRupees: prod.pricePaise ? (prod.pricePaise / 100).toString() : '',
       description: prod.description || '',
       image: prod.image || '',
@@ -760,7 +778,7 @@ export const AdminProducts = () => {
                   >
                     <option value="">Select Category</option>
                     {categories.map((c) => (
-                      <option key={c._id || c.slug} value={c._id}>
+                      <option key={c.id || c._id || c.slug} value={c.id || c._id}>
                         {c.name}
                       </option>
                     ))}

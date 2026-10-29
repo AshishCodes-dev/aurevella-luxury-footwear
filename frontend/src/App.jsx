@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { BagProvider } from './context/BagContext.jsx';
 import AppShell from './components/AppShell.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 // Core routes kept in the main bundle (Home, Shop, Product, Bag)
 import Home from './pages/Home.jsx';
@@ -135,13 +136,15 @@ const AppRoutes = () => {
 
 export const App = () => {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <BagProvider>
-          <AppRoutes />
-        </BagProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <BagProvider>
+            <AppRoutes />
+          </BagProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 };
 

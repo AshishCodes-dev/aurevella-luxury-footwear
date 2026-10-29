@@ -152,7 +152,24 @@ if (serviceAccountPath && serviceAccountPath.trim() !== '') {
   }
 }
 
-// 5. ADMIN_SEED Settings
+// 5. TRUST_PROXY Configuration
+const trustProxy = process.env.TRUST_PROXY;
+if (trustProxy !== undefined && trustProxy.trim() !== '') {
+  const trimmed = trustProxy.trim();
+  if (trimmed === 'true' || trimmed === 'false' || !isNaN(Number(trimmed)) || trimmed.length > 0) {
+    pass('TRUST_PROXY', `Set to "${trimmed}" (configured for reverse-proxy rate limiting)`);
+  } else {
+    fail('TRUST_PROXY', `Invalid value: "${trimmed}"`);
+  }
+} else {
+  if (process.env.NODE_ENV === 'production') {
+    info('TRUST_PROXY', 'Unset (defaults to false; set to 1 if behind reverse proxy/load balancer)');
+  } else {
+    pass('TRUST_PROXY', 'Unset (acceptable in development/test environments)');
+  }
+}
+
+// 6. ADMIN_SEED Settings
 const adminEmail = process.env.ADMIN_SEED_EMAIL;
 const adminPassword = process.env.ADMIN_SEED_PASSWORD;
 const adminName = process.env.ADMIN_SEED_NAME;

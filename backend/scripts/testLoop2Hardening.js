@@ -15,6 +15,7 @@ import http from 'http';
 import app from '../src/app.js';
 import { getAllowedOrigins } from '../src/config/corsOrigins.js';
 import { globalApiLimiter } from '../src/middleware/rateLimiter.js';
+import { errorHandler } from '../src/middleware/errorHandler.js';
 
 let passedCount = 0;
 let failedCount = 0;
@@ -42,7 +43,11 @@ async function request(server, path, options = {}) {
       url,
       {
         method: options.method || 'GET',
-        headers: options.headers || {},
+        headers: {
+          Connection: 'close',
+          ...(options.headers || {}),
+        },
+        agent: false,
       },
       (res) => {
         let data = '';
@@ -230,22 +235,8 @@ async function runTests() {
     next(err);
   });
 
-  // Attach same central error handler logic
-  testErrorApp.use((err, req, res, next) => {
-    const statusCode = err.status || err.statusCode || 500;
-    const isProduction = process.env.NODE_ENV === 'production';
-
-    let clientMessage = err.message || 'Internal Server Error';
-    if (statusCode >= 500 && isProduction) {
-      clientMessage = 'An unexpected server error occurred. Please try again later.';
-    }
-
-    res.status(statusCode).json({
-      status: 'error',
-      message: clientMessage,
-      ...(isProduction ? {} : { stack: err.stack }),
-    });
-  });
+  // Attach central error handler middleware
+  testErrorApp.use(errorHandler);
 
   const errorServer = http.createServer(testErrorApp);
   await new Promise((resolve) => errorServer.listen(0, '127.0.0.1', resolve));

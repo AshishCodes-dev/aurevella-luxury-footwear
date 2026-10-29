@@ -9,6 +9,7 @@ import { getAllowedOrigins } from './config/corsOrigins.js';
 import { csrfGuard } from './middleware/csrfGuard.js';
 import { sanitize } from './middleware/sanitize.js';
 import { globalApiLimiter } from './middleware/rateLimiter.js';
+import { errorHandler } from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import productRoutes, { getCategories } from './routes/product.routes.js';
@@ -109,26 +110,6 @@ app.use((req, res, next) => {
 });
 
 // Central Error Handler (never leaks stack trace in production; masks 500 error messages in production)
-app.use((err, req, res, next) => {
-  const statusCode = err.status || err.statusCode || 500;
-  const isProduction = process.env.NODE_ENV === 'production';
-
-  // Server-side logging for unhandled server errors (status >= 500)
-  if (statusCode >= 500) {
-    console.error('[Unhandled Server Error]:', err);
-  }
-
-  // Safe client response message
-  let clientMessage = err.message || 'Internal Server Error';
-  if (statusCode >= 500 && isProduction) {
-    clientMessage = 'An unexpected server error occurred. Please try again later.';
-  }
-
-  res.status(statusCode).json({
-    status: 'error',
-    message: clientMessage,
-    ...(isProduction ? {} : { stack: err.stack }),
-  });
-});
+app.use(errorHandler);
 
 export default app;

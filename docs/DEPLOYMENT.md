@@ -1,7 +1,7 @@
 # AUREVELLA — Production Deployment Runbook & Environment Specification
 
 > **Hostinger & Cloud Architecture**: Comprehensive deployment guide for the AUREVELLA luxury footwear platform (`myaurevella.in`).  
-> **Status**: Verified for Production Readiness (Loop 4 Audit Gate).
+> **Status**: Verified for Production Readiness.
 
 ---
 
@@ -35,31 +35,109 @@ To maintain secure, seamless session persistence with `httpOnly`, `SameSite=Lax`
 | `ALLOWED_ORIGINS` | Comma-delimited list of authorized frontend origins allowed to make CORS requests. | `https://myaurevella.in,https://www.myaurevella.in` | **YES** |
 | `CLIENT_URL` | Primary customer storefront origin used for redirects and canonical links. | `https://myaurevella.in` | **YES** |
 | `TRUST_PROXY` | Configures Express reverse-proxy trust for accurate client IP resolution in rate limiters. Set to `1` behind a single reverse proxy (LiteSpeed/Nginx/Cloudflare), or `true`. | `1` | **YES** (behind reverse proxy) |
-| `RAZORPAY_KEY_ID` | Razorpay production merchant key ID. | `rzp_live_xxxxxxxxxxxxxxxx` | **YES** |
+| `RAZORPAY_KEY_ID` | Razorpay production merchant key ID. Read by backend and returned to client during order creation. | `rzp_live_xxxxxxxxxxxxxxxx` | **YES** |
 | `RAZORPAY_KEY_SECRET` | Razorpay production merchant secret for HMAC SHA-256 signature verification. | `xxxxxxxxxxxxxxxxxxxxxxxx` | **YES** |
 | `RAZORPAY_WEBHOOK_SECRET` | Secret configured in Razorpay Webhooks dashboard for verifying payload signatures. | `whsec_xxxxxxxxxxxxxxxxxxxxxxxx` | **YES** |
 | `FIREBASE_PROJECT_ID` | Google Cloud / Firebase project identifier. | `aurevella-prod-xxxx` | **YES** |
-| `FIREBASE_CLIENT_EMAIL` | Firebase Service Account email address. | `firebase-adminsdk-xxxx@aurevella-prod-xxxx.iam.gserviceaccount.com` | **YES** |
-| `FIREBASE_PRIVATE_KEY` | Firebase Service Account private key PEM string (with `\n` escaping preserved). | `"-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQD...\n-----END PRIVATE KEY-----\n"` | **YES** |
-| `ADMIN_BOOTSTRAP_SECRET` | One-time administrative bootstrap token for running initial setup utilities if needed. | `high-entropy-secret-token` | Optional (Recommended) |
+| `FIREBASE_CLIENT_EMAIL` | Firebase Service Account email address. Required if not using `FIREBASE_SERVICE_ACCOUNT_PATH`. | `firebase-adminsdk-xxxx@aurevella-prod-xxxx.iam.gserviceaccount.com` | Conditional |
+| `FIREBASE_PRIVATE_KEY` | Firebase Service Account private key PEM string. Required if not using `FIREBASE_SERVICE_ACCOUNT_PATH`. | `"-----BEGIN PRIVATE KEY-----\nMIIEvg...-----END PRIVATE KEY-----\n"` | Conditional |
+| `FIREBASE_SERVICE_ACCOUNT_PATH` | Absolute or relative filesystem path to Firebase Service Account JSON keyfile. **Preferred over inline keys** in production to prevent multiline PEM formatting corruption. | `/etc/secrets/service-account.json` or `config/service-account.json` | **Preferred** |
+| `DISABLE_RATE_LIMITER` | Emergency rate-limit kill switch. **NEVER set in production**. When `NODE_ENV === 'production'`, this switch is strictly IGNORED and logs a security warning. | Do not define in production | **NEVER** in prod |
+| `MONGODB_LOCAL_URI` | Development-only fallback connection string for local MongoDB instances. | `mongodb://127.0.0.1:27017/aurevella` | Dev only |
+| `MONGODB_TEST_URI` | Test-suite-only connection string strictly targeting isolated `aurevella_test` database. | `mongodb://127.0.0.1:27017/aurevella_test` | Test only |
+| `USE_LOCAL_DB` | Development/testing switch forcing connection to local DB instead of Atlas. | `false` | Dev/Test only |
 
-> [!CAUTION]
-> **Zero Live Secrets in Version Control**: Never commit `.env` or paste live credentials into Git. All secrets must be populated strictly through the production hosting server's environment dashboard or `.env` file with restrictive `600` filesystem permissions.
+> [!NOTE]
+> **Razorpay Public Key Handling**: The frontend does **NOT** read `VITE_RAZORPAY_KEY_ID` from build environment variables. Instead, when a customer initiates checkout, the backend route `POST /api/payments/create-order` dynamically and securely supplies `{ keyId: process.env.RAZORPAY_KEY_ID, razorpayOrderId, amount, currency }` to the frontend `Razorpay()` checkout modal.
 
-### B. Frontend Build-Time Variables (`frontend/.env.production`)
+### B. Admin Provisioning Variables (Used by `npm run seed:admin`)
+
+| Variable Name | Purpose & Description | Example Value | Required for Seed? |
+| :--- | :--- | :--- | :--- |
+| `ADMIN_SEED_EMAIL` | Unique email address for the initial executive administrator account. Normalized to lowercase. | `concierge@myaurevella.in` | **YES** |
+| `ADMIN_SEED_PASSWORD` | Strong password ($\ge$ 8 characters) for Firebase authentication. Required when creating new account or resetting. | `AtelierSecret2026!` | Required for new or reset |
+| `ADMIN_SEED_NAME` | Display name for the administrative user. Defaults to `Aurevella Admin` if omitted. | `Managing Director` | Optional |
+| `CONFIRM_PROD_SEED` | **Mandatory production safety lock**. Must be set to `true` when running seeder in `NODE_ENV=production`. | `true` | **YES** in production |
+| `ADMIN_RESET_PASSWORD` | Explicit flag to overwrite existing Firebase admin password. Preserves existing password when omitted or `false`. | `true` | Optional (Reset only) |
+
+### C. Frontend Build-Time Variables (`frontend/.env`)
+
+Baked into the compiled client JavaScript bundle at build time (`npm run build`):
 
 | Variable Name | Purpose & Description | Example Value | Required at Build? |
 | :--- | :--- | :--- | :--- |
-| `VITE_API_URL` | Base endpoint for the backend API. Baked into the compiled JS bundle at build time. | `https://api.myaurevella.in` | **YES** |
+| `VITE_API_URL` | Base endpoint for the backend API. Must be a valid remote HTTPS URL in production (e.g. `https://api.myaurevella.in`). Production build strictly FAILS if missing, empty, or pointing to localhost. | `https://api.myaurevella.in` | **YES** |
 | `VITE_FIREBASE_API_KEY` | Public Firebase Web API Key for client-side Auth initialization. | `AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` | **YES** |
 | `VITE_FIREBASE_AUTH_DOMAIN` | Firebase Web Auth domain. | `aurevella-prod-xxxx.firebaseapp.com` | **YES** |
 | `VITE_FIREBASE_PROJECT_ID` | Firebase Project ID. | `aurevella-prod-xxxx` | **YES** |
 | `VITE_FIREBASE_APP_ID` | Firebase Web Application ID. | `1:xxxxxxxxxxxx:web:xxxxxxxxxxxxxxxx` | **YES** |
-| `VITE_RAZORPAY_KEY_ID` | Public Razorpay Key ID initialized in the browser checkout modal. | `rzp_live_xxxxxxxxxxxxxxxx` | **YES** |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase Cloud Messaging sender identifier. | `123456789012` | **YES** |
+| `VITE_FIREBASE_STORAGE_BUCKET` | Firebase Storage bucket domain. | `aurevella-prod-xxxx.appspot.com` | Optional |
 
 ---
 
-## 3. MongoDB Atlas Infrastructure & Database Runbook
+## 3. Executive Admin Provisioning Runbook (`backend/src/utils/seedAdmin.js`)
+
+To create or promote an administrative account safely in production, execute the administrative provisioning utility.
+
+### Step-by-Step Production Provisioning Procedure:
+1. SSH into the backend production server.
+2. Navigate to the backend directory:
+   ```bash
+   cd /var/www/aurevella-backend
+   ```
+3. Execute the seed command with explicit production confirmation:
+   ```bash
+   CONFIRM_PROD_SEED=true \
+   ADMIN_SEED_EMAIL="concierge@myaurevella.in" \
+   ADMIN_SEED_PASSWORD="YourStrongPassword123!" \
+   ADMIN_SEED_NAME="Managing Director" \
+   npm run seed:admin
+   ```
+4. **Expected Console Output**:
+   ```text
+   [Database] Connected to: ...
+   [Firebase] Admin SDK initialized successfully via service account file.
+   [SeedAdmin] Found existing Firebase account for concierge@myaurevella.in.
+   [SeedAdmin] Preserving existing user credentials (password will not be overwritten).
+   [SeedAdmin] Updating existing MongoDB user to admin role...
+   [SeedAdmin] SUCCESS: Administrator account [concierge@myaurevella.in] initialized with admin privileges.
+   ```
+   *(Or `[SeedAdmin] Creating new Firebase account...` and `[SeedAdmin] Creating new MongoDB admin user record...` if provisioning a first-time administrator).*
+
+### Safety Safeguards Enforced by Seeder:
+1. **Production Guard**: If `NODE_ENV === 'production'` and `CONFIRM_PROD_SEED !== 'true'`, the seeder immediately aborts:
+   `[SeedAdmin] ABORT: Running admin seeder in production environment requires CONFIRM_PROD_SEED=true.`
+2. **Email Normalization**: Validates non-empty string and trims/lowercases (`email.trim().toLowerCase()`).
+3. **Password Preservation**: If the account already exists in Firebase, the existing password is preserved intact unless `ADMIN_RESET_PASSWORD=true` is explicitly passed with a valid $\ge$ 8 character password.
+4. **Identity Conflict Abort**: If a MongoDB user with this email exists but is bound to a different `firebaseUid`, the seeder strictly aborts to prevent identity theft or account clobbering:
+   `[SeedAdmin] ABORT: Identity conflict detected. MongoDB user <email> is linked to firebaseUid "<uid1>", but Firebase account has UID "<uid2>". Automatic relinking is blocked for safety.`
+
+---
+
+## 4. Common Deployment Mistakes & Prevention
+
+Here are the top 5 ways an operator or deployment engineer could misconfigure this platform, and how each is prevented:
+
+1. **Building the Frontend with Empty or Localhost `VITE_API_URL`**:
+   - *Risk*: Vite bakes environment variables at compilation time. If built without `VITE_API_URL` or with `http://localhost:5000`, customer browsers in production will attempt to send API requests to their own personal computer.
+   - *Prevention*: `frontend/vite.config.js` enforces a strict compile-time assertion during production builds (`mode === 'production' && command === 'build'`). The build halts immediately with an error if `VITE_API_URL` is omitted, blank, or contains `localhost`, `127.0.0.1`, or `0.0.0.0`.
+2. **Multiline PEM Escaping Errors in `FIREBASE_PRIVATE_KEY`**:
+   - *Risk*: Copying raw RSA private keys with real newlines into cloud dashboard environment variables or `.env` files breaks parser tokens, causing Firebase Admin SDK initialization crashes (`Error: Invalid PEM formatted message`).
+   - *Prevention*: Set `FIREBASE_SERVICE_ACCOUNT_PATH=config/service-account.json`. Reading the JSON keyfile directly from the filesystem bypasses string-escaping pitfalls completely.
+3. **Omitting `TRUST_PROXY=1` Behind Reverse Proxy (LiteSpeed / Nginx / Cloudflare)**:
+   - *Risk*: If `TRUST_PROXY` is missing or `0`, Express cannot read `X-Forwarded-For`. Express sees every request originating from internal loopback IP `127.0.0.1`. All global visitors share a single client IP bucket, triggering false-positive 429 "Too Many Requests" rate limiter lockouts for legitimate customers.
+   - *Prevention*: Always set `TRUST_PROXY=1` in production environments behind a reverse proxy.
+4. **CORS / Cookie Domain Mismatches**:
+   - *Risk*: If `ALLOWED_ORIGINS` is configured as `https://myaurevella.in` but the operator accesses `https://www.myaurevella.in`, or if the API is hosted on a completely different base domain (e.g. `onrender.com`), browsers block `SameSite=Lax` cookies with credentials, preventing user login and cart persistence.
+   - *Prevention*: Keep Storefront (`myaurevella.in`) and API (`api.myaurevella.in`) on the same root domain. Always include both apex and `www` origins in `ALLOWED_ORIGINS=https://myaurevella.in,https://www.myaurevella.in`.
+5. **Accidental Rate Limiter Disablement in Production**:
+   - *Risk*: An operator copies a development `.env` containing `DISABLE_RATE_LIMITER=true` to the production server, leaving the checkout, auth, and contact endpoints unprotected against brute force or volumetric spam.
+   - *Prevention*: `backend/src/middleware/rateLimiter.js` and `backend/scripts/checkEnv.js` strictly ignore `DISABLE_RATE_LIMITER` whenever `NODE_ENV === 'production'`. The rate limiter remains fully active, and `checkEnv.js` fails with a fatal error if the variable is detected in production mode.
+
+---
+
+## 5. MongoDB Atlas Infrastructure & Database Runbook
 
 ### A. Replica Set & ACID Transactions
 - **Strict Requirement**: In production (`NODE_ENV=production`), the payment service executes inventory decrements and order state mutations inside multi-document ACID transactions (`session.withTransaction`).
@@ -93,7 +171,7 @@ node src/utils/seedProducts.js
 
 ---
 
-## 4. Frontend Build & Hostinger Deployment Steps
+## 6. Frontend Build & Hostinger Deployment Steps
 
 1. **Clean Production Build**:
    ```bash
@@ -105,7 +183,7 @@ node src/utils/seedProducts.js
    Confirm `frontend/dist/` contains:
    - `index.html` (entry point)
    - `assets/` (code-split, hashed chunks: `index-*.js`, `index-*.css`, lazy chunks)
-   - `.htaccess` (Apache/LiteSpeed SPA fallback and caching rules)
+   - `.htaccess` (Apache/LiteSpeed SPA fallback, HSTS, and caching rules)
    - `robots.txt`, `sitemap.xml`, `favicon.ico`
    - `brand/` and `images/products/`
 3. **Upload to Hostinger**:
@@ -118,9 +196,7 @@ node src/utils/seedProducts.js
 
 ---
 
-## 5. Backend Deployment & Process Management
-
-Depending on the client's Hostinger tier:
+## 7. Backend Deployment & Process Management
 
 ### Scenario A: Hostinger Cloud / VPS (Recommended)
 1. **Node.js Environment**:
@@ -147,13 +223,15 @@ Depending on the client's Hostinger tier:
    - Route `https://api.myaurevella.in` to `http://127.0.0.1:5000`.
    - Ensure `X-Forwarded-For` and `X-Forwarded-Proto` headers are passed.
 
-### Scenario B: Hostinger Shared Hosting (Decision Pending)
-> [!NOTE]
-> **DECISION PENDING**: If the client has a standard Hostinger Shared/Web Hosting plan without Node.js daemon support, the Express API cannot run natively on that plan. The frontend can remain on Hostinger, but the backend API should be deployed to a dedicated Node.js service (such as Render, Railway, DigitalOcean App Platform, or a Hostinger KVM VPS) pointed to the DNS record `api.myaurevella.in`.
+### Scenario B: Dedicated Node.js PaaS (Alternative)
+If the client holds a Hostinger Shared Web Hosting plan without native Node.js process manager support:
+- Deploy backend to a managed Node.js container (Render, Railway, or DigitalOcean App Platform).
+- Configure custom domain CNAME: `api.myaurevella.in`.
+- Set all production environment variables through the platform dashboard.
 
 ---
 
-## 6. Post-Deployment Smoke Test Checklist
+## 8. Post-Deployment Smoke Test Checklist
 
 Execute these 10 real checks immediately following production deployment:
 

@@ -196,6 +196,16 @@ if (adminName && adminName.trim().length > 0) {
   info('ADMIN_SEED_NAME', 'Not set (defaults to "Aurevella Admin")');
 }
 
+// 7. DISABLE_RATE_LIMITER Production Guard
+const disableRateLimiter = process.env.DISABLE_RATE_LIMITER;
+if (process.env.NODE_ENV === 'production' && disableRateLimiter === 'true') {
+  fail('DISABLE_RATE_LIMITER', 'Security violation: DISABLE_RATE_LIMITER must never be "true" in production.');
+} else if (disableRateLimiter === 'true') {
+  info('DISABLE_RATE_LIMITER', 'Set to "true" (allowed in development/test only; ignored in production)');
+} else {
+  pass('DISABLE_RATE_LIMITER', 'Not enabled or active (rate limiters will enforce)');
+}
+
 console.log('\n========================================');
 if (allPassed) {
   console.log('STATUS: ALL CRITICAL CHECKS PASSED');

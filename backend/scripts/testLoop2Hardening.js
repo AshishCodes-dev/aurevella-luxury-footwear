@@ -12,9 +12,10 @@
 
 import express from 'express';
 import http from 'http';
+import rateLimit from 'express-rate-limit';
 import app from '../src/app.js';
 import { getAllowedOrigins } from '../src/config/corsOrigins.js';
-import { globalApiLimiter } from '../src/middleware/rateLimiter.js';
+import { globalApiLimiter, isRateLimiterDisabled } from '../src/middleware/rateLimiter.js';
 import { errorHandler } from '../src/middleware/errorHandler.js';
 
 let passedCount = 0;
@@ -291,6 +292,83 @@ async function runTests() {
   } finally {
     process.env.NODE_ENV = originalEnv;
     await new Promise((resolve) => errorServer.close(resolve));
+  }
+
+  // --- Part 5: Rate Limiter Production Guard & Test Mode Exemption ---
+  console.log('\n--- Part 5: Rate Limiter Production Guard & Test Mode Exemption ---');
+  const savedNodeEnv = process.env.NODE_ENV;
+  const savedDisableFlag = process.env.DISABLE_RATE_LIMITER;
+
+  try {
+    // 5.1 When NODE_ENV === 'production' and DISABLE_RATE_LIMITER === 'true'
+    process.env.NODE_ENV = 'production';
+    process.env.DISABLE_RATE_LIMITER = 'true';
+    const prodDisabled = isRateLimiterDisabled();
+    assert(
+      prodDisabled === false,
+      'Rate Limiter Kill Switch: Ignored in production mode (isRateLimiterDisabled returns false)',
+      `Returned: ${prodDisabled}`
+    );
+
+    // 5.2 When NODE_ENV === 'test' and DISABLE_RATE_LIMITER === 'true'
+    process.env.NODE_ENV = 'test';
+    process.env.DISABLE_RATE_LIMITER = 'true';
+    const testDisabled = isRateLimiterDisabled();
+    assert(
+      testDisabled === true,
+      'Rate Limiter Kill Switch: Active in test mode (isRateLimiterDisabled returns true)',
+      `Returned: ${testDisabled}`
+    );
+
+    // 5.3 Live rate limiter enforcement under production mode with kill switch set
+    const rateLimitTestApp = express();
+    const testLimiter = rateLimit({
+      windowMs: 60 * 1000,
+      limit: 2,
+      standardHeaders: 'draft-8',
+      legacyHeaders: false,
+      skip: () => isRateLimiterDisabled(),
+      message: { status: 'error', message: 'Rate limit exceeded' },
+    });
+    rateLimitTestApp.get('/test-limit', testLimiter, (req, res) => res.json({ ok: true }));
+
+    const rateServer = http.createServer(rateLimitTestApp);
+    await new Promise((resolve) => rateServer.listen(0, '127.0.0.1', resolve));
+
+    try {
+      // In production mode with DISABLE_RATE_LIMITER=true, rate limit MUST trigger on 3rd request
+      process.env.NODE_ENV = 'production';
+      process.env.DISABLE_RATE_LIMITER = 'true';
+
+      const r1 = await request(rateServer, '/test-limit');
+      const r2 = await request(rateServer, '/test-limit');
+      const r3 = await request(rateServer, '/test-limit');
+
+      assert(
+        r1.status === 200 && r2.status === 200 && r3.status === 429,
+        'Rate Limiter: Limits are actively enforced in production even when DISABLE_RATE_LIMITER="true"',
+        `r1: ${r1.status}, r2: ${r2.status}, r3: ${r3.status}`
+      );
+
+      // In test mode with DISABLE_RATE_LIMITER=true, rate limit must be skipped
+      process.env.NODE_ENV = 'test';
+      process.env.DISABLE_RATE_LIMITER = 'true';
+
+      const t1 = await request(rateServer, '/test-limit');
+      const t2 = await request(rateServer, '/test-limit');
+      const t3 = await request(rateServer, '/test-limit');
+
+      assert(
+        t1.status === 200 && t2.status === 200 && t3.status === 200,
+        'Rate Limiter: Limits are bypassed in test mode when DISABLE_RATE_LIMITER="true"',
+        `t1: ${t1.status}, t2: ${t2.status}, t3: ${t3.status}`
+      );
+    } finally {
+      await new Promise((resolve) => rateServer.close(resolve));
+    }
+  } finally {
+    process.env.NODE_ENV = savedNodeEnv;
+    process.env.DISABLE_RATE_LIMITER = savedDisableFlag;
   }
 
   // --- Summary ---

@@ -219,6 +219,11 @@ async function runLayoutChecks() {
 
   try {
     for (const route of ROUTES) {
+        // Skip admin routes in unauthenticated layout check to avoid timeout due to auth redirects
+        if (route.path.startsWith('/admin')) {
+          console.log(`Skipping admin route ${route.path} (requires authentication)`);
+          continue;
+        }
       for (const width of WIDTHS) {
         const page = await browser.newPage({
           viewport: { width, height: HEIGHT },

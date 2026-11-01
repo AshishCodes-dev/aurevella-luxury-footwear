@@ -151,12 +151,11 @@ export const AppShell = ({ children }) => {
             <button
               type="button"
               onClick={openBag}
-              aria-label={`Open shopping bag with ${totalCount} items`}
-              aria-labelledby="bag-label-text bag-count-text"
+              aria-label={`Bag ${totalCount} — Open shopping bag with ${totalCount} items`}
               className="min-h-[44px] inline-flex items-center gap-2 px-2.5 sm:px-3 py-1.5 bg-[#181210] border border-[#2F1C15] hover:border-[#FEF5E6]/40 text-[#FEF5E6] transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] select-none"
             >
-              <ShoppingBag size={16} />
-              <span id="bag-label-text" className="hidden sm:inline text-xs uppercase tracking-[0.16em] font-medium">Bag</span>
+              <ShoppingBag size={16} aria-hidden="true" />
+              <span id="bag-label-text" className="hidden sm:inline text-xs uppercase tracking-[0.16em] font-medium">Bag</span>{' '}
               <span id="bag-count-text" className="text-[10px] font-semibold bg-[#2F1C15] text-[#FEF5E6] px-1.5 py-0.5 border border-[#3D261C] min-w-[20px] text-center">
                 {totalCount}
               </span>

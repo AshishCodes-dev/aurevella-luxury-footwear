@@ -286,6 +286,7 @@ Executes Playwright across 19 routes on 5 responsive viewports (360px, 390px, 76
 cd frontend
 npm run check:layout
 ```
+> **Note**: Playwright scripts serve pre-built `frontend/dist`, which must have been built with a non-localhost `VITE_API_URL` (`$env:VITE_API_URL="https://api.myaurevella.in"; npm --prefix frontend run build`) or the production guard in `api.js` will break them at runtime.
 
 ### 2. Standalone In-Memory Razorpay Mock Suite (Backend)
 Verifies fail-closed behavior without network or database dependencies:

@@ -179,6 +179,8 @@ node src/utils/seedProducts.js
    npm ci
    npm run build
    ```
+   > **Note on Playwright Verification Scripts**: Playwright test suites (`check:layout`, functional e2e, and admin UI tests) serve pre-built `frontend/dist`, which must have been built with a non-localhost `VITE_API_URL` (`$env:VITE_API_URL="https://api.myaurevella.in"; npm --prefix frontend run build`) or the production guard in `api.js` will break them at runtime.
+
 2. **Verify Distribution Folder**:
    Confirm `frontend/dist/` contains:
    - `index.html` (entry point)

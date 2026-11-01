@@ -35,12 +35,16 @@ if (mongoUri && mongoUri.trim().length > 0) {
   fail('MONGODB_URI', 'Missing or empty');
 }
 
-// 2. CLIENT_URL
+// 2. CLIENT_URL & ALLOWED_ORIGINS
+const allowedOrigins = process.env.ALLOWED_ORIGINS;
 const clientUrl = process.env.CLIENT_URL;
-if (clientUrl && clientUrl.trim().length > 0) {
-  pass('CLIENT_URL', 'Set and non-empty');
+if (allowedOrigins && allowedOrigins.trim().length > 0) {
+  const count = allowedOrigins.split(',').filter((o) => o.trim().length > 0).length;
+  pass('ALLOWED_ORIGINS', `Set (${count} origins configured)`);
+} else if (clientUrl && clientUrl.trim().length > 0) {
+  pass('CLIENT_URL', 'Set and non-empty (fallback for ALLOWED_ORIGINS)');
 } else {
-  fail('CLIENT_URL', 'Missing or empty');
+  fail('CLIENT_URL / ALLOWED_ORIGINS', 'Missing or empty: Neither CLIENT_URL nor ALLOWED_ORIGINS is configured');
 }
 
 // 3. JWT_SECRET
@@ -148,7 +152,24 @@ if (serviceAccountPath && serviceAccountPath.trim() !== '') {
   }
 }
 
-// 5. ADMIN_SEED Settings
+// 5. TRUST_PROXY Configuration
+const trustProxy = process.env.TRUST_PROXY;
+if (trustProxy !== undefined && trustProxy.trim() !== '') {
+  const trimmed = trustProxy.trim();
+  if (trimmed === 'true' || trimmed === 'false' || !isNaN(Number(trimmed)) || trimmed.length > 0) {
+    pass('TRUST_PROXY', `Set to "${trimmed}" (configured for reverse-proxy rate limiting)`);
+  } else {
+    fail('TRUST_PROXY', `Invalid value: "${trimmed}"`);
+  }
+} else {
+  if (process.env.NODE_ENV === 'production') {
+    info('TRUST_PROXY', 'Unset (defaults to false; set to 1 if behind reverse proxy/load balancer)');
+  } else {
+    pass('TRUST_PROXY', 'Unset (acceptable in development/test environments)');
+  }
+}
+
+// 6. ADMIN_SEED Settings
 const adminEmail = process.env.ADMIN_SEED_EMAIL;
 const adminPassword = process.env.ADMIN_SEED_PASSWORD;
 const adminName = process.env.ADMIN_SEED_NAME;
@@ -173,6 +194,16 @@ if (adminName && adminName.trim().length > 0) {
   pass('ADMIN_SEED_NAME', 'Set');
 } else {
   info('ADMIN_SEED_NAME', 'Not set (defaults to "Aurevella Admin")');
+}
+
+// 7. DISABLE_RATE_LIMITER Production Guard
+const disableRateLimiter = process.env.DISABLE_RATE_LIMITER;
+if (process.env.NODE_ENV === 'production' && disableRateLimiter === 'true') {
+  fail('DISABLE_RATE_LIMITER', 'Security violation: DISABLE_RATE_LIMITER must never be "true" in production.');
+} else if (disableRateLimiter === 'true') {
+  info('DISABLE_RATE_LIMITER', 'Set to "true" (allowed in development/test only; ignored in production)');
+} else {
+  pass('DISABLE_RATE_LIMITER', 'Not enabled or active (rate limiters will enforce)');
 }
 
 console.log('\n========================================');

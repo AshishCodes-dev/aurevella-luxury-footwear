@@ -407,7 +407,7 @@ export const Shop = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-full inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 text-xs uppercase tracking-[0.16em] bg-[#0F0A09] border border-[#2F1C15] hover:border-[#FEF5E6]/40 text-[#FEF5E6] hover:bg-[#241B18] transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
-                      aria-label={`Inquire on WhatsApp about ${product.name}`}
+                      aria-label={`Inquire — WhatsApp concierge for ${product.name}`}
                     >
                       <MessageSquare size={13} />
                       <span>Inquire</span>

@@ -160,7 +160,7 @@ export const AdminProducts = () => {
       name: '',
       slug: '',
       code: '',
-      categoryId: categories[0]?._id || '',
+      categoryId: categories[0]?.id || categories[0]?._id || '',
       priceRupees: '',
       description: '',
       image: '',
@@ -182,7 +182,25 @@ export const AdminProducts = () => {
       name: prod.name || '',
       slug: prod.slug || '',
       code: prod.code || '',
-      categoryId: prod.category?._id || prod.category?.id || prod.category || '',
+      categoryId:
+        prod.categoryId ||
+        prod.category?._id ||
+        prod.category?.id ||
+        (categories.find(
+          (c) =>
+            c.name === prod.category ||
+            c.slug === prod.category ||
+            c.id === prod.category ||
+            c._id === prod.category
+        )?.id ||
+          categories.find(
+            (c) =>
+              c.name === prod.category ||
+              c.slug === prod.category ||
+              c.id === prod.category ||
+              c._id === prod.category
+          )?._id ||
+          ''),
       priceRupees: prod.pricePaise ? (prod.pricePaise / 100).toString() : '',
       description: prod.description || '',
       image: prod.image || '',
@@ -684,10 +702,11 @@ export const AdminProducts = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Product Name */}
                 <div className="space-y-1.5 sm:col-span-2">
-                  <label className="uppercase tracking-widest text-[10px] text-[#B8AD9A] font-medium">
+                  <label htmlFor="admin-product-title" className="uppercase tracking-widest text-[10px] text-[#B8AD9A] font-medium">
                     Product Title *
                   </label>
                   <input
+                    id="admin-product-title"
                     type="text"
                     required
                     placeholder="e.g. Floral Block Heel Sandal"
@@ -760,7 +779,7 @@ export const AdminProducts = () => {
                   >
                     <option value="">Select Category</option>
                     {categories.map((c) => (
-                      <option key={c._id || c.slug} value={c._id}>
+                      <option key={c.id || c._id || c.slug} value={c.id || c._id}>
                         {c.name}
                       </option>
                     ))}
@@ -769,10 +788,11 @@ export const AdminProducts = () => {
 
                 {/* Price in INR */}
                 <div className="space-y-1.5">
-                  <label className="uppercase tracking-widest text-[10px] text-[#B8AD9A] font-medium">
+                  <label htmlFor="admin-product-price" className="uppercase tracking-widest text-[10px] text-[#B8AD9A] font-medium">
                     Price (₹ INR) *
                   </label>
                   <input
+                    id="admin-product-price"
                     type="number"
                     required
                     min="1"
@@ -788,10 +808,11 @@ export const AdminProducts = () => {
 
                 {/* Initial Stock */}
                 <div className="space-y-1.5">
-                  <label className="uppercase tracking-widest text-[10px] text-[#B8AD9A] font-medium">
+                  <label htmlFor="admin-product-stock" className="uppercase tracking-widest text-[10px] text-[#B8AD9A] font-medium">
                     Inventory Units *
                   </label>
                   <input
+                    id="admin-product-stock"
                     type="number"
                     required
                     min="0"

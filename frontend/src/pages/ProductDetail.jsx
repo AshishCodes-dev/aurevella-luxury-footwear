@@ -405,7 +405,7 @@ export const ProductDetail = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-[50px] px-6 text-xs uppercase tracking-[0.2em] bg-[#181210] border border-[#2F1C15] hover:border-[#FEF5E6]/40 text-[#FEF5E6] hover:bg-[#241B18] transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] shrink-0"
-                aria-label={`Inquire on WhatsApp about ${product.name}`}
+                aria-label={`Concierge Fit Advice — Inquire on WhatsApp about ${product.name}`}
               >
                 <MessageSquare size={15} />
                 <span>Concierge Fit Advice</span>

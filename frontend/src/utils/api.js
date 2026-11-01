@@ -230,3 +230,32 @@ export const updateAdminOrderFulfillment = async (idOrNumber, { status, notes })
     body: { status, notes },
   });
 };
+
+// Client Contact & Concierge Inquiries
+export const submitContactInquiry = async (inquiryData) => {
+  return apiFetch('/api/contact', {
+    method: 'POST',
+    body: inquiryData,
+  });
+};
+
+export const fetchAdminInquiries = async (params = {}) => {
+  const query = new URLSearchParams();
+  if (params.page) query.set('page', params.page);
+  if (params.limit) query.set('limit', params.limit);
+  if (params.status) query.set('status', params.status);
+  if (params.search) query.set('search', params.search);
+  const qs = query.toString();
+  return apiFetch(qs ? `/api/admin/inquiries?${qs}` : '/api/admin/inquiries');
+};
+
+export const fetchAdminInquiry = async (id) => {
+  return apiFetch(`/api/admin/inquiries/${encodeURIComponent(id)}`);
+};
+
+export const updateAdminInquiryStatus = async (id, status) => {
+  return apiFetch(`/api/admin/inquiries/${encodeURIComponent(id)}/status`, {
+    method: 'PATCH',
+    body: { status },
+  });
+};

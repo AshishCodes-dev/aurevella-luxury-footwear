@@ -4,6 +4,7 @@ import {
   BarChart3,
   Package,
   ShoppingBag,
+  Mail,
   ArrowLeft,
   Shield,
   RefreshCw,
@@ -14,6 +15,7 @@ import { fetchAdminStats } from '../../utils/api.js';
 import AdminOverview from './AdminOverview.jsx';
 import AdminProducts from './AdminProducts.jsx';
 import AdminOrders from './AdminOrders.jsx';
+import AdminInquiries from './AdminInquiries.jsx';
 
 export const AdminDashboard = () => {
   const { user } = useAuth();
@@ -159,6 +161,20 @@ export const AdminDashboard = () => {
                 </span>
               )}
             </button>
+
+            {/* Inquiries Tab */}
+            <button
+              type="button"
+              onClick={() => handleTabChange('inquiries')}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 text-xs uppercase tracking-widest transition-subtle border ${
+                activeTab === 'inquiries'
+                  ? 'bg-[#FEF5E6] text-[#0F0A09] border-[#FEF5E6] font-semibold shadow-sm'
+                  : 'bg-[#181210] border-[#2F1C15] text-[#B8AD9A] hover:text-[#FEF5E6] hover:bg-[#241B18]'
+              }`}
+            >
+              <Mail size={14} />
+              <span>Inquiries</span>
+            </button>
           </div>
 
           {/* Quick Link to Storefront Shop */}
@@ -194,6 +210,8 @@ export const AdminDashboard = () => {
               onClearInitialOrder={() => setTargetedOrderId(null)}
             />
           )}
+
+          {activeTab === 'inquiries' && <AdminInquiries />}
         </div>
       </div>
     </div>

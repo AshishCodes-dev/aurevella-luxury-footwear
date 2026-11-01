@@ -151,12 +151,12 @@ export const AppShell = ({ children }) => {
             <button
               type="button"
               onClick={openBag}
-              aria-label={`Open shopping bag with ${totalCount} items`}
+              aria-label={`Bag ${totalCount} — Open shopping bag with ${totalCount} items`}
               className="min-h-[44px] inline-flex items-center gap-2 px-2.5 sm:px-3 py-1.5 bg-[#181210] border border-[#2F1C15] hover:border-[#FEF5E6]/40 text-[#FEF5E6] transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] select-none"
             >
-              <ShoppingBag size={16} />
-              <span className="hidden sm:inline text-xs uppercase tracking-[0.16em] font-medium">Bag</span>
-              <span className="text-[10px] font-semibold bg-[#2F1C15] text-[#FEF5E6] px-1.5 py-0.5 border border-[#3D261C] min-w-[20px] text-center">
+              <ShoppingBag size={16} aria-hidden="true" />
+              <span id="bag-label-text" className="hidden sm:inline text-xs uppercase tracking-[0.16em] font-medium">Bag</span>{' '}
+              <span id="bag-count-text" className="text-[10px] font-semibold bg-[#2F1C15] text-[#FEF5E6] px-1.5 py-0.5 border border-[#3D261C] min-w-[20px] text-center">
                 {totalCount}
               </span>
             </button>
@@ -171,7 +171,7 @@ export const AppShell = ({ children }) => {
                 {user?.role === 'admin' && (
                   <Link
                     to="/admin"
-                    aria-label="Atelier Admin Portal"
+                    aria-label="Admin — Atelier Admin Portal"
                     className="min-h-[38px] inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] uppercase tracking-[0.16em] text-amber-300 hover:text-amber-200 bg-amber-950/30 border border-amber-800/50 hover:border-amber-600/70 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-amber-400 font-medium"
                   >
                     <ShieldCheck size={13} className="text-amber-400 shrink-0" />
@@ -182,7 +182,6 @@ export const AppShell = ({ children }) => {
                 {/* Account Link */}
                 <Link
                   to="/account"
-                  aria-label="Customer Account"
                   className="text-xs uppercase tracking-[0.16em] text-[#B8AD9A] hover:text-[#FEF5E6] min-h-[44px] inline-flex items-center gap-1.5 px-2 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
                 >
                   <User size={15} className="shrink-0" />
@@ -193,7 +192,6 @@ export const AppShell = ({ children }) => {
                 {/* Orders Link (Shown on wide desktop) */}
                 <Link
                   to="/orders"
-                  aria-label="Order History"
                   className="hidden 2xl:inline-flex text-xs uppercase tracking-[0.16em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] items-center px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
                 >
                   Orders
@@ -203,7 +201,6 @@ export const AppShell = ({ children }) => {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  aria-label="Sign out"
                   className="text-xs uppercase tracking-[0.16em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
                 >
                   Sign Out

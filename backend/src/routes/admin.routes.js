@@ -2,6 +2,7 @@ import express from 'express';
 import { z } from 'zod';
 import { authenticate, authorizeAdmin } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { adminLimiter } from '../middleware/rateLimiter.js';
 import {
   getDashboardStats,
   getAdminProducts,
@@ -13,11 +14,16 @@ import {
   getAdminOrderById,
   updateOrderFulfillment,
 } from '../controllers/admin.controller.js';
+import {
+  getAdminInquiries,
+  getAdminInquiryById,
+  updateAdminInquiryStatus,
+} from '../controllers/contact.controller.js';
 
 const router = express.Router();
 
-// Strict Security Requirement: All admin endpoints enforce both authentication and admin authorization
-router.use(authenticate, authorizeAdmin);
+// Strict Security Requirement: All admin endpoints enforce authentication, admin authorization, and rate limiting
+router.use(authenticate, authorizeAdmin, adminLimiter);
 
 // Diagnostic Ping
 router.get('/ping', (req, res) => {
@@ -113,6 +119,14 @@ const updateOrderFulfillmentSchema = z.object({
   }),
 });
 
+const updateInquiryStatusSchema = z.object({
+  body: z.object({
+    status: z.enum(['new', 'read', 'replied'], {
+      required_error: 'Valid status is required (new, read, or replied)',
+    }),
+  }),
+});
+
 // --- Admin Routes ---
 
 // Dashboard Analytics & Metrics
@@ -129,5 +143,10 @@ router.patch('/products/:id/stock', validate(updateProductStockSchema), updatePr
 router.get('/orders', getAdminOrders);
 router.get('/orders/:idOrNumber', getAdminOrderById);
 router.patch('/orders/:idOrNumber/fulfillment', validate(updateOrderFulfillmentSchema), updateOrderFulfillment);
+
+// Client Inquiries Management
+router.get('/inquiries', getAdminInquiries);
+router.get('/inquiries/:id', getAdminInquiryById);
+router.patch('/inquiries/:id/status', validate(updateInquiryStatusSchema), updateAdminInquiryStatus);
 
 export default router;

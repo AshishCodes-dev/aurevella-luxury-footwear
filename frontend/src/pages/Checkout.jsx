@@ -327,7 +327,6 @@ export const Checkout = () => {
         },
         modal: {
           ondismiss: () => {
-            console.log('Razorpay modal closed by client');
             setPaymentStatus('cancelled');
             setIsSubmitting(false);
           },
@@ -750,10 +749,11 @@ export const Checkout = () => {
               <form onSubmit={handleSubmit(handleSaveAddress)} className="space-y-4 pt-2" noValidate>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[11px] uppercase tracking-wider text-[#B8AD9A] mb-1.5 font-medium">
+                    <label htmlFor="checkout-recipientName" className="block text-[11px] uppercase tracking-wider text-[#B8AD9A] mb-1.5 font-medium">
                       Recipient Full Name *
                     </label>
                     <input
+                      id="checkout-recipientName"
                       type="text"
                       {...register('recipientName')}
                       placeholder="e.g. Ananya Sharma"
@@ -765,10 +765,11 @@ export const Checkout = () => {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] uppercase tracking-wider text-[#B8AD9A] mb-1.5 font-medium">
+                    <label htmlFor="checkout-phone" className="block text-[11px] uppercase tracking-wider text-[#B8AD9A] mb-1.5 font-medium">
                       Delivery Phone Number *
                     </label>
                     <input
+                      id="checkout-phone"
                       type="tel"
                       {...register('phone')}
                       placeholder="+91 98765 43210"
@@ -781,10 +782,11 @@ export const Checkout = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] uppercase tracking-wider text-[#B8AD9A] mb-1.5 font-medium">
+                  <label htmlFor="checkout-addressline1" className="block text-[11px] uppercase tracking-wider text-[#B8AD9A] mb-1.5 font-medium">
                     Address Line 1 (House/Flat, Building, Street) *
                   </label>
                   <input
+                    id="checkout-addressline1"
                     type="text"
                     {...register('addressLine1')}
                     placeholder="e.g. Flat 402, Signature Towers, MG Road"
@@ -796,10 +798,11 @@ export const Checkout = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] uppercase tracking-wider text-[#B8AD9A] mb-1.5 font-medium">
+                  <label htmlFor="checkout-addressline2" className="block text-[11px] uppercase tracking-wider text-[#B8AD9A] mb-1.5 font-medium">
                     Address Line 2 (Landmark, Area - Optional)
                   </label>
                   <input
+                    id="checkout-addressline2"
                     type="text"
                     {...register('addressLine2')}
                     placeholder="e.g. Near Royal Palms Atelier"
@@ -809,10 +812,11 @@ export const Checkout = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[11px] uppercase tracking-wider text-[#B8AD9A] mb-1.5 font-medium">
+                    <label htmlFor="checkout-city" className="block text-[11px] uppercase tracking-wider text-[#B8AD9A] mb-1.5 font-medium">
                       City *
                     </label>
                     <input
+                      id="checkout-city"
                       type="text"
                       {...register('city')}
                       placeholder="e.g. Mumbai"
@@ -824,10 +828,11 @@ export const Checkout = () => {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] uppercase tracking-wider text-[#B8AD9A] mb-1.5 font-medium">
+                    <label htmlFor="checkout-state" className="block text-[11px] uppercase tracking-wider text-[#B8AD9A] mb-1.5 font-medium">
                       State *
                     </label>
                     <input
+                      id="checkout-state"
                       type="text"
                       {...register('state')}
                       placeholder="e.g. Maharashtra"
@@ -839,10 +844,11 @@ export const Checkout = () => {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] uppercase tracking-wider text-[#B8AD9A] mb-1.5 font-medium">
+                    <label htmlFor="checkout-postalCode" className="block text-[11px] uppercase tracking-wider text-[#B8AD9A] mb-1.5 font-medium">
                       PIN Code (6 Digits) *
                     </label>
                     <input
+                      id="checkout-postalCode"
                       type="text"
                       maxLength={6}
                       {...register('postalCode')}
@@ -858,11 +864,11 @@ export const Checkout = () => {
                 <div className="flex items-center gap-2 pt-1">
                   <input
                     type="checkbox"
-                    id="isDefault"
+                    id="checkout-isDefault"
                     {...register('isDefault')}
                     className="accent-[#FEF5E6] w-4 h-4 cursor-pointer"
                   />
-                  <label htmlFor="isDefault" className="text-xs text-[#B8AD9A] select-none cursor-pointer">
+                  <label htmlFor="checkout-isDefault" className="text-xs text-[#B8AD9A] select-none cursor-pointer">
                     Set as my primary delivery address
                   </label>
                 </div>
@@ -904,7 +910,9 @@ export const Checkout = () => {
                     >
                       <input
                         type="radio"
+                        id={`delivery-addr-${addrId}`}
                         name="delivery_address"
+                        aria-label={`Select delivery address for ${addr.recipientName}`}
                         checked={isSelected}
                         onChange={() => setSelectedAddressId(addrId)}
                         className="mt-1 accent-[#FEF5E6] cursor-pointer"
@@ -1010,6 +1018,8 @@ export const Checkout = () => {
               Include bespoke fitting notes, gift enclosure cards, or special dispatch instructions.
             </p>
             <textarea
+              id="checkout-orderNotes"
+              aria-label="Atelier notes and delivery instructions"
               value={orderNotes}
               onChange={(e) => setOrderNotes(e.target.value)}
               maxLength={500}

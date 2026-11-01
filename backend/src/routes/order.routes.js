@@ -2,6 +2,7 @@ import express from 'express';
 import { z } from 'zod';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { orderLimiter } from '../middleware/rateLimiter.js';
 import {
   validateCheckoutQuote,
   createOrder,
@@ -49,8 +50,8 @@ const createOrderSchema = z.object({
 // All order endpoints require authentication
 router.use(authenticate);
 
-router.post('/quote', validate(quoteOrderSchema), validateCheckoutQuote);
-router.post('/', validate(createOrderSchema), createOrder);
+router.post('/quote', orderLimiter, validate(quoteOrderSchema), validateCheckoutQuote);
+router.post('/', orderLimiter, validate(createOrderSchema), createOrder);
 router.get('/', getUserOrders);
 router.get('/:idOrNumber', getOrderByIdOrNumber);
 

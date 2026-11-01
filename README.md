@@ -29,9 +29,15 @@ AureVeLla/
 │   │   ├── testPhase6_1.js             # Phase 6.1 catalogue & variant regression suite
 │   │   ├── testPhase6_2.js             # Phase 6.2 payment isolation & ACID transaction suite
 │   │   ├── testPhase7.js               # Phase 7 checkout & order history regression suite
-│   │   └── testPhase11.js              # Phase 11 secure admin dashboard & order management suite
+│   │   ├── testPhase11.js              # Phase 11 secure admin dashboard & order management suite
+│   │   ├── testPhase14.js              # Phase 14 authentication lifecycle & route guard suite
+│   │   ├── testSeedAdminSafety.js      # Admin seeder safety guards & schema validation suite
+│   │   ├── testLoop2Hardening.js       # Multi-origin CORS, rate limiters & error masking suite
+│   │   ├── testContact.js              # Contact form rate limiting, honeypot & dossier suite
+│   │   └── testRoutesSecurity.js       # Complete 34-route authentication, admin guard & CSRF verification suite
 │   ├── src/
 │   │   ├── config/
+│   │   │   ├── corsOrigins.js          # Multi-origin parser & allowed origin resolver
 │   │   │   ├── db.js                   # Mongoose connection & URI parser
 │   │   │   ├── firebase.js             # Firebase Admin SDK initialization
 │   │   │   └── razorpay.js             # Razorpay SDK instance & offline test double factory
@@ -43,8 +49,11 @@ AureVeLla/
 │   │   │   ├── payment.controller.js   # Payment creation, verification & webhooks
 │   │   │   └── product.controller.js   # Product catalogue & category handlers
 │   │   ├── middleware/
+│   │   │   ├── adminAuth.js            # Admin authorization guard
 │   │   │   ├── auth.js                 # JWT authenticate & authorizeAdmin guards
 │   │   │   ├── csrfGuard.js            # Custom X-Aurevella-Request & Origin header defense
+│   │   │   ├── errorHandler.js         # Production-safe error masking & centralized logging
+│   │   │   ├── rateLimiter.js          # Tiered rate limiting with payment webhook exemption
 │   │   │   ├── sanitize.js             # NoSQL query injection sanitizer
 │   │   │   └── validate.js             # Zod request schema validator
 │   │   ├── models/
@@ -74,7 +83,9 @@ AureVeLla/
 │   ├── public/
 │   │   ├── .htaccess                   # Apache/LiteSpeed SPA rewrite fallback for Hostinger
 │   │   ├── brand/                      # Official client logos, circular marks & icons
-│   │   └── images/products/            # 1:1 client footwear launch photography
+│   │   ├── images/products/            # 1:1 client footwear launch photography
+│   │   ├── robots.txt                  # Search engine crawler policies
+│   │   └── sitemap.xml                 # XML sitemap index of canonical brand pages
 │   ├── scripts/
 │   │   └── layout-check.mjs            # Playwright headless browser layout & form audit
 │   ├── src/
@@ -117,6 +128,7 @@ AureVeLla/
 │   ├── package.json                    # Frontend dependencies & build scripts
 │   └── vite.config.js                  # Vite bundler configuration with Tailwind CSS v4
 ├── docs/                               # Comprehensive project architectural specifications
+│   └── archive/                        # Historical phase logs & visual/UX audit reports
 ├── .gitignore                          # Strict secret, log, and build output exclusions
 └── README.md                           # Master project documentation
 ```
@@ -204,11 +216,13 @@ Environment files (`.env`) contain secrets and infrastructure configuration. The
 | :--- | :--- |
 | `PORT` | Listening port for Express HTTP server (e.g. `5000` or host `$PORT`) |
 | `NODE_ENV` | Environment mode (`development` or `production`) |
-| `CLIENT_URL` | Exact allowed origin for CORS and CSRF guards (e.g. `https://myaurevella.in`) |
+| `CLIENT_URL` | Primary allowed origin for CORS and CSRF guards (e.g. `https://myaurevella.in`) |
+| `ALLOWED_ORIGINS` | Comma-separated list of allowed origins (e.g. `https://myaurevella.in,https://www.myaurevella.in,http://localhost:5173`) |
+| `TRUST_PROXY` | Reverse-proxy hop count or trust flag (`true`, `false`, or hop count) for IP resolution & rate limiting |
 | `MONGODB_URI` | MongoDB Atlas replica set connection string (`mongodb+srv://...`) |
 | `MONGODB_TEST_URI` | Dedicated local test database URI (`127.0.0.1:27017/aurevella_test`) |
 | `JWT_SECRET` | Cryptographic secret for signing session tokens (min 32 characters) |
-| `FIREBASE_SERVICE_ACCOUNT_PATH` | Path to Firebase Admin service account JSON file (optional if inline vars set) |
+| `FIREBASE_SERVICE_ACCOUNT_PATH` | Absolute filesystem path to Firebase Admin service account JSON file located outside repository (optional if inline vars set) |
 | `FIREBASE_PROJECT_ID` | Firebase project identifier |
 | `FIREBASE_CLIENT_EMAIL` | Firebase Admin service account email |
 | `FIREBASE_PRIVATE_KEY` | Firebase Admin private key |
@@ -272,6 +286,7 @@ Executes Playwright across 19 routes on 5 responsive viewports (360px, 390px, 76
 cd frontend
 npm run check:layout
 ```
+> **Note**: Playwright scripts serve pre-built `frontend/dist`, which must have been built with a non-localhost `VITE_API_URL` (`$env:VITE_API_URL="https://api.myaurevella.in"; npm --prefix frontend run build`) or the production guard in `api.js` will break them at runtime.
 
 ### 2. Standalone In-Memory Razorpay Mock Suite (Backend)
 Verifies fail-closed behavior without network or database dependencies:
@@ -284,16 +299,36 @@ node scripts/testOfflineMock.js
 Runs against dedicated local database `127.0.0.1:27017/aurevella_test` with offline payment test doubles:
 ```bash
 cd backend
-npm run test:phase5      # 17/17 tests: payment creation, verification & refunds
-npm run test:phase6-1    # 18/18 tests: catalogue browsing, category filters & stock bounds
-npm run test:phase6-2    # 33/33 tests: payment gateway isolation, ACID transactions & concurrency
-npm run test:phase7      # 15/15 tests: bespoke checkout flow, quotes & address isolation
-npm run test:phase11     # 37/37 tests: secure admin dashboard, product CRUD & order fulfillment
+npm run test:phase5         # 17/17 tests: payment creation, verification & refunds
+npm run test:phase6-1       # 18/18 tests: catalogue browsing, category filters & stock bounds
+npm run test:phase6-2       # 33/33 tests: payment gateway isolation, ACID transactions & concurrency
+npm run test:phase7         # 15/15 tests: bespoke checkout flow, quotes & address isolation
+npm run test:phase11        # 37/37 tests: secure admin dashboard, product CRUD & order fulfillment
+npm run test:phase14        # 27/27 tests: authentication lifecycle, user state & route protection
+npm run test:admin-safety   # 10/10 tests: admin seeder safety guards & real Mongoose schema validations
+npm run test:hardening      # 16/16 tests: multi-origin CORS, rate limiters & error masking
+npm run test:contact        # 24/24 tests: public contact submission, honeypot bot defense, rate limiting & admin dossier
+npm run test:routes         # 62/62 tests: route enumeration, 401/403 admin auth, tenant isolation & CSRF defense
 ```
+
+### 4. Contact Form & Concierge Inquiries Architecture
+- **Public API (`POST /api/contact`)**:
+  - Protected with custom CSRF header check (`X-Aurevella-Request: 1`) and strict Origin verification.
+  - Dedicated rate limiter (`contactLimiter`): 5 submissions per 15 minutes per IP (returns 429 upon exhaustion).
+  - Anti-Bot Honeypot Defense (`hp_field`): Spambots completing the hidden field receive a silent 200 OK without writing to MongoDB or triggering alerts.
+  - NoSQL Injection Sanitizer: Automatically strips Mongo operators (`$`, `.`) from payloads.
+  - Strict Zod Validation: Validates patron name (2-80 chars), email format, optional E.164 phone number, optional subject (up to 120 chars), and message body (10-2000 chars).
+- **Admin Inquiries Management (`/admin?tab=inquiries`)**:
+  - Secured behind admin authentication (`authenticate`) and role-based access control (`authorizeAdmin`).
+  - `GET /api/admin/inquiries`: Paginated inquiry listing sorted newest first, searchable by customer name, email, or subject, and filterable by status (`new`, `read`, `replied`).
+  - `GET /api/admin/inquiries/:id`: Full dossier modal view with complete patron message and metadata.
+  - `PATCH /api/admin/inquiries/:id/status`: Controlled status updates (`new` $\rightarrow$ `read` $\rightarrow$ `replied`) with strict validation.
 
 ---
 
 ## 🚀 Deployment Considerations (Hostinger)
+
+> For the complete step-by-step production runbook, environment variable checklist, MongoDB Atlas requirements, and post-deploy smoke test runbook, see **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
 
 1. **SPA Route Fallback**:
    [`frontend/public/.htaccess`](frontend/public/.htaccess) contains the Apache/LiteSpeed URL rewrite rules. When deploying `frontend/dist/` to Hostinger's `public_html/`, direct page refreshes on `/shop`, `/checkout`, `/account`, `/orders`, and `/admin` will properly serve `index.html`.

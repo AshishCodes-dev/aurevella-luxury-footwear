@@ -92,7 +92,7 @@ export const AppShell = ({ children }) => {
   };
 
   const navLinkClasses = ({ isActive }) =>
-    `text-[11px] xl:text-xs uppercase tracking-[0.14em] xl:tracking-[0.2em] font-medium min-h-[44px] inline-flex items-center px-1.5 lg:px-2 xl:px-3 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] ${
+    `whitespace-nowrap text-[11px] 2xl:text-xs uppercase tracking-[0.12em] xl:tracking-[0.14em] 2xl:tracking-[0.18em] font-medium min-h-[44px] inline-flex items-center px-1.5 xl:px-1.5 2xl:px-2.5 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] ${
       isActive
         ? 'text-[#FEF5E6] font-semibold border-b-2 border-[#FEF5E6]'
         : 'text-[#B8AD9A] hover:text-[#FEF5E6]'
@@ -117,7 +117,7 @@ export const AppShell = ({ children }) => {
 
       {/* Sleek Sticky Header */}
       <header className="border-b border-[#2F1C15] bg-[#0F0A09]/95 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] sm:h-20 flex items-center justify-between gap-3 xl:gap-6">
+        <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-4 2xl:px-6 h-[72px] sm:h-20 flex items-center justify-between gap-2 xl:gap-2.5 2xl:gap-4">
           {/* Brand Logo: header variant (mark + live text) */}
           <div className="flex items-center shrink-0">
             <Logo variant="header" />
@@ -126,7 +126,7 @@ export const AppShell = ({ children }) => {
           {/* Desktop Navigation */}
           <nav
             aria-label="Primary navigation"
-            className="hidden lg:flex items-center space-x-0.5 xl:space-x-1"
+            className="hidden xl:flex items-center space-x-0.5 2xl:space-x-1"
           >
             {siteConfig.navLinks.map((item) => (
               <NavLink key={item.href} to={item.href} className={navLinkClasses} end={item.href === '/'}>
@@ -136,15 +136,15 @@ export const AppShell = ({ children }) => {
           </nav>
 
           {/* Right Utility Suite: Search, Bag, Account, Admin */}
-          <div className="flex items-center gap-1.5 sm:gap-2 xl:gap-3 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 xl:gap-1.5 2xl:gap-2.5 shrink-0">
             {/* Search Trigger */}
             <Link
               to="/shop"
               aria-label="Search atelier footwear catalogue"
-              className="min-h-[44px] inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.16em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle px-2 xl:px-2.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] select-none"
+              className="min-h-[44px] inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.16em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle px-1.5 xl:px-2 2xl:px-2.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] select-none whitespace-nowrap"
             >
-              <Search size={16} />
-              <span className="hidden xl:inline font-medium">Search</span>
+              <Search size={16} aria-hidden="true" />
+              <span className="hidden 2xl:inline font-medium">Search</span>
             </Link>
 
             {/* Shopping Bag Button (Header Desktop & Mobile) */}
@@ -152,7 +152,7 @@ export const AppShell = ({ children }) => {
               type="button"
               onClick={openBag}
               aria-label={`Bag ${totalCount} — Open shopping bag with ${totalCount} items`}
-              className="min-h-[44px] inline-flex items-center gap-2 px-2.5 sm:px-3 py-1.5 bg-[#181210] border border-[#2F1C15] hover:border-[#FEF5E6]/40 text-[#FEF5E6] transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] select-none"
+              className="min-h-[44px] inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 2xl:px-3 py-1.5 bg-[#181210] border border-[#2F1C15] hover:border-[#FEF5E6]/40 text-[#FEF5E6] transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] select-none whitespace-nowrap"
             >
               <ShoppingBag size={16} aria-hidden="true" />
               <span id="bag-label-text" className="hidden sm:inline text-xs uppercase tracking-[0.16em] font-medium">Bag</span>{' '}
@@ -166,15 +166,15 @@ export const AppShell = ({ children }) => {
 
             {/* Account & Authentication Suite */}
             {isAuthenticated ? (
-              <div className="hidden sm:flex items-center gap-1 xl:gap-2">
+              <div className="hidden sm:flex items-center gap-1 xl:gap-1.5 2xl:gap-2">
                 {/* Admin Entry Badge (Compact & Prestigious - only for admin role) */}
                 {user?.role === 'admin' && (
                   <Link
                     to="/admin"
                     aria-label="Admin — Atelier Admin Portal"
-                    className="min-h-[38px] inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] uppercase tracking-[0.16em] text-amber-300 hover:text-amber-200 bg-amber-950/30 border border-amber-800/50 hover:border-amber-600/70 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-amber-400 font-medium"
+                    className="min-h-[38px] inline-flex items-center gap-1 px-1.5 xl:px-2 2xl:px-2.5 py-1 text-[11px] uppercase tracking-[0.14em] text-amber-300 hover:text-amber-200 bg-amber-950/30 border border-amber-800/50 hover:border-amber-600/70 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-amber-400 font-medium whitespace-nowrap"
                   >
-                    <ShieldCheck size={13} className="text-amber-400 shrink-0" />
+                    <ShieldCheck size={13} className="text-amber-400 shrink-0" aria-hidden="true" />
                     <span>Admin</span>
                   </Link>
                 )}
@@ -182,17 +182,18 @@ export const AppShell = ({ children }) => {
                 {/* Account Link */}
                 <Link
                   to="/account"
-                  className="text-xs uppercase tracking-[0.16em] text-[#B8AD9A] hover:text-[#FEF5E6] min-h-[44px] inline-flex items-center gap-1.5 px-2 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                  aria-label={`Account${user?.name ? ` — ${user.name}` : ''}`}
+                  className="text-xs uppercase tracking-[0.14em] text-[#B8AD9A] hover:text-[#FEF5E6] min-h-[44px] inline-flex items-center gap-1.5 px-1.5 xl:px-2 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] whitespace-nowrap"
                 >
-                  <User size={15} className="shrink-0" />
-                  <span className="hidden xl:inline">{user?.name ? user.name.split(' ')[0] : 'Account'}</span>
-                  <span className="xl:hidden">Account</span>
+                  <User size={15} className="shrink-0" aria-hidden="true" />
+                  <span className="hidden 2xl:inline truncate max-w-[120px]">{user?.name ? user.name.split(' ')[0] : 'Account'}</span>
+                  <span className="2xl:hidden">Account</span>
                 </Link>
 
                 {/* Orders Link (Shown on wide desktop) */}
                 <Link
                   to="/orders"
-                  className="hidden 2xl:inline-flex text-xs uppercase tracking-[0.16em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] items-center px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                  className="hidden 2xl:inline-flex text-xs uppercase tracking-[0.14em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] items-center px-1.5 2xl:px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] whitespace-nowrap"
                 >
                   Orders
                 </Link>
@@ -201,7 +202,8 @@ export const AppShell = ({ children }) => {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="text-xs uppercase tracking-[0.16em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                  aria-label="Sign out"
+                  className="text-xs uppercase tracking-[0.14em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-1.5 xl:px-2 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] whitespace-nowrap"
                 >
                   Sign Out
                 </button>
@@ -210,13 +212,13 @@ export const AppShell = ({ children }) => {
               <div className="hidden sm:flex items-center gap-1.5 xl:gap-2">
                 <Link
                   to="/login"
-                  className="text-xs uppercase tracking-[0.16em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-2 xl:px-2.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+                  className="text-xs uppercase tracking-[0.16em] text-[#B8AD9A] hover:text-[#FEF5E6] transition-subtle min-h-[44px] inline-flex items-center px-2 xl:px-2.5 outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] whitespace-nowrap"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/signup"
-                  className="text-xs uppercase tracking-[0.16em] text-[#0F0A09] bg-[#FEF5E6] hover:bg-[#FFFFFF] transition-subtle min-h-[38px] inline-flex items-center px-3 xl:px-4 font-semibold outline-none focus-visible:ring-1 focus-visible:ring-white shadow-sm"
+                  className="text-xs uppercase tracking-[0.16em] text-[#0F0A09] bg-[#FEF5E6] hover:bg-[#FFFFFF] transition-subtle min-h-[38px] inline-flex items-center px-3 xl:px-4 font-semibold outline-none focus-visible:ring-1 focus-visible:ring-white shadow-sm whitespace-nowrap"
                 >
                   Sign Up
                 </Link>
@@ -230,9 +232,9 @@ export const AppShell = ({ children }) => {
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Open mobile navigation"
               aria-expanded={mobileMenuOpen}
-              className="lg:hidden min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-[#FEF5E6] hover:text-white transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
+              className="xl:hidden min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-[#FEF5E6] hover:text-white transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6]"
             >
-              <Menu size={22} />
+              <Menu size={22} aria-hidden="true" />
             </button>
           </div>
         </div>

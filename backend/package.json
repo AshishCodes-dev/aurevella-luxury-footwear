@@ -19,7 +19,8 @@
     "test:hardening": "node scripts/testLoop2Hardening.js",
     "test:contact": "node scripts/testContact.js",
     "test:routes": "node scripts/testRoutesSecurity.js",
-    "test:deployment-env": "node scripts/testDeploymentDocEnv.js"
+    "test:deployment-env": "node scripts/testDeploymentDocEnv.js",
+    "test:razorpay-guards": "node scripts/testRazorpayGuards.js"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",

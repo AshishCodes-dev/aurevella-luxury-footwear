@@ -41,7 +41,7 @@ To maintain secure, seamless session persistence with `httpOnly`, `SameSite=Lax`
 | `FIREBASE_PROJECT_ID` | Google Cloud / Firebase project identifier. | `aurevella-prod-xxxx` | **YES** |
 | `FIREBASE_CLIENT_EMAIL` | Firebase Service Account email address. Required if not using `FIREBASE_SERVICE_ACCOUNT_PATH`. | `firebase-adminsdk-xxxx@aurevella-prod-xxxx.iam.gserviceaccount.com` | Conditional |
 | `FIREBASE_PRIVATE_KEY` | Firebase Service Account private key PEM string. Required if not using `FIREBASE_SERVICE_ACCOUNT_PATH`. | `"-----BEGIN PRIVATE KEY-----\nMIIEvg...-----END PRIVATE KEY-----\n"` | Conditional |
-| `FIREBASE_SERVICE_ACCOUNT_PATH` | Absolute or relative filesystem path to Firebase Service Account JSON keyfile. **Preferred over inline keys** in production to prevent multiline PEM formatting corruption. | `/etc/secrets/service-account.json` or `config/service-account.json` | **Preferred** |
+| `FIREBASE_SERVICE_ACCOUNT_PATH` | Absolute filesystem path to Firebase Service Account JSON keyfile located OUTSIDE the project folder. **The backend and checkEnv strictly reject paths inside the repository** to prevent accidental git leakage. **Preferred over inline keys** in production. | `/home/<user>/secrets/aurevella-firebase.json` | **Preferred** |
 | `DISABLE_RATE_LIMITER` | Emergency rate-limit kill switch. **NEVER set in production**. When `NODE_ENV === 'production'`, this switch is strictly IGNORED and logs a security warning. | Do not define in production | **NEVER** in prod |
 | `MONGODB_LOCAL_URI` | Development-only fallback connection string for local MongoDB instances. | `mongodb://127.0.0.1:27017/aurevella` | Dev only |
 | `MONGODB_TEST_URI` | Test-suite-only connection string strictly targeting isolated `aurevella_test` database. | `mongodb://127.0.0.1:27017/aurevella_test` | Test only |
@@ -55,7 +55,7 @@ To maintain secure, seamless session persistence with `httpOnly`, `SameSite=Lax`
 | Variable Name | Purpose & Description | Example Value | Required for Seed? |
 | :--- | :--- | :--- | :--- |
 | `ADMIN_SEED_EMAIL` | Unique email address for the initial executive administrator account. Normalized to lowercase. | `concierge@myaurevella.in` | **YES** |
-| `ADMIN_SEED_PASSWORD` | Strong password ($\ge$ 8 characters) for Firebase authentication. Required when creating new account or resetting. | `AtelierSecret2026!` | Required for new or reset |
+| `ADMIN_SEED_PASSWORD` | Strong password ($\ge$ 8 characters) for Firebase authentication. Required when creating new account or resetting. | `<strong-unique-password>` | Required for new or reset |
 | `ADMIN_SEED_NAME` | Display name for the administrative user. Defaults to `Aurevella Admin` if omitted. | `Managing Director` | Optional |
 | `CONFIRM_PROD_SEED` | **Mandatory production safety lock**. Must be set to `true` when running seeder in `NODE_ENV=production`. | `true` | **YES** in production |
 | `ADMIN_RESET_PASSWORD` | Explicit flag to overwrite existing Firebase admin password. Preserves existing password when omitted or `false`. | `true` | Optional (Reset only) |
@@ -90,7 +90,7 @@ To create or promote an administrative account safely in production, execute the
    ```bash
    CONFIRM_PROD_SEED=true \
    ADMIN_SEED_EMAIL="concierge@myaurevella.in" \
-   ADMIN_SEED_PASSWORD="YourStrongPassword123!" \
+   ADMIN_SEED_PASSWORD="<strong-unique-password>" \
    ADMIN_SEED_NAME="Managing Director" \
    npm run seed:admin
    ```
@@ -124,7 +124,7 @@ Here are the top 5 ways an operator or deployment engineer could misconfigure th
    - *Prevention*: `frontend/vite.config.js` enforces a strict compile-time assertion during production builds (`mode === 'production' && command === 'build'`). The build halts immediately with an error if `VITE_API_URL` is omitted, blank, or contains `localhost`, `127.0.0.1`, or `0.0.0.0`.
 2. **Multiline PEM Escaping Errors in `FIREBASE_PRIVATE_KEY`**:
    - *Risk*: Copying raw RSA private keys with real newlines into cloud dashboard environment variables or `.env` files breaks parser tokens, causing Firebase Admin SDK initialization crashes (`Error: Invalid PEM formatted message`).
-   - *Prevention*: Set `FIREBASE_SERVICE_ACCOUNT_PATH=config/service-account.json`. Reading the JSON keyfile directly from the filesystem bypasses string-escaping pitfalls completely.
+   - *Prevention*: Set `FIREBASE_SERVICE_ACCOUNT_PATH=/home/<user>/secrets/aurevella-firebase.json` (an absolute path outside the project folder; the backend and checkEnv strictly reject any path resolving inside the project repository). Reading the JSON keyfile directly from the filesystem bypasses string-escaping pitfalls completely.
 3. **Omitting `TRUST_PROXY=1` Behind Reverse Proxy (LiteSpeed / Nginx / Cloudflare)**:
    - *Risk*: If `TRUST_PROXY` is missing or `0`, Express cannot read `X-Forwarded-For`. Express sees every request originating from internal loopback IP `127.0.0.1`. All global visitors share a single client IP bucket, triggering false-positive 429 "Too Many Requests" rate limiter lockouts for legitimate customers.
    - *Prevention*: Always set `TRUST_PROXY=1` in production environments behind a reverse proxy.

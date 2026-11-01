@@ -222,7 +222,7 @@ Environment files (`.env`) contain secrets and infrastructure configuration. The
 | `MONGODB_URI` | MongoDB Atlas replica set connection string (`mongodb+srv://...`) |
 | `MONGODB_TEST_URI` | Dedicated local test database URI (`127.0.0.1:27017/aurevella_test`) |
 | `JWT_SECRET` | Cryptographic secret for signing session tokens (min 32 characters) |
-| `FIREBASE_SERVICE_ACCOUNT_PATH` | Path to Firebase Admin service account JSON file (optional if inline vars set) |
+| `FIREBASE_SERVICE_ACCOUNT_PATH` | Absolute filesystem path to Firebase Admin service account JSON file located outside repository (optional if inline vars set) |
 | `FIREBASE_PROJECT_ID` | Firebase project identifier |
 | `FIREBASE_CLIENT_EMAIL` | Firebase Admin service account email |
 | `FIREBASE_PRIVATE_KEY` | Firebase Admin private key |

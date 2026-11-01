@@ -34,5 +34,14 @@ export default defineConfig(({ mode, command }) => {
       react(),
       tailwindcss(),
     ],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            firebase: ['firebase/app', 'firebase/auth'],
+          },
+        },
+      },
+    },
   }
 })

@@ -121,7 +121,7 @@ export const ProductCard = ({
                 type="button"
                 onClick={handleAddToBag}
                 className="flex-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 text-xs uppercase tracking-[0.16em] bg-[#FEF5E6] text-[#0F0A09] hover:bg-white font-semibold transition-subtle shadow-sm outline-none focus-visible:ring-1 focus-visible:ring-white"
-                aria-label={`Add ${resolvedName} to shopping bag`}
+                aria-label={justAdded ? `Added — ${resolvedName}` : `Add to Bag — ${resolvedName}`}
               >
                 {justAdded ? (
                   <>
@@ -138,7 +138,7 @@ export const ProductCard = ({
             <Link
               to={resolvedLink}
               className="inline-flex items-center justify-center gap-1 min-h-[44px] px-3 text-xs uppercase tracking-[0.16em] text-[#FEF5E6] hover:text-white bg-[#0F0A09] hover:bg-[#241B18] border border-[#2F1C15] hover:border-[#FEF5E6]/40 transition-subtle outline-none focus-visible:ring-1 focus-visible:ring-[#FEF5E6] shrink-0"
-              aria-label={`View details for ${resolvedName}`}
+              aria-label={`Details — ${resolvedName}`}
             >
               <span>Details</span>
               <ArrowUpRight size={13} className="text-[#B8AD9A]" />

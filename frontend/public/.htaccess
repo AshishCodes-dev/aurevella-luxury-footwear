@@ -41,6 +41,7 @@
   Header set X-Content-Type-Options "nosniff"
   Header set X-Frame-Options "SAMEORIGIN"
   Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Strict-Transport-Security "max-age=2592000"
 </IfModule>
 
 # 4. SPA Fallback Routing

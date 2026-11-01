@@ -702,10 +702,11 @@ export const AdminProducts = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Product Name */}
                 <div className="space-y-1.5 sm:col-span-2">
-                  <label className="uppercase tracking-widest text-[10px] text-[#B8AD9A] font-medium">
+                  <label htmlFor="admin-product-title" className="uppercase tracking-widest text-[10px] text-[#B8AD9A] font-medium">
                     Product Title *
                   </label>
                   <input
+                    id="admin-product-title"
                     type="text"
                     required
                     placeholder="e.g. Floral Block Heel Sandal"
@@ -787,10 +788,11 @@ export const AdminProducts = () => {
 
                 {/* Price in INR */}
                 <div className="space-y-1.5">
-                  <label className="uppercase tracking-widest text-[10px] text-[#B8AD9A] font-medium">
+                  <label htmlFor="admin-product-price" className="uppercase tracking-widest text-[10px] text-[#B8AD9A] font-medium">
                     Price (₹ INR) *
                   </label>
                   <input
+                    id="admin-product-price"
                     type="number"
                     required
                     min="1"
@@ -806,10 +808,11 @@ export const AdminProducts = () => {
 
                 {/* Initial Stock */}
                 <div className="space-y-1.5">
-                  <label className="uppercase tracking-widest text-[10px] text-[#B8AD9A] font-medium">
+                  <label htmlFor="admin-product-stock" className="uppercase tracking-widest text-[10px] text-[#B8AD9A] font-medium">
                     Inventory Units *
                   </label>
                   <input
+                    id="admin-product-stock"
                     type="number"
                     required
                     min="0"

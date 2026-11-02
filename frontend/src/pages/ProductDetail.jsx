@@ -418,7 +418,7 @@ export const ProductDetail = () => {
                 <Truck size={16} className="text-[#FEF5E6] shrink-0 mt-0.5" />
                 <div>
                   <span className="font-medium text-[#FEF5E6] block">Complimentary Shipping</span>
-                  <span className="text-[11px] text-[#B8AD9A]">All-India atelier delivery</span>
+                  <span className="text-[11px] text-[#B8AD9A]">Complimentary delivery across India</span>
                 </div>
               </div>
 

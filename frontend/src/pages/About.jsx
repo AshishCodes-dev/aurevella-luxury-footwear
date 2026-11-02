@@ -10,21 +10,21 @@ export const About = () => {
   const processSteps = [
     {
       step: '01',
-      title: 'Anatomical Last Sculpting',
+      title: 'Careful Silhouette Modeling',
       description:
-        'Each silhouette originates on custom wooden lasts contoured to distribute body weight evenly across the metatarsal and heel arches.',
+        'Each silhouette is contoured to balance aesthetics with comfortable everyday wear.',
     },
     {
       step: '02',
       title: 'Artisan Material Selection',
       description:
-        'We source breathable full-grain leathers, durable woven textiles, and precision metal hardware tested to resist coastal humidity and wear.',
+        'We select quality leathers, durable woven textiles, and refined metal hardware chosen for long-lasting wear.',
     },
     {
       step: '03',
       title: 'Interchangeable Heel Engineering',
       description:
-        'Our proprietary heel locking mechanism is machined from lightweight structural alloy to provide rock-solid stability in every setting.',
+        'Our signature heel locking mechanism is designed to provide dependable stability and versatility in every setting.',
     },
     {
       step: '04',
@@ -46,7 +46,7 @@ export const About = () => {
             Where Continental Architecture Meets Indian Craftsmanship
           </h1>
           <p className="text-sm sm:text-base text-[#B8AD9A] max-w-xl mx-auto leading-relaxed pt-2">
-            AUREVELLA was founded on a singular premise: luxury footwear should embody timeless European elegance without sacrificing anatomical ease or local artisanal integrity.
+            AUREVELLA was founded on a singular premise: luxury footwear should embody timeless elegance without sacrificing comfort or artisanal craftsmanship.
           </p>
         </div>
       </section>
@@ -121,7 +121,7 @@ export const About = () => {
               Inside the Aurevella Workshop
             </h3>
             <p className="text-xs sm:text-sm text-[#B8AD9A]">
-              Every pair undergoes over seventy bespoke bench operations before receiving its final seal of dispatch.
+              Every pair undergoes thorough bench craftsmanship and inspection before receiving its final dispatch.
             </p>
           </div>
 
@@ -146,7 +146,7 @@ export const About = () => {
               {siteConfig.contact.studioAddress}
             </p>
             <p className="text-[10px] text-[#B8AD9A]/70">
-              Private fittings and bespoke commissions arranged exclusively through our concierge service.
+              Personal inquiries and sizing consultations are arranged through our concierge service.
             </p>
           </div>
 

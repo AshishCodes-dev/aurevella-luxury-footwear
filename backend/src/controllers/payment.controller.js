@@ -8,15 +8,27 @@ import {
 } from '../config/razorpay.js';
 import {
   processPaymentSuccessAndDeductInventory,
+  recoverStuckProcessingOrder,
   InventoryReconciliationError,
   PaymentConflictError,
 } from '../services/paymentInventory.service.js';
+
+// Module-level map tracking in-flight gateway creation promises by orderId
+const inFlightGatewayCreations = new Map();
+
+/**
+ * Test helper to reset in-flight creation state between isolated test cases.
+ */
+export const _resetInFlightGatewayCreations = () => {
+  inFlightGatewayCreations.clear();
+};
 
 /**
  * POST /api/payments/create-order
  * Initiates Razorpay payment for an existing pending order.
  * Strictly uses server-calculated totalPaise from database.
  * Safe & idempotent: re-uses existing razorpayOrderId if already created.
+ * Protected by atomic lease, fencing token, and in-flight promise coalescing.
  */
 export const createPaymentOrder = async (req, res) => {
   try {
@@ -29,8 +41,21 @@ export const createPaymentOrder = async (req, res) => {
       });
     }
 
-    // 1. Fetch order belonging strictly to authenticated customer
-    const order = await Order.findOne({
+    const orderIdStr = orderId.toString();
+
+    // 1. Single-Flight Check: If gateway creation is actively in-flight in this process,
+    // join the in-flight promise to guarantee zero duplicate gateway orders.
+    if (inFlightGatewayCreations.has(orderIdStr)) {
+      try {
+        const sharedResult = await inFlightGatewayCreations.get(orderIdStr);
+        return res.status(sharedResult.statusCode || 200).json(sharedResult.body);
+      } catch (inFlightErr) {
+        // In-flight request failed; fall through to normal lease acquisition retry
+      }
+    }
+
+    // 2. Fetch order belonging strictly to authenticated customer
+    let order = await Order.findOne({
       _id: orderId,
       user: req.user._id,
     });
@@ -42,7 +67,33 @@ export const createPaymentOrder = async (req, res) => {
       });
     }
 
-    // 2. Validate eligibility
+    // 3. Reactive Recovery: If order is stuck in 'processing' with expired lease,
+    // automatically reconcile with gateway before validating eligibility.
+    if (order.status === 'processing') {
+      const claimTime = order.paymentDetails?.processingClaimedAt
+        ? new Date(order.paymentDetails.processingClaimedAt).getTime()
+        : 0;
+      if (Date.now() - claimTime > 30000) {
+        try {
+          const recovery = await recoverStuckProcessingOrder({ orderId: order._id });
+          if (recovery?.order) {
+            order = recovery.order;
+          }
+        } catch (recErr) {
+          console.error('[createPaymentOrder - reactive recovery error]:', recErr.message);
+        }
+      }
+    }
+
+    // 4. Validate eligibility
+    if (order.status === 'paid') {
+      return res.status(200).json({
+        status: 'success',
+        isAlreadyPaid: true,
+        order: order.toSafeJSON(),
+      });
+    }
+
     if (order.status !== 'pending_payment') {
       return res.status(400).json({
         status: 'error',
@@ -52,7 +103,7 @@ export const createPaymentOrder = async (req, res) => {
 
     const keyId = getRazorpayKeyId();
 
-    // 3. Idempotency: If Razorpay order was already created, reuse it immediately
+    // 5. Idempotency: If Razorpay order was already created, reuse it immediately
     if (order.paymentDetails?.razorpayOrderId) {
       return res.status(200).json({
         status: 'success',
@@ -64,9 +115,10 @@ export const createPaymentOrder = async (req, res) => {
       });
     }
 
-    // 4. Concurrency Guard: Atomically acquire payment creation lease
+    // 6. Concurrency Guard: Atomically acquire payment creation lease with unique fencing token
     const LEASE_DURATION_MS = 15000;
     const leaseCutoff = new Date(Date.now() - LEASE_DURATION_MS);
+    const claimToken = new mongoose.Types.ObjectId().toString();
 
     const claimedOrder = await Order.findOneAndUpdate(
       {
@@ -92,15 +144,22 @@ export const createPaymentOrder = async (req, res) => {
       {
         $set: {
           'paymentDetails.paymentCreationClaimedAt': new Date(),
+          'paymentDetails.paymentCreationToken': claimToken,
         },
       },
       { new: true }
     );
 
     if (!claimedOrder) {
-      // Another concurrent worker/request has already claimed payment creation,
-      // or razorpayOrderId was just written. Poll briefly (up to 1.5s in 100ms intervals)
-      // to allow the in-flight request to finish and return the reused razorpayOrderId.
+      // Check again if an in-flight gateway creation was started by the winning worker
+      if (inFlightGatewayCreations.has(orderIdStr)) {
+        try {
+          const sharedResult = await inFlightGatewayCreations.get(orderIdStr);
+          return res.status(sharedResult.statusCode || 200).json(sharedResult.body);
+        } catch (inFlightErr) {}
+      }
+
+      // Poll briefly (up to 1.5s in 100ms intervals) to allow the in-flight request to finish
       for (let poll = 0; poll < 15; poll++) {
         await new Promise((r) => setTimeout(r, 100));
         const recheckOrder = await Order.findOne({ _id: orderId, user: req.user._id });
@@ -125,11 +184,11 @@ export const createPaymentOrder = async (req, res) => {
       });
     }
 
-    // 5. Exclusive lease acquired: Create order via official Razorpay SDK
-    try {
+    // 7. Exclusive lease acquired: Execute gateway order creation with single-flight tracking
+    const gatewayCreationTask = (async () => {
       const razorpay = getRazorpayInstance();
       const razorpayOrder = await razorpay.orders.create({
-        amount: claimedOrder.totalPaise, // Guaranteed integer paise from database
+        amount: claimedOrder.totalPaise,
         currency: claimedOrder.currency || 'INR',
         receipt: claimedOrder.orderNumber,
         notes: {
@@ -139,30 +198,59 @@ export const createPaymentOrder = async (req, res) => {
         },
       });
 
-      // 6. Atomically persist razorpayOrderId and release creation lease
-      await Order.findOneAndUpdate(
-        { _id: orderId },
+      // Atomically persist razorpayOrderId ONLY IF this worker still holds the claim token (fencing)
+      const finalized = await Order.findOneAndUpdate(
+        {
+          _id: orderId,
+          'paymentDetails.paymentCreationToken': claimToken,
+        },
         {
           $set: { 'paymentDetails.razorpayOrderId': razorpayOrder.id },
-          $unset: { 'paymentDetails.paymentCreationClaimedAt': 1 },
-        }
+          $unset: {
+            'paymentDetails.paymentCreationClaimedAt': 1,
+            'paymentDetails.paymentCreationToken': 1,
+          },
+        },
+        { new: true }
       );
 
-      return res.status(201).json({
-        status: 'success',
-        keyId,
-        razorpayOrderId: razorpayOrder.id,
-        amountPaise: claimedOrder.totalPaise,
-        currency: claimedOrder.currency || 'INR',
-        orderNumber: claimedOrder.orderNumber,
-      });
+      const effectiveOrderId = finalized?.paymentDetails?.razorpayOrderId || razorpayOrder.id;
+
+      return {
+        statusCode: 201,
+        body: {
+          status: 'success',
+          keyId,
+          razorpayOrderId: effectiveOrderId,
+          amountPaise: claimedOrder.totalPaise,
+          currency: claimedOrder.currency || 'INR',
+          orderNumber: claimedOrder.orderNumber,
+        },
+      };
+    })();
+
+    inFlightGatewayCreations.set(orderIdStr, gatewayCreationTask);
+
+    try {
+      const taskResult = await gatewayCreationTask;
+      return res.status(taskResult.statusCode).json(taskResult.body);
     } catch (gatewayErr) {
-      // Clear claim on gateway failure so retries can proceed immediately without waiting for lease
+      // Clear claim ONLY IF this worker still holds the original claimToken (ownership-aware cleanup)
       await Order.updateOne(
-        { _id: orderId },
-        { $unset: { 'paymentDetails.paymentCreationClaimedAt': 1 } }
+        {
+          _id: orderId,
+          'paymentDetails.paymentCreationToken': claimToken,
+        },
+        {
+          $unset: {
+            'paymentDetails.paymentCreationClaimedAt': 1,
+            'paymentDetails.paymentCreationToken': 1,
+          },
+        }
       ).catch(() => {});
       throw gatewayErr;
+    } finally {
+      inFlightGatewayCreations.delete(orderIdStr);
     }
   } catch (error) {
     const errorMsg =
@@ -639,11 +727,19 @@ export const handleWebhook = async (req, res) => {
       }
 
       // 5. Process payment success & atomic inventory decrement using verified real payment ID
-      await processPaymentSuccessAndDeductInventory({
+      const fulfillmentResult = await processPaymentSuccessAndDeductInventory({
         orderId: order._id,
         razorpayPaymentId: verifiedPaymentId,
         webhookEventId: eventId,
       });
+
+      if (fulfillmentResult?.inProgress) {
+        return res.status(503).json({
+          status: 'in_progress',
+          message:
+            'Order payment is currently being processed by another worker. Please retry delivery.',
+        });
+      }
 
       return res.status(200).json({
         status: 'ok',

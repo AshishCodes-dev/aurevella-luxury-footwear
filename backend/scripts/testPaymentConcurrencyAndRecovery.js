@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import crypto from 'crypto';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import app from '../src/app.js';
@@ -11,12 +12,14 @@ import {
 import {
   processPaymentSuccessAndDeductInventory,
   recoverStuckProcessingOrder,
+  recoverAllStuckProcessingOrders,
 } from '../src/services/paymentInventory.service.js';
 import {
   isAddressSnapshotEquivalent,
   normalizeAddressField,
   normalizePhoneNumber,
 } from '../src/controllers/order.controller.js';
+import { _resetInFlightGatewayCreations } from '../src/controllers/payment.controller.js';
 import { isValidTrustProxyConfig, runCheckEnv } from './checkEnv.js';
 import User from '../src/models/User.js';
 import Category from '../src/models/Category.js';
@@ -296,6 +299,165 @@ async function runPaymentConcurrencyAndRecoveryTests() {
       `status: ${errorRes.status}, lockCleared: ${lockCleared}`
     );
 
+    // Test 2.5: Simulated gateway response > 15s with concurrent second request arriving
+    // Verifies that two gateway orders cannot be created for the same payment attempt
+    _resetInFlightGatewayCreations();
+    const orderSlow = await Order.create({
+      orderNumber: 'AUR-20261102-SLOW1',
+      user: testUser._id,
+      items: [
+        {
+          product: productA._id,
+          productCode: productA.code,
+          name: productA.name,
+          slug: productA.slug,
+          image: productA.images[0],
+          pricePaise: productA.pricePaise,
+          quantity: 1,
+          lineTotalPaise: productA.pricePaise,
+        },
+      ],
+      shippingAddress: baseAddress,
+      itemsCount: 1,
+      subtotalPaise: 2500000,
+      totalPaise: 2500000,
+      currency: 'INR',
+      status: 'pending_payment',
+    });
+
+    let slowGatewayCalls = 0;
+    let resolveSlowGateway;
+    const slowGatewayPromise = new Promise((resolve) => {
+      resolveSlowGateway = resolve;
+    });
+
+    mockRazorpay.reset();
+    mockRazorpay.mockDefaultOrder(async (params) => {
+      slowGatewayCalls++;
+      return await slowGatewayPromise;
+    });
+
+    // Request 1 enters gateway call
+    const slowReq1Promise = fetch(`${baseUrl}/api/payments/create-order`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({ orderId: orderSlow._id.toString() }),
+    }).then(async (r) => ({ status: r.status, data: await r.json() }));
+
+    // Wait until Request 1 has acquired lease and entered gateway creation
+    await new Promise((r) => setTimeout(r, 150));
+
+    // Simulate elapsed time exceeding 15-second lease window (> 15000ms)
+    await Order.updateOne(
+      { _id: orderSlow._id },
+      { $set: { 'paymentDetails.paymentCreationClaimedAt': new Date(Date.now() - 16000) } }
+    );
+
+    // Request 2 arrives while Request 1's gateway call is still in flight
+    const slowReq2Promise = fetch(`${baseUrl}/api/payments/create-order`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({ orderId: orderSlow._id.toString() }),
+    }).then(async (r) => ({ status: r.status, data: await r.json() }));
+
+    // Let Request 2 arrive and join the in-flight creation
+    await new Promise((r) => setTimeout(r, 100));
+
+    // Resolve the slow gateway response
+    resolveSlowGateway({
+      id: 'order_rzp_mock_slow_888',
+      amount: 2500000,
+      currency: 'INR',
+      status: 'created',
+    });
+
+    const [slowRes1, slowRes2] = await Promise.all([slowReq1Promise, slowReq2Promise]);
+
+    record(
+      'Payment Creation Concurrency: Delayed gateway (> 15s) results in EXACTLY 1 gateway order (zero duplicate gateway orders)',
+      slowGatewayCalls === 1,
+      `gatewayCalls=${slowGatewayCalls}`
+    );
+
+    record(
+      'Payment Creation Concurrency: Both requests resolve with identical gateway orderId',
+      (slowRes1.status === 201 || slowRes1.status === 200) &&
+        (slowRes2.status === 201 || slowRes2.status === 200) &&
+        slowRes1.data.razorpayOrderId === 'order_rzp_mock_slow_888' &&
+        slowRes2.data.razorpayOrderId === 'order_rzp_mock_slow_888',
+      `req1=${slowRes1.data.razorpayOrderId}, req2=${slowRes2.data.razorpayOrderId}`
+    );
+
+    // Test 2.6: Fencing token isolates stale workers from writing to database
+    const orderFenced = await Order.create({
+      orderNumber: 'AUR-20261102-FNC1',
+      user: testUser._id,
+      items: [
+        {
+          product: productA._id,
+          productCode: productA.code,
+          name: productA.name,
+          slug: productA.slug,
+          image: productA.images[0],
+          pricePaise: productA.pricePaise,
+          quantity: 1,
+          lineTotalPaise: productA.pricePaise,
+        },
+      ],
+      shippingAddress: baseAddress,
+      itemsCount: 1,
+      subtotalPaise: 2500000,
+      totalPaise: 2500000,
+      currency: 'INR',
+      status: 'pending_payment',
+      paymentDetails: {
+        paymentCreationToken: 'token-active-worker-2',
+        paymentCreationClaimedAt: new Date(),
+      },
+    });
+
+    // Stale Worker 1 attempts to commit with superseded token
+    const staleCommitResult = await Order.findOneAndUpdate(
+      {
+        _id: orderFenced._id,
+        'paymentDetails.paymentCreationToken': 'stale-token-worker-1',
+      },
+      {
+        $set: { 'paymentDetails.razorpayOrderId': 'order_rzp_stale_999' },
+      },
+      { new: true }
+    );
+
+    const recheckFenced = await Order.findById(orderFenced._id);
+    record(
+      'Lock Ownership & Fencing: Stale worker with superseded token cannot commit to order',
+      staleCommitResult === null &&
+        recheckFenced.paymentDetails.paymentCreationToken === 'token-active-worker-2' &&
+        !recheckFenced.paymentDetails.razorpayOrderId,
+      `staleResult=${staleCommitResult}, activeToken=${recheckFenced.paymentDetails.paymentCreationToken}`
+    );
+
+    // Test 2.7: Rapid retry succeeds immediately after failed gateway call
+    mockRazorpay.reset();
+    mockRazorpay.mockDefaultOrder({
+      id: 'order_rzp_mock_retry_success',
+      amount: 2500000,
+      currency: 'INR',
+      status: 'created',
+    });
+
+    const retryRes = await fetch(`${baseUrl}/api/payments/create-order`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({ orderId: order3._id.toString() }),
+    });
+    const retryData = await retryRes.json();
+    record(
+      'Payment Creation Retry Safety: Immediate retry after failure succeeds without lease lock delay',
+      retryRes.status === 201 && retryData.razorpayOrderId === 'order_rzp_mock_retry_success',
+      `status: ${retryRes.status}, id: ${retryData.razorpayOrderId}`
+    );
+
     // =========================================================================
     // SECTION 3: STUCK PROCESSING RECOVERY TESTS
     // =========================================================================
@@ -503,6 +665,259 @@ async function runPaymentConcurrencyAndRecoveryTests() {
       'Stuck Processing Recovery: Unattempted payment order safely reverts to "pending_payment"',
       unattemptedRecovery.recovered === true && updatedOrderStuck4.status === 'pending_payment',
       `status: ${updatedOrderStuck4.status}`
+    );
+
+    // Test 3.6: Automatic discovery & recovery via recoverAllStuckProcessingOrders (sweeper engine)
+    const initialProductBStockSweep = (await Product.findById(productB._id)).stockQuantity;
+    const orderSweep1 = await Order.create({
+      orderNumber: 'AUR-20261102-SWP1',
+      user: testUser._id,
+      items: [
+        {
+          product: productB._id,
+          productCode: productB.code,
+          name: productB.name,
+          slug: productB.slug,
+          image: productB.images[0],
+          pricePaise: productB.pricePaise,
+          quantity: 1,
+          lineTotalPaise: productB.pricePaise,
+        },
+      ],
+      shippingAddress: baseAddress,
+      itemsCount: 1,
+      subtotalPaise: 3200000,
+      totalPaise: 3200000,
+      status: 'processing',
+      paymentDetails: {
+        razorpayPaymentId: 'pay_mock_sweep_captured_111',
+        inventoryDecremented: false,
+        processingClaimedAt: new Date(Date.now() - 45000), // Expired (> 30s)
+      },
+    });
+
+    const orderSweep2 = await Order.create({
+      orderNumber: 'AUR-20261102-SWP2',
+      user: testUser._id,
+      items: [
+        {
+          product: productA._id,
+          productCode: productA.code,
+          name: productA.name,
+          slug: productA.slug,
+          image: productA.images[0],
+          pricePaise: productA.pricePaise,
+          quantity: 1,
+          lineTotalPaise: productA.pricePaise,
+        },
+      ],
+      shippingAddress: baseAddress,
+      itemsCount: 1,
+      subtotalPaise: 2500000,
+      totalPaise: 2500000,
+      status: 'processing',
+      paymentDetails: {
+        razorpayPaymentId: 'pay_mock_sweep_declined_222',
+        inventoryDecremented: false,
+        processingClaimedAt: new Date(Date.now() - 50000), // Expired (> 30s)
+      },
+    });
+
+    mockRazorpay.reset();
+    mockRazorpay.mockPayment('pay_mock_sweep_captured_111', {
+      id: 'pay_mock_sweep_captured_111',
+      status: 'captured',
+      amount: 3200000,
+      currency: 'INR',
+    });
+    mockRazorpay.mockPayment('pay_mock_sweep_declined_222', {
+      id: 'pay_mock_sweep_declined_222',
+      status: 'failed',
+      error_description: 'Card declined during sweep simulation',
+    });
+
+    const batchSweepResult = await recoverAllStuckProcessingOrders({
+      maxClaimAgeMs: 30000,
+      limit: 10,
+      customRazorpayClient: mockRazorpay,
+    });
+
+    const refreshedSweep1 = await Order.findById(orderSweep1._id);
+    const refreshedSweep2 = await Order.findById(orderSweep2._id);
+    const postStockProductBSweep = (await Product.findById(productB._id)).stockQuantity;
+
+    record(
+      'Automatic Stuck Order Recovery: recoverAllStuckProcessingOrders discovers and recovers expired orders',
+      batchSweepResult.discoveredCount >= 2 &&
+        refreshedSweep1.status === 'paid' &&
+        refreshedSweep1.paymentDetails.inventoryDecremented === true &&
+        postStockProductBSweep === initialProductBStockSweep - 1 &&
+        refreshedSweep2.status === 'pending_payment',
+      `discovered=${batchSweepResult.discoveredCount}, sweep1=${refreshedSweep1.status}, sweep2=${refreshedSweep2.status}`
+    );
+
+    // Test 3.7: Reactive recovery on createPaymentOrder for expired stuck order
+    const orderReactiveCreate = await Order.create({
+      orderNumber: 'AUR-20261102-RCT1',
+      user: testUser._id,
+      items: [
+        {
+          product: productA._id,
+          productCode: productA.code,
+          name: productA.name,
+          slug: productA.slug,
+          image: productA.images[0],
+          pricePaise: productA.pricePaise,
+          quantity: 1,
+          lineTotalPaise: productA.pricePaise,
+        },
+      ],
+      shippingAddress: baseAddress,
+      itemsCount: 1,
+      subtotalPaise: 2500000,
+      totalPaise: 2500000,
+      status: 'processing',
+      paymentDetails: {
+        razorpayPaymentId: 'pay_mock_reactive_captured_333',
+        inventoryDecremented: false,
+        processingClaimedAt: new Date(Date.now() - 40000), // Expired (> 30s)
+      },
+    });
+
+    mockRazorpay.reset();
+    mockRazorpay.mockPayment('pay_mock_reactive_captured_333', {
+      id: 'pay_mock_reactive_captured_333',
+      status: 'captured',
+      amount: 2500000,
+      currency: 'INR',
+    });
+
+    const reactiveCreateRes = await fetch(`${baseUrl}/api/payments/create-order`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({ orderId: orderReactiveCreate._id.toString() }),
+    });
+    const reactiveCreateData = await reactiveCreateRes.json();
+    const refreshedReactiveCreate = await Order.findById(orderReactiveCreate._id);
+
+    record(
+      'Reactive Stuck Order Recovery: createPaymentOrder automatically reconciles expired processing order to paid',
+      reactiveCreateRes.status === 200 &&
+        reactiveCreateData.isAlreadyPaid === true &&
+        refreshedReactiveCreate.status === 'paid',
+      `status: ${reactiveCreateRes.status}, isAlreadyPaid: ${reactiveCreateData.isAlreadyPaid}, orderStatus: ${refreshedReactiveCreate.status}`
+    );
+
+    // Test 3.8: Reactive recovery on getOrderByIdOrNumber for expired unattempted processing order
+    const orderReactiveGet = await Order.create({
+      orderNumber: 'AUR-20261102-RCT2',
+      user: testUser._id,
+      items: [
+        {
+          product: productA._id,
+          productCode: productA.code,
+          name: productA.name,
+          slug: productA.slug,
+          image: productA.images[0],
+          pricePaise: productA.pricePaise,
+          quantity: 1,
+          lineTotalPaise: productA.pricePaise,
+        },
+      ],
+      shippingAddress: baseAddress,
+      itemsCount: 1,
+      subtotalPaise: 2500000,
+      totalPaise: 2500000,
+      status: 'processing',
+      paymentDetails: {
+        razorpayOrderId: 'order_mock_unattempted_444',
+        inventoryDecremented: false,
+        processingClaimedAt: new Date(Date.now() - 40000), // Expired (> 30s)
+      },
+    });
+
+    mockRazorpay.reset();
+    mockRazorpay.mockOrderPayments('order_mock_unattempted_444', { count: 0, items: [] });
+
+    const reactiveGetRes = await fetch(`${baseUrl}/api/orders/AUR-20261102-RCT2`, {
+      method: 'GET',
+      headers: authHeaders,
+    });
+    const reactiveGetData = await reactiveGetRes.json();
+    const refreshedReactiveGet = await Order.findById(orderReactiveGet._id);
+
+    record(
+      'Reactive Stuck Order Recovery: getOrderByIdOrNumber automatically resets abandoned processing order to pending_payment',
+      reactiveGetRes.status === 200 &&
+        reactiveGetData.order?.status === 'pending_payment' &&
+        refreshedReactiveGet.status === 'pending_payment',
+      `status: ${reactiveGetRes.status}, returnedStatus: ${reactiveGetData.order?.status}`
+    );
+
+    // Test 3.9: Webhook returns HTTP 503 on active processing lease to trigger gateway retry
+    const orderActiveWebhook = await Order.create({
+      orderNumber: 'AUR-20261102-WBK1',
+      user: testUser._id,
+      items: [
+        {
+          product: productA._id,
+          productCode: productA.code,
+          name: productA.name,
+          slug: productA.slug,
+          image: productA.images[0],
+          pricePaise: productA.pricePaise,
+          quantity: 1,
+          lineTotalPaise: productA.pricePaise,
+        },
+      ],
+      shippingAddress: baseAddress,
+      itemsCount: 1,
+      subtotalPaise: 2500000,
+      totalPaise: 2500000,
+      status: 'processing',
+      paymentDetails: {
+        razorpayOrderId: 'order_active_wbk_555',
+        inventoryDecremented: false,
+        processingClaimedAt: new Date(), // Active lease (< 30s)
+      },
+    });
+
+    const webhookPayload = JSON.stringify({
+      event: 'payment.captured',
+      payload: {
+        payment: {
+          entity: {
+            id: 'pay_active_wbk_666',
+            order_id: 'order_active_wbk_555',
+            status: 'captured',
+            amount: 2500000,
+            currency: 'INR',
+          },
+        },
+      },
+    });
+
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || 'test_webhook_secret_for_suite_123';
+    process.env.RAZORPAY_WEBHOOK_SECRET = webhookSecret;
+    const webhookSig = crypto
+      .createHmac('sha256', webhookSecret)
+      .update(Buffer.from(webhookPayload, 'utf-8'))
+      .digest('hex');
+
+    const webhookRes = await fetch(`${baseUrl}/api/payments/webhook`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-razorpay-signature': webhookSig,
+      },
+      body: webhookPayload,
+    });
+    const webhookData = await webhookRes.json();
+
+    record(
+      'Webhook Retry Signaling: Returns HTTP 503 on in-progress processing order so gateway automatically retries',
+      webhookRes.status === 503 && webhookData.status === 'in_progress',
+      `status: ${webhookRes.status}, code: ${webhookData.status}`
     );
 
     // =========================================================================

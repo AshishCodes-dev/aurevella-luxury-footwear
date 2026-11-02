@@ -638,3 +638,109 @@ export const recoverStuckProcessingOrder = async ({
       : 'No completed payment found on gateway. Abandoned processing claim safely reset to pending_payment.',
   };
 };
+
+/**
+ * Automatically discovers and recovers expired stuck orders in 'processing' status.
+ * Reconciles each discovered order with the gateway.
+ *
+ * Rules:
+ * - Bounded: limits batch size to prevent unbounded queries.
+ * - Safe & Idempotent: checks gateway status via recoverStuckProcessingOrder.
+ * - Never marks paid or decrements stock without trusted gateway verification.
+ *
+ * @param {Object} [options]
+ * @param {number} [options.maxClaimAgeMs=30000]
+ * @param {number} [options.limit=25]
+ * @param {Object} [options.customRazorpayClient=null]
+ * @returns {Promise<{ discoveredCount: number, recoveredCount: number, results: Array<Object> }>}
+ */
+export const recoverAllStuckProcessingOrders = async ({
+  maxClaimAgeMs = 30000,
+  limit = 25,
+  customRazorpayClient = null,
+} = {}) => {
+  const cutoff = new Date(Date.now() - maxClaimAgeMs);
+
+  const stuckOrders = await Order.find({
+    status: 'processing',
+    'paymentDetails.inventoryDecremented': { $ne: true },
+    $or: [
+      { 'paymentDetails.processingClaimedAt': { $in: [null] } },
+      { 'paymentDetails.processingClaimedAt': { $exists: false } },
+      { 'paymentDetails.processingClaimedAt': { $lt: cutoff } },
+    ],
+  })
+    .limit(limit)
+    .select('_id orderNumber status paymentDetails');
+
+  const results = [];
+  let recoveredCount = 0;
+
+  for (const stuckOrder of stuckOrders) {
+    try {
+      const outcome = await recoverStuckProcessingOrder({
+        orderId: stuckOrder._id,
+        maxClaimAgeMs,
+        customRazorpayClient,
+      });
+      if (outcome.success) {
+        recoveredCount++;
+      }
+      results.push({
+        orderId: stuckOrder._id,
+        orderNumber: stuckOrder.orderNumber,
+        ...outcome,
+      });
+    } catch (err) {
+      console.error(
+        `[recoverAllStuckProcessingOrders] Error recovering order ${stuckOrder.orderNumber}:`,
+        err.message
+      );
+      results.push({
+        orderId: stuckOrder._id,
+        orderNumber: stuckOrder.orderNumber,
+        success: false,
+        message: err.message,
+      });
+    }
+  }
+
+  return {
+    discoveredCount: stuckOrders.length,
+    recoveredCount,
+    results,
+  };
+};
+
+let sweeperTimer = null;
+
+/**
+ * Starts periodic background sweeper for automatic stuck-order recovery.
+ * Unreferenced timer does not block application shutdown or test runners.
+ *
+ * @param {number} [intervalMs=60000]
+ */
+export const startStuckOrderRecoverySweeper = (intervalMs = 60000) => {
+  if (sweeperTimer) return;
+  sweeperTimer = setInterval(async () => {
+    try {
+      await recoverAllStuckProcessingOrders();
+    } catch (err) {
+      console.error('[StuckOrderRecoverySweeper Error]:', err.message);
+    }
+  }, intervalMs);
+
+  if (sweeperTimer.unref) {
+    sweeperTimer.unref();
+  }
+};
+
+/**
+ * Stops the periodic background sweeper.
+ */
+export const stopStuckOrderRecoverySweeper = () => {
+  if (sweeperTimer) {
+    clearInterval(sweeperTimer);
+    sweeperTimer = null;
+  }
+};

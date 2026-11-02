@@ -244,6 +244,11 @@ const orderSchema = new mongoose.Schema(
         type: Date,
         default: null,
       },
+      paymentCreationToken: {
+        type: String,
+        trim: true,
+        default: null,
+      },
       processingClaimedAt: {
         type: Date,
         default: null,

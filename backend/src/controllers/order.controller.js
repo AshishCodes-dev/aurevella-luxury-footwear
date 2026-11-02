@@ -7,6 +7,7 @@ import {
   toRupees,
   formatRupeeText,
 } from '../utils/orderPricing.js';
+import { recoverStuckProcessingOrder } from '../services/paymentInventory.service.js';
 
 /**
  * POST /api/orders/quote
@@ -312,9 +313,25 @@ export const getOrderByIdOrNumber = async (req, res) => {
       });
     }
 
+    let finalOrder = order;
+    if (
+      order.status === 'processing' &&
+      order.paymentDetails?.processingClaimedAt &&
+      Date.now() - new Date(order.paymentDetails.processingClaimedAt).getTime() > 30000
+    ) {
+      try {
+        const recovery = await recoverStuckProcessingOrder({ orderId: order._id });
+        if (recovery?.order) {
+          finalOrder = recovery.order;
+        }
+      } catch (recErr) {
+        console.error('[Order Controller - auto-recovery check error]:', recErr.message);
+      }
+    }
+
     return res.status(200).json({
       status: 'success',
-      order: order.toSafeJSON(),
+      order: finalOrder.toSafeJSON(),
     });
   } catch (error) {
     console.error('[Order Controller - getOrderByIdOrNumber]:', error);

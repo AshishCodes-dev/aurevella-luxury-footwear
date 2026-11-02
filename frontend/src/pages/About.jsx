@@ -121,7 +121,7 @@ export const About = () => {
               Inside the Aurevella Workshop
             </h3>
             <p className="text-xs sm:text-sm text-[#B8AD9A]">
-              Every pair undergoes thorough bench craftsmanship and inspection before receiving its final dispatch.
+              Our footwear is handcrafted with deliberate attention to detail and construction.
             </p>
           </div>
 

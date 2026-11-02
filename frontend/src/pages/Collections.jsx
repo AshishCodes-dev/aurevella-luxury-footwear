@@ -17,7 +17,6 @@ export const Collections = () => {
         'Our signature interchangeable heel engineering offers versatile silhouettes for day and evening wear. Designed with a secure locking mechanism to easily adapt your style with dependable stability and comfort.',
       features: [
         'Secure quick-release locking mechanism',
-        'Comfort-focused contoured footbed',
         'Selected quality leather and textile uppers',
         'Hand-finished heel accents',
       ],
@@ -46,7 +45,7 @@ export const Collections = () => {
     },
     {
       id: 'gala-evening',
-      badge: 'Upcoming Release',
+      badge: 'Evening Series',
       title: 'Evening & Statement Series',
       subtitle: 'Refined Silhouettes for Special Occasions',
       description:
@@ -54,7 +53,7 @@ export const Collections = () => {
       features: [
         'Refined metallic hardware accents',
         'Selected hand-finished materials',
-        'Upcoming Evening Series — Inquiries via Concierge',
+        'Inquiries and consultations via Concierge',
         'Personalized sizing advice upon request',
       ],
       ctaText: 'Inquire via Concierge',
@@ -168,14 +167,13 @@ export const Collections = () => {
                   <div className="bg-[#181210] border border-dashed border-[#2F1C15] p-8 sm:p-12 text-center space-y-4">
                     <Sparkles size={28} className="mx-auto text-[#B8AD9A]/60" />
                     <h4 className="font-serif text-lg text-[#FEF5E6]">
-                      Upcoming Evening Releases
+                      Evening Series Inquiries
                     </h4>
                     <p className="text-xs text-[#B8AD9A] max-w-md mx-auto leading-relaxed">
-                      Our upcoming evening silhouettes are currently in preparation.
-                      Connect with our concierge to inquire about preview styles and release details.
+                      Connect with our concierge team to explore evening silhouettes and design consultations.
                     </p>
                     <span className="block text-[11px] text-[#B8AD9A]/70 italic pt-2">
-                      Lookbook and release updates available upon concierge request.
+                      Inquiries and lookbooks available upon concierge request.
                     </span>
                   </div>
                 )}

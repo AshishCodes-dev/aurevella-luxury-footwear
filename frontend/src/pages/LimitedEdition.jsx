@@ -10,27 +10,27 @@ export const LimitedEdition = () => {
   const hallmarks = [
     {
       icon: Award,
-      title: 'Limited Small Batches',
+      title: 'Handcrafted in India',
       description:
-        'Crafted in limited quantities per edition to ensure attentive artisanal finishing on every pair.',
-    },
-    {
-      icon: Package,
-      title: 'Signature Packaging',
-      description:
-        'Delivered in dedicated protective packaging with individual dust bags to care for your footwear.',
-    },
-    {
-      icon: ShieldCheck,
-      title: 'Authenticity Guarantee',
-      description:
-        'Every pair is verified prior to dispatch to ensure it meets our quality and design standards.',
+        'Crafted with deliberate care, reflecting fine artisanal footwear construction.',
     },
     {
       icon: Sparkles,
-      title: 'Curated Releases',
+      title: 'Italian-Inspired Design',
       description:
-        'Each limited edition is offered for a restricted duration, celebrating unique seasonal styling.',
+        'Refined proportions and elegant styling inspired by classic traditions.',
+    },
+    {
+      icon: ShieldCheck,
+      title: 'Interchangeable Heels',
+      description:
+        'Engineered with our signature convertible heel mechanism for versatile wear.',
+    },
+    {
+      icon: MessageCircle,
+      title: 'Concierge Guidance',
+      description:
+        'Direct consultation available for personalized sizing inquiries and order assistance.',
     },
   ];
 
@@ -88,18 +88,12 @@ export const LimitedEdition = () => {
                 Handcrafted from floral jacquard textile with smooth interior lining. Finished with our signature interchangeable block heel mechanism and a gold-tone buckle. Designed for discerning patrons who appreciate singular craftsmanship.
               </p>
 
-              {/* Series Allocation Badge */}
-              <div className="p-4 bg-[#140E0C] border border-[#2F1C15] space-y-2">
+              {/* Series Availability Badge */}
+              <div className="p-4 bg-[#140E0C] border border-[#2F1C15]">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-[#B8AD9A] uppercase tracking-wider text-[11px]">Availability:</span>
                   <span className="text-emerald-400 font-medium">Available to Order</span>
                 </div>
-                <div className="w-full bg-[#0F0A09] h-1.5 rounded-full overflow-hidden border border-[#2F1C15]">
-                  <div className="bg-[#FEF5E6] h-full w-2/5 rounded-full" />
-                </div>
-                <p className="text-[10px] text-[#B8AD9A]/70 text-right">
-                  Limited release available while quantities last
-                </p>
               </div>
 
               <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">

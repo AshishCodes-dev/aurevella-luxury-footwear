@@ -12,13 +12,12 @@ export const Collections = () => {
       id: 'interchangeable-heels',
       badge: 'Signature Engineering',
       title: 'Interchangeable Heels Capsule',
-      subtitle: 'From Morning Poise to Gala Drama',
+      subtitle: 'Versatile Styling for Day and Evening',
       description:
-        'Our signature interchangeable heel engineering redefines footwear versatility. Designed with an ultra-secure locking mechanism, effortlessly transition between sculptural block profiles and daytime silhouettes without compromising lumbar alignment or arch balance.',
+        'Our signature interchangeable heel engineering offers versatile silhouettes for day and evening wear. Designed with a secure locking mechanism to easily adapt your style with dependable stability and comfort.',
       features: [
         'Secure quick-release locking mechanism',
-        'Balanced ergonomic arch distribution',
-        'Supple full-grain Italian leather uppers',
+        'Selected quality leather and textile uppers',
         'Hand-finished heel accents',
       ],
       ctaText: 'Explore Interchangeable Heels',
@@ -31,14 +30,14 @@ export const Collections = () => {
       id: 'resort-slides',
       badge: 'Artisanal Comfort',
       title: 'Resort & Flat Slides Capsule',
-      subtitle: 'Unlined Luxury for Effortless Elegance',
+      subtitle: 'Comfortable Designs for Daily Elegance',
       description:
-        'Embodying relaxed sophistication, our resort slides pair handwoven artisanal soles with cloud-soft knotted straps. Created for sun-drenched afternoons, coastal escapes, and understated daily comfort.',
+        'Our flat slides pair handwoven soles with knotted straps, crafted for relaxed sophistication and understated daily comfort.',
       features: [
         'Naturally cushioned woven footbeds',
-        'Hand-knotted silk-touch textile straps',
+        'Hand-knotted textile straps',
         'Non-slip textured rubber outsole',
-        'Featherweight all-day construction',
+        'Lightweight all-day construction',
       ],
       ctaText: 'Explore Resort Slides',
       ctaLink: '/shop?category=flat-slide',
@@ -46,17 +45,16 @@ export const Collections = () => {
     },
     {
       id: 'gala-evening',
-      badge: 'Atelier Preview',
-      title: 'Red Carpet & Evening Series',
-      subtitle: 'Statement Silhouettes for Grand Occasions',
+      badge: 'Evening Series',
+      title: 'Evening & Statement Series',
+      subtitle: 'Refined Silhouettes for Special Occasions',
       description:
-        'Sculptural contours, hand-applied gold hardware, and architectural heel geometries crafted for red carpet entrances and bespoke celebrations. Each pair is built on an elongated Italian last for dramatic presence.',
+        'Elevated contours, metallic accents, and refined styling crafted for evening occasions. Each pair is designed to offer a distinctive presence.',
       features: [
-        'Solid brass hardware with anti-tarnish coating',
-        'Hand-buffed museum patina leather',
-        // TODO(client): Confirm Autumn/Winter Gala launch release date
-        'Autumn/Winter Gala Series — Private Allocation via Concierge',
-        'Bespoke heel height adjustments upon request',
+        'Refined metallic hardware accents',
+        'Selected hand-finished materials',
+        'Inquiries and consultations via Concierge',
+        'Personalized sizing advice upon request',
       ],
       ctaText: 'Inquire via Concierge',
       ctaLink: '/contact',
@@ -77,7 +75,7 @@ export const Collections = () => {
             Curated Collections
           </h1>
           <p className="text-sm sm:text-base text-[#B8AD9A] max-w-xl mx-auto leading-relaxed pt-2">
-            Explore our curated footwear capsules, where classic continental architecture harmonizes with bespoke Indian shoemaking craftsmanship.
+            Explore our curated footwear capsules, where Italian-inspired design harmonizes with handcrafted Indian shoemaking.
           </p>
         </div>
       </section>
@@ -169,15 +167,13 @@ export const Collections = () => {
                   <div className="bg-[#181210] border border-dashed border-[#2F1C15] p-8 sm:p-12 text-center space-y-4">
                     <Sparkles size={28} className="mx-auto text-[#B8AD9A]/60" />
                     <h4 className="font-serif text-lg text-[#FEF5E6]">
-                      Private Atelier Commissioning
+                      Evening Series Inquiries
                     </h4>
                     <p className="text-xs text-[#B8AD9A] max-w-md mx-auto leading-relaxed">
-                      Our Red Carpet Gala Series is reserved for bespoke private orders and red carpet commissions.
-                      Connect directly with our master atelier concierge to explore tailored heel heights and jewel allocations.
+                      Connect with our concierge team to explore evening silhouettes and design consultations.
                     </p>
-                    {/* TODO(client): Provide launch photography and confirm Autumn/Winter 2026 delivery window */}
                     <span className="block text-[11px] text-[#B8AD9A]/70 italic pt-2">
-                      Private preview lookbook and bespoke allocations available upon concierge request.
+                      Inquiries and lookbooks available upon concierge request.
                     </span>
                   </div>
                 )}

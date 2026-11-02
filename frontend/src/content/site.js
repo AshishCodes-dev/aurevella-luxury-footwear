@@ -23,8 +23,8 @@ export const siteConfig = {
       url: 'https://wa.me/917728060447',
       label: '+91 77280 60447',
     },
-    // TODO(client): Physical studio or registered office location (e.g. Mumbai / Delhi, India)
-    studioAddress: 'Private Atelier Showroom & Studio Fittings (By Appointment — Mumbai / Delhi)',
+    // TODO(client): Physical studio or registered office location
+    studioAddress: 'Private Fitting Consultations (By Appointment)',
     // TODO(client): Concierge support hours
     supportHours: 'Monday – Saturday, 10:00 AM – 7:00 PM IST',
   },
@@ -45,7 +45,7 @@ export const siteConfig = {
       { label: 'All Footwear', href: '/shop' },
       { label: 'Collections', href: '/collections' },
       { label: 'Limited Edition', href: '/limited-edition' },
-      { label: 'Customization', href: '/contact' }, // TODO(client): Customization policy and lead time
+      { label: 'Concierge', href: '/contact' },
     ],
     company: [
       { label: 'Our Story', href: '/about' },
@@ -62,7 +62,7 @@ export const siteConfig = {
 
   // Hero Section Copy (Text-only with Logo; no product photo in hero)
   hero: {
-    eyebrow: 'Bespoke Footwear Atelier',
+    eyebrow: 'Footwear Atelier',
     headline: 'Luxury, Reimagined.',
     subline: 'Italian-inspired elegance, crafted in India.',
     primaryCta: { label: 'Explore the Collection', href: '/shop' },
@@ -121,9 +121,9 @@ export const siteConfig = {
   // Limited Edition Showcase
   limitedEdition: {
     badge: 'Limited Edition',
-    heading: 'The Atelier Series Drop',
+    heading: 'The Limited Edition Drop',
     description:
-      'Individually numbered, small-batch releases handcrafted with rare leathers and solid brass hardware. Strictly capped at 50 pairs worldwide. Once retired, the series is never reproduced.',
+      'Small-batch footwear releases handcrafted in limited quantities. Once a series concludes, the edition is retired.',
     cta: { label: 'View Limited Edition', href: '/limited-edition' },
   },
 
@@ -132,7 +132,7 @@ export const siteConfig = {
     {
       id: 'handcrafted',
       title: 'Handcrafted Precision',
-      description: 'Lasted by hand and built with bespoke artisan construction for lasting poise.',
+      description: 'Lasted by hand and built with quality construction for lasting comfort and poise.',
     },
     {
       id: 'italian',
@@ -142,7 +142,7 @@ export const siteConfig = {
     {
       id: 'india',
       title: 'Crafted in India',
-      description: 'Empowering master regional artisans with ethical, bespoke atelier shoemaking.',
+      description: 'Supporting regional artisans through dedicated, handcrafted footwear production.',
     },
   ],
 

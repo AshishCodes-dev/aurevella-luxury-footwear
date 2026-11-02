@@ -10,27 +10,27 @@ export const LimitedEdition = () => {
   const hallmarks = [
     {
       icon: Award,
-      title: 'Individually Numbered',
+      title: 'Handcrafted in India',
       description:
-        'Every pair carries a hand-stamped serial number (e.g., 07/50) heat-pressed into the interior Italian calfskin lining.',
-    },
-    {
-      icon: Package,
-      title: 'Solid Cedar & Wooden Box',
-      description:
-        'Delivered in an archival handcrafted wooden storage box with custom aromatic cedar shoe trees tailored to maintain the silhouette.',
-    },
-    {
-      icon: ShieldCheck,
-      title: 'Archival Provenance Certificate',
-      description:
-        'Accompanied by a gold-embossed certificate of authenticity signed by our chief lasting artisan confirming leather batch origins.',
+        'Crafted with deliberate care, reflecting fine artisanal footwear construction.',
     },
     {
       icon: Sparkles,
-      title: 'Strict Global Cap',
+      title: 'Italian-Inspired Design',
       description:
-        'Limited strictly to 50 pairs worldwide. Once a series is fully commissioned, the last and pattern are permanently retired.',
+        'Refined proportions and elegant styling inspired by classic traditions.',
+    },
+    {
+      icon: ShieldCheck,
+      title: 'Interchangeable Heels',
+      description:
+        'Engineered with our signature convertible heel mechanism for versatile wear.',
+    },
+    {
+      icon: MessageCircle,
+      title: 'Concierge Guidance',
+      description:
+        'Direct consultation available for personalized sizing inquiries and order assistance.',
     },
   ];
 
@@ -41,13 +41,13 @@ export const LimitedEdition = () => {
         <div className="max-w-3xl mx-auto space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#181210] border border-[#2F1C15] text-[10px] uppercase tracking-[0.25em] text-[#B8AD9A]">
             <Sparkles size={12} className="text-[#FEF5E6]" />
-            Strictly 50 Pairs Worldwide
+            Curated Limited Run
           </div>
           <h1 className="font-serif text-3xl sm:text-5xl text-[#FEF5E6] tracking-wide">
             The Limited Edition Drops
           </h1>
           <p className="text-sm sm:text-base text-[#B8AD9A] max-w-xl mx-auto leading-relaxed pt-2">
-            Small-batch handcrafted collector drops featuring antique patinas, rare floral textiles, and solid brass detailing.
+            Small-batch handcrafted footwear featuring distinctive textiles and refined metallic accents.
           </p>
         </div>
       </section>
@@ -60,7 +60,7 @@ export const LimitedEdition = () => {
             <div className="lg:col-span-6 bg-[#0F0A09] border border-[#2F1C15] p-6 aspect-square sm:aspect-4/3 max-h-[380px] w-full flex flex-col items-center justify-center relative overflow-hidden group">
               <div className="absolute top-4 left-4 z-10">
                 <span className="text-[10px] uppercase tracking-[0.2em] px-2.5 py-1 bg-[#181210]/90 border border-[#2F1C15] text-[#FEF5E6] font-medium backdrop-blur-sm">
-                  Series 01 &bull; 50 Pairs
+                  Series 01 &bull; Limited Run
                 </span>
               </div>
               <img
@@ -76,7 +76,7 @@ export const LimitedEdition = () => {
             <div className="lg:col-span-6 space-y-6">
               <div className="space-y-2">
                 <span className="text-[11px] uppercase tracking-[0.2em] text-[#B8AD9A]">
-                  Active Atelier Allocation
+                  Featured Release
                 </span>
                 <h2 className="font-serif text-2xl sm:text-4xl text-[#FEF5E6]">
                   Floral Block Heel Mule
@@ -85,21 +85,15 @@ export const LimitedEdition = () => {
               </div>
 
               <p className="text-xs sm:text-sm text-[#B8AD9A] leading-relaxed">
-                Handcrafted from rich floral jacquard and lined with butter-soft calfskin. Finished with our signature interchangeable block heel mechanism and a solid brushed gold buckle. Designed for discerning patrons who demand singular craftsmanship.
+                Handcrafted from floral jacquard textile with smooth interior lining. Finished with our signature interchangeable block heel mechanism and a gold-tone buckle. Designed for discerning patrons who appreciate singular craftsmanship.
               </p>
 
-              {/* Series Allocation Badge */}
-              <div className="p-4 bg-[#140E0C] border border-[#2F1C15] space-y-2">
+              {/* Series Availability Badge */}
+              <div className="p-4 bg-[#140E0C] border border-[#2F1C15]">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-[#B8AD9A] uppercase tracking-wider text-[11px]">Allocation Status:</span>
-                  <span className="text-emerald-400 font-medium">Bespoke Orders Open</span>
+                  <span className="text-[#B8AD9A] uppercase tracking-wider text-[11px]">Availability:</span>
+                  <span className="text-emerald-400 font-medium">Available to Order</span>
                 </div>
-                <div className="w-full bg-[#0F0A09] h-1.5 rounded-full overflow-hidden border border-[#2F1C15]">
-                  <div className="bg-[#FEF5E6] h-full w-2/5 rounded-full" />
-                </div>
-                <p className="text-[10px] text-[#B8AD9A]/70 text-right">
-                  Numbered 01/50 through 50/50 allocation in progress
-                </p>
               </div>
 
               <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
@@ -107,7 +101,7 @@ export const LimitedEdition = () => {
                   to="/product/prod-03"
                   className="w-full sm:w-auto min-h-[46px] px-8 text-xs uppercase tracking-[0.18em] bg-[#FEF5E6] text-[#0F0A09] hover:bg-white font-semibold transition-subtle flex items-center justify-center gap-2"
                 >
-                  Commission This Pair
+                  Order This Pair
                   <ArrowRight size={14} />
                 </Link>
                 <a
@@ -117,7 +111,7 @@ export const LimitedEdition = () => {
                   className="w-full sm:w-auto min-h-[46px] px-6 text-xs uppercase tracking-[0.18em] border border-[#2F1C15] text-[#FEF5E6] hover:bg-[#221A18] transition-subtle flex items-center justify-center gap-2"
                 >
                   <MessageCircle size={14} />
-                  Reserve Serial Number
+                  Inquire via WhatsApp
                 </a>
               </div>
             </div>
@@ -133,10 +127,10 @@ export const LimitedEdition = () => {
               Atelier Standards
             </span>
             <h3 className="font-serif text-2xl sm:text-3xl text-[#FEF5E6]">
-              Every Pair is an Heirloom
+              Artisanal Craftsmanship
             </h3>
             <p className="text-xs sm:text-sm text-[#B8AD9A]">
-              We treat our limited drops as pieces of wearable sculpture rather than seasonal commodities.
+              We treat our limited drops with deliberate craftsmanship and attention to detail.
             </p>
           </div>
 
@@ -158,9 +152,8 @@ export const LimitedEdition = () => {
             })}
           </div>
 
-          {/* TODO(client): Confirm specific serial stamping sequence and custom monogramming availability */}
           <div className="text-center text-[11px] text-[#B8AD9A]/70 pt-4">
-            Individual serial inscriptions are assigned sequentially upon order confirmation. Bespoke monogram inquiries may be routed to our concierge.
+            Limited release pairs are fulfilled sequentially upon order confirmation. Inquiries may be routed directly to our concierge.
           </div>
         </div>
       </section>

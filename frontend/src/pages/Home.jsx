@@ -202,7 +202,7 @@ export const Home = () => {
             Connect with the Atelier
           </h2>
           <p className="text-xs sm:text-sm text-[#B8AD9A] mb-8 max-w-md mx-auto leading-relaxed">
-            Our luxury footwear consultants are available for personalized sizing inquiries and order guidance.
+            Our concierge team is available for sizing inquiries and order guidance.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">

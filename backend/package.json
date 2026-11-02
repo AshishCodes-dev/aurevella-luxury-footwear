@@ -20,7 +20,9 @@
     "test:contact": "node scripts/testContact.js",
     "test:routes": "node scripts/testRoutesSecurity.js",
     "test:deployment-env": "node scripts/testDeploymentDocEnv.js",
-    "test:razorpay-guards": "node scripts/testRazorpayGuards.js"
+    "test:razorpay-guards": "node scripts/testRazorpayGuards.js",
+    "test:auth-hardening": "node scripts/testAuthLinkingHardening.js",
+    "test:payment-concurrency": "node scripts/testPaymentConcurrencyAndRecovery.js"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",

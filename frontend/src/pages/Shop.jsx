@@ -7,7 +7,10 @@ import { useBag } from '../context/BagContext.jsx';
 import useDocumentTitle from '../utils/useDocumentTitle.js';
 
 export const Shop = () => {
-  useDocumentTitle('Atelier Footwear Catalogue — AUREVELLA');
+  useDocumentTitle('Atelier Footwear Catalogue — AUREVELLA', {
+    description:
+      'Explore our curated collection of luxury footwear, featuring signature interchangeable heels handcrafted in India.',
+  });
   const { addToBag } = useBag();
   const [searchParams, setSearchParams] = useSearchParams();
 

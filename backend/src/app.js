@@ -21,17 +21,40 @@ import contactRoutes from './routes/contact.routes.js';
 const app = express();
 
 // Trust Proxy Configuration
-// Configured via TRUST_PROXY env var (e.g. 'true', integer number of hops like '1', or specific string)
+// Configured via TRUST_PROXY env var (e.g. 'true', integer hop count, or documented IP/subnet keywords)
 const rawTrustProxy = process.env.TRUST_PROXY;
 if (rawTrustProxy !== undefined && rawTrustProxy !== '') {
-  if (rawTrustProxy === 'true') {
+  const trimmed = rawTrustProxy.trim();
+  if (trimmed === 'true') {
     app.set('trust proxy', 1);
-  } else if (!isNaN(Number(rawTrustProxy))) {
-    app.set('trust proxy', Number(rawTrustProxy));
-  } else if (rawTrustProxy === 'false') {
+  } else if (trimmed === 'false') {
     app.set('trust proxy', false);
+  } else if (/^\d+$/.test(trimmed)) {
+    app.set('trust proxy', parseInt(trimmed, 10));
   } else {
-    app.set('trust proxy', rawTrustProxy);
+    const SAFE_KEYWORDS = new Set(['loopback', 'linklocal', 'uniquelocal']);
+    const parts = trimmed.split(',').map((p) => p.trim());
+    const isValidPart = (p) => {
+      if (SAFE_KEYWORDS.has(p.toLowerCase())) return true;
+      const ipv4Cidr = /^(?:\d{1,3}\.){3}\d{1,3}(?:\/(?:[0-9]|[1-2][0-9]|3[0-2]))?$/;
+      const ipv6Cidr = /^[0-9a-fA-F:]+(?:\/(?:[0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8]))?$/;
+      return ipv4Cidr.test(p) || ipv6Cidr.test(p);
+    };
+
+    if (parts.length > 0 && parts.every(isValidPart)) {
+      app.set('trust proxy', trimmed);
+    } else {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+          `[SECURITY FATAL] Invalid TRUST_PROXY configuration "${trimmed}". Must be a boolean ('true'/'false'), an integer hop count, or comma-separated IPs/CIDRs/keywords ('loopback', 'linklocal', 'uniquelocal').`
+        );
+      } else {
+        console.warn(
+          `[WARN] Invalid TRUST_PROXY "${trimmed}" in non-production. Falling back to false.`
+        );
+        app.set('trust proxy', false);
+      }
+    }
   }
 } else {
   app.set('trust proxy', false);

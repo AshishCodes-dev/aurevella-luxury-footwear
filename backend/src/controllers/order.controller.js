@@ -78,6 +78,47 @@ export const validateCheckoutQuote = async (req, res) => {
 };
 
 /**
+ * Deterministically normalizes address fields for comparison:
+ * Trims whitespace, collapses internal multiple spaces, and normalizes casing.
+ */
+export const normalizeAddressField = (val) => {
+  if (val === null || val === undefined) return '';
+  return String(val).trim().replace(/\s+/g, ' ').toLowerCase();
+};
+
+/**
+ * Normalizes phone numbers by stripping non-digit formatting characters.
+ * Handles Indian country code (+91) uniformly.
+ */
+export const normalizePhoneNumber = (phone) => {
+  if (!phone) return '';
+  const digits = String(phone).replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) {
+    return digits.slice(2);
+  }
+  return digits;
+};
+
+/**
+ * Validates whether two address snapshots are equivalent across all delivery parameters.
+ */
+export const isAddressSnapshotEquivalent = (addrA, addrB) => {
+  if (!addrA || !addrB) return false;
+
+  return (
+    normalizeAddressField(addrA.recipientName) === normalizeAddressField(addrB.recipientName) &&
+    normalizePhoneNumber(addrA.phone) === normalizePhoneNumber(addrB.phone) &&
+    normalizeAddressField(addrA.addressLine1) === normalizeAddressField(addrB.addressLine1) &&
+    normalizeAddressField(addrA.addressLine2) === normalizeAddressField(addrB.addressLine2) &&
+    normalizeAddressField(addrA.city) === normalizeAddressField(addrB.city) &&
+    normalizeAddressField(addrA.state) === normalizeAddressField(addrB.state) &&
+    normalizeAddressField(addrA.postalCode) === normalizeAddressField(addrB.postalCode) &&
+    normalizeAddressField(addrA.country || 'India') ===
+      normalizeAddressField(addrB.country || 'India')
+  );
+};
+
+/**
  * POST /api/orders
  * Creates an order in 'pending_payment' status after server-side stock and price verification.
  * In Phase 6.1, stock is verified but NOT decremented (stock decrements upon verified payment in Phase 6.2).
@@ -112,11 +153,11 @@ export const createOrder = async (req, res) => {
             return match && match.quantity === exItem.quantity;
           });
 
-        // Compare address delivery parameters
-        const addressMatch =
-          existing.shippingAddress?.postalCode === addressSnapshot.postalCode &&
-          existing.shippingAddress?.addressLine1 === addressSnapshot.addressLine1 &&
-          existing.shippingAddress?.recipientName === addressSnapshot.recipientName;
+        // Compare full address delivery parameters deterministically
+        const addressMatch = isAddressSnapshotEquivalent(
+          existing.shippingAddress,
+          addressSnapshot
+        );
 
         if (!itemsMatch || !addressMatch) {
           return res.status(409).json({

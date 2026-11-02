@@ -85,7 +85,7 @@ const loadRazorpayScript = () => {
 };
 
 export const Checkout = () => {
-  useDocumentTitle('Bespoke Checkout — AUREVELLA');
+  useDocumentTitle('Bespoke Checkout — AUREVELLA', { noIndex: true });
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { items: bagItems, rawItems, totalCount, clearBag } = useBag();

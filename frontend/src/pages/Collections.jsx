@@ -5,7 +5,10 @@ import useDocumentTitle from '../utils/useDocumentTitle.js';
 import siteConfig from '../content/site.js';
 
 export const Collections = () => {
-  useDocumentTitle('Curated Collections');
+  useDocumentTitle('Curated Collections', {
+    description:
+      'Explore signature capsule collections designed with Italian-inspired elegance and crafted in India.',
+  });
 
   const launchCapsules = [
     {

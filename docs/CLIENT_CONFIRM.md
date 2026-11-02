@@ -89,3 +89,56 @@ The following policy statements and core technical claims were preserved without
 | `frontend/src/pages/About.jsx:25,68` | `Interchangeable Heel Engineering`, `By introducing our signature interchangeable heel mechanism, we eliminate the false choice between towering evening glamour and all-day walking comfort.` | **Needs Confirmation** | Confirmed brand narrative regarding interchangeable heel convenience? |
 | `frontend/src/pages/ShippingPolicy.jsx:75` | `Because each shoe incorporates our proprietary interchangeable heel fitting and hand-stitched components...` | **Needs Confirmation** | Confirmed operational reference in shipping guidelines? |
 | `frontend/src/pages/TermsConditions.jsx:67,70` | `The AUREVELLA name, trademark, bespoke heel attachment engineering... No reproduction, reverse-engineering, mechanical copying, or commercial re-distribution of our interchangeable heel mechanism or designs is permitted...` | **Needs Confirmation** | Has a patent, design registration, or trademark application been filed in India or internationally for the interchangeable heel mechanism? |
+
+---
+
+## 3. Pending Owner Business Decisions & Operations Backlog
+
+The following operational and business decisions require explicit client sign-off prior to production deployment:
+
+### A. Shipping & Logistics
+1. **Domestic Shipping Rates & Thresholds:**
+   - Confirm whether all domestic shipping across India is 100% complimentary on all orders, or if a minimum order value threshold (e.g., free above ₹5,000) applies.
+2. **Transit Insurance:**
+   - Confirm whether Aurevella maintains a merchant transit insurance agreement covering 100% of order value against loss, theft, or transit damage with designated couriers.
+3. **Fulfillment SLAs:**
+   - Confirm dispatch SLAs: 2–3 business days for in-stock ready-to-wear models, and 10–14 business days for made-to-order or limited editions.
+4. **Packaging Standard:**
+   - Confirm whether packaging consists of custom wooden presentation boxes or rigid luxury cardboard presentation boxes with individual dust bags.
+
+### B. Returns & Exchanges
+1. **Return Window:**
+   - Confirm the 14 calendar day return/exchange window from confirmed carrier delivery date.
+2. **Reverse Pickup & Size Exchange:**
+   - Confirm offering one complimentary size exchange per order with pre-arranged doorstep reverse courier pickup.
+3. **Technical Inspection & Refund SLA:**
+   - Confirm the 48-business-hour return technical inspection SLA and 5–7 business day Razorpay bank refund timeline.
+
+### C. Legal, Tax & Corporate Identity
+1. **Registered Business Entity:**
+   - Provide the registered legal entity name, corporate office address, and registered GSTIN for customer invoicing and Terms of Service.
+2. **Support Channels & Concierge:**
+   - Confirm operational support email addresses (`concierge@myaurevella.in`, `support@myaurevella.in`, or `marketing@myaurevella.in`).
+   - Confirm active operating hours for the WhatsApp concierge (`+91 77280 60447`).
+3. **Intellectual Property Sign-Off:**
+   - Confirm legal registration status (registered trademark, design registration, or patent pending) regarding the "Interchangeable Heel" locking mechanism.
+
+### D. Private Atelier Consultations
+1. **Consultation Format:**
+   - Confirm whether Aurevella offers physical showroom/atelier fittings in Mumbai/Delhi or if appointments are conducted digitally via WhatsApp Concierge.
+
+---
+
+## 4. Provider Dashboard Secret Rotation Checklist (Pre-Launch)
+
+Before production release, the following external credential variables must be generated and rotated directly within their respective provider dashboards. **Values must never be committed to Git or stored in shared repositories.**
+
+| Credential Variable Name | Provider Dashboard / Service | Rotation Requirement |
+|:---|:---|:---|
+| `RAZORPAY_KEY_ID` | Razorpay Dashboard (`rzp_live_...`) | Generate dedicated Live mode API key. Test mode keys (`rzp_test_...`) must not be used for live commerce. |
+| `RAZORPAY_KEY_SECRET` | Razorpay Dashboard | Generated alongside the live Key ID; keep securely in production server environment. |
+| `RAZORPAY_WEBHOOK_SECRET` | Razorpay Dashboard > Webhooks | Set up webhook endpoint (`https://api.myaurevella.in/api/v1/payments/webhook`) and generate secret. |
+| `MONGODB_URI` | MongoDB Atlas / Managed Cluster | Dedicated production database user with least-privilege credentials, network IP access list, and TLS enabled. |
+| `JWT_SECRET` | Production Server Environment | Cryptographically secure high-entropy string (minimum 64 characters / 256 bits). |
+| `FIREBASE_SERVICE_ACCOUNT_PATH` | Google Cloud Console / Firebase Console | Dedicated production service account JSON key stored at an absolute path outside the repo (e.g., `/home/<user>/secrets/aurevella-firebase.json`). |
+| `ADMIN_SEED_PASSWORD` | Initial Admin Setup | Use a unique complex passphrase for initial seeding; rotate immediately upon first admin login. |

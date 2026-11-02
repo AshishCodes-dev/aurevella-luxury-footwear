@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { MapPin, Plus, Check, Trash2, Edit2, ShieldCheck, X } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext.jsx';
+import useDocumentTitle from '../utils/useDocumentTitle.js';
 import { Button } from '../components/ui/button.jsx';
 import { Input } from '../components/ui/input.jsx';
 import { Label } from '../components/ui/label.jsx';
@@ -50,6 +51,7 @@ const addressFormSchema = z.object({
 });
 
 export const Account = () => {
+  useDocumentTitle('Customer Account Profile — AUREVELLA', { noIndex: true });
   const { user, updateProfile, logout } = useAuth();
   const navigate = useNavigate();
 

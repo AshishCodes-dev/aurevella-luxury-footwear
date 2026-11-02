@@ -75,6 +75,14 @@ export const createSession = async (req, res) => {
       const existingUserByEmail = await User.findOne({ email: normalizedEmail });
 
       if (existingUserByEmail) {
+        // Enforce deactivated account guard before any linking or session creation
+        if (!existingUserByEmail.isActive) {
+          return res.status(403).json({
+            status: 'error',
+            message: 'User account has been deactivated',
+          });
+        }
+
         // Enforce account linking security: email MUST be verified
         if (!emailVerified) {
           return res.status(409).json({
@@ -84,8 +92,19 @@ export const createSession = async (req, res) => {
           });
         }
 
-        // Safe link: attach new firebaseUid and provider
-        existingUserByEmail.firebaseUid = firebaseUid;
+        // Prevent accidental UID reassignment or cross-account linking
+        if (existingUserByEmail.firebaseUid && existingUserByEmail.firebaseUid !== firebaseUid) {
+          return res.status(409).json({
+            status: 'error',
+            message:
+              'Identity conflict detected. This email is already associated with a different account identifier.',
+          });
+        }
+
+        // Safe link: attach new firebaseUid if missing, and provider
+        if (!existingUserByEmail.firebaseUid) {
+          existingUserByEmail.firebaseUid = firebaseUid;
+        }
         existingUserByEmail.emailVerified = true;
         if (!existingUserByEmail.providers.includes(provider)) {
           existingUserByEmail.providers.push(provider);
@@ -93,6 +112,7 @@ export const createSession = async (req, res) => {
         if (picture && !existingUserByEmail.photoURL) {
           existingUserByEmail.photoURL = picture;
         }
+        // Preserve existing administrator or customer role as-is (never promote)
         await existingUserByEmail.save();
         user = existingUserByEmail;
       } else {

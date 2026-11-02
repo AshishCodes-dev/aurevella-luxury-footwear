@@ -201,7 +201,31 @@ export const initFirebase = () => {
   }
 };
 
+let customFirebaseAuthInstance = null;
+
+/**
+ * Injects a test-only mock Firebase Auth instance.
+ * Fails closed with a fatal error if invoked in production.
+ *
+ * @param {Object|null} instance
+ */
+export const setCustomFirebaseAuth = (instance) => {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      '[SECURITY FATAL] Custom Firebase Auth mock instance cannot be injected in production environment.'
+    );
+  }
+  customFirebaseAuthInstance = instance;
+};
+
+export const resetCustomFirebaseAuth = () => {
+  customFirebaseAuthInstance = null;
+};
+
 export const getFirebaseAuth = () => {
+  if (customFirebaseAuthInstance) {
+    return customFirebaseAuthInstance;
+  }
   if (!firebaseApp && getApps().length === 0) {
     initFirebase();
   }
@@ -215,6 +239,8 @@ export const getFirebaseAuth = () => {
 export default {
   initFirebase,
   getFirebaseAuth,
+  setCustomFirebaseAuth,
+  resetCustomFirebaseAuth,
   validateAuthConfig,
   parsePrivateKey,
 };

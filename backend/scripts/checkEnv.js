@@ -8,6 +8,37 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '../..');
 
+export const isValidTrustProxyConfig = (val) => {
+  if (val === undefined || val === null || String(val).trim() === '') {
+    return { valid: true, isUnset: true };
+  }
+  const trimmed = String(val).trim();
+  if (trimmed === 'true' || trimmed === 'false') {
+    return { valid: true, isUnset: false, value: trimmed === 'true' };
+  }
+  if (/^\d+$/.test(trimmed)) {
+    return { valid: true, isUnset: false, value: parseInt(trimmed, 10) };
+  }
+  const SAFE_KEYWORDS = new Set(['loopback', 'linklocal', 'uniquelocal']);
+  const parts = trimmed.split(',').map((p) => p.trim());
+  const isValidPart = (p) => {
+    if (SAFE_KEYWORDS.has(p.toLowerCase())) return true;
+    const ipv4Cidr = /^(?:\d{1,3}\.){3}\d{1,3}(?:\/(?:[0-9]|[1-2][0-9]|3[0-2]))?$/;
+    const ipv6Cidr = /^[0-9a-fA-F:]+(?:\/(?:[0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8]))?$/;
+    return ipv4Cidr.test(p) || ipv6Cidr.test(p);
+  };
+
+  if (parts.length > 0 && parts.every(isValidPart)) {
+    return { valid: true, isUnset: false, value: trimmed };
+  }
+
+  return {
+    valid: false,
+    isUnset: false,
+    error: `Invalid TRUST_PROXY value "${trimmed}". Must be a boolean ('true'/'false'), an integer hop count, or comma-separated IPs/CIDRs/keywords ('loopback', 'linklocal', 'uniquelocal').`,
+  };
+};
+
 export const runCheckEnv = (env = process.env) => {
   console.log('========================================');
   console.log('    AUREVELLA ENVIRONMENT CHECK PANEL    ');
@@ -49,7 +80,7 @@ if (allowedOrigins && allowedOrigins.trim().length > 0) {
 }
 
 // 3. JWT_SECRET
-const jwtSecret = process.env.JWT_SECRET;
+const jwtSecret = env.JWT_SECRET;
 if (!jwtSecret) {
   fail('JWT_SECRET', 'Missing or empty');
 } else if (jwtSecret.length < 32) {
@@ -59,10 +90,10 @@ if (!jwtSecret) {
 }
 
 // 4. Firebase Credentials Validation
-const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
-const projectId = process.env.FIREBASE_PROJECT_ID;
-const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
+const serviceAccountPath = env.FIREBASE_SERVICE_ACCOUNT_PATH;
+const projectId = env.FIREBASE_PROJECT_ID;
+const clientEmail = env.FIREBASE_CLIENT_EMAIL;
+const rawPrivateKey = env.FIREBASE_PRIVATE_KEY;
 
 if (serviceAccountPath && serviceAccountPath.trim() !== '') {
   info('Firebase Credential Source', 'FIREBASE_SERVICE_ACCOUNT_PATH (preferred file source)');
@@ -154,26 +185,30 @@ if (serviceAccountPath && serviceAccountPath.trim() !== '') {
 }
 
 // 5. TRUST_PROXY Configuration
-const trustProxy = process.env.TRUST_PROXY;
-if (trustProxy !== undefined && trustProxy.trim() !== '') {
-  const trimmed = trustProxy.trim();
-  if (trimmed === 'true' || trimmed === 'false' || !isNaN(Number(trimmed)) || trimmed.length > 0) {
-    pass('TRUST_PROXY', `Set to "${trimmed}" (configured for reverse-proxy rate limiting)`);
-  } else {
-    fail('TRUST_PROXY', `Invalid value: "${trimmed}"`);
-  }
+const trustProxy = env.TRUST_PROXY;
+const trustProxyCheck = isValidTrustProxyConfig(trustProxy);
+if (!trustProxyCheck.valid) {
+  fail('TRUST_PROXY', trustProxyCheck.error);
+} else if (!trustProxyCheck.isUnset) {
+  pass(
+    'TRUST_PROXY',
+    `Set to "${String(trustProxy).trim()}" (valid reverse-proxy configuration)`
+  );
 } else {
-  if (process.env.NODE_ENV === 'production') {
-    info('TRUST_PROXY', 'Unset (defaults to false; set to 1 if behind reverse proxy/load balancer)');
+  if (env.NODE_ENV === 'production') {
+    info(
+      'TRUST_PROXY',
+      'Unset (defaults to false; set to 1 if behind reverse proxy/load balancer)'
+    );
   } else {
     pass('TRUST_PROXY', 'Unset (acceptable in development/test environments)');
   }
 }
 
 // 6. ADMIN_SEED Settings
-const adminEmail = process.env.ADMIN_SEED_EMAIL;
-const adminPassword = process.env.ADMIN_SEED_PASSWORD;
-const adminName = process.env.ADMIN_SEED_NAME;
+const adminEmail = env.ADMIN_SEED_EMAIL;
+const adminPassword = env.ADMIN_SEED_PASSWORD;
+const adminName = env.ADMIN_SEED_NAME;
 
 if (adminEmail && adminEmail.trim().length > 0) {
   pass('ADMIN_SEED_EMAIL', 'Set');
@@ -197,14 +232,51 @@ if (adminName && adminName.trim().length > 0) {
   info('ADMIN_SEED_NAME', 'Not set (defaults to "Aurevella Admin")');
 }
 
-// 7. DISABLE_RATE_LIMITER Production Guard
-const disableRateLimiter = process.env.DISABLE_RATE_LIMITER;
-if (process.env.NODE_ENV === 'production' && disableRateLimiter === 'true') {
-  fail('DISABLE_RATE_LIMITER', 'Security violation: DISABLE_RATE_LIMITER must never be "true" in production.');
+// 7. DISABLE_RATE_LIMITER & Production Safety Guards
+const disableRateLimiter = env.DISABLE_RATE_LIMITER;
+if (env.NODE_ENV === 'production' && disableRateLimiter === 'true') {
+  fail(
+    'DISABLE_RATE_LIMITER',
+    'Security violation: DISABLE_RATE_LIMITER must never be "true" in production.'
+  );
 } else if (disableRateLimiter === 'true') {
-  info('DISABLE_RATE_LIMITER', 'Set to "true" (allowed in development/test only; ignored in production)');
+  info(
+    'DISABLE_RATE_LIMITER',
+    'Set to "true" (allowed in development/test only; ignored in production)'
+  );
 } else {
   pass('DISABLE_RATE_LIMITER', 'Not enabled or active (rate limiters will enforce)');
+}
+
+if (env.NODE_ENV === 'production') {
+  if (env.USE_LOCAL_DB === 'true') {
+    fail(
+      'USE_LOCAL_DB',
+      'Security violation: USE_LOCAL_DB must never be "true" in production.'
+    );
+  }
+
+  const originsToCheck = [];
+  if (allowedOrigins) {
+    originsToCheck.push(...allowedOrigins.split(',').map((o) => o.trim()).filter(Boolean));
+  }
+  if (clientUrl) {
+    originsToCheck.push(clientUrl.trim());
+  }
+
+  for (const origin of originsToCheck) {
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      fail(
+        'CORS Origin Production Guard',
+        `Security violation: Production origin cannot point to localhost/127.0.0.1 ("${origin}").`
+      );
+    } else if (!origin.startsWith('https://')) {
+      fail(
+        'CORS Origin Production Guard',
+        `Security violation: Production origin must use HTTPS ("${origin}"). Insecure HTTP is forbidden.`
+      );
+    }
+  }
 }
 
   // 8. Razorpay Configuration Checks

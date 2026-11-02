@@ -84,6 +84,7 @@ export const createMockRazorpay = (options = {}) => {
   }
 
   const paymentHandlers = new Map();
+  const orderPaymentHandlers = new Map();
   const orderHandlers = [];
   let defaultPaymentHandler = null;
   let defaultOrderHandler = null;
@@ -142,6 +143,19 @@ export const createMockRazorpay = (options = {}) => {
           )}) in test.`
         );
       },
+      fetchPayments: async (orderId) => {
+        if (orderPaymentHandlers.has(orderId)) {
+          const handler = orderPaymentHandlers.get(orderId);
+          if (typeof handler === 'function') {
+            return handler(orderId);
+          }
+          if (handler instanceof Error) {
+            throw handler;
+          }
+          return handler;
+        }
+        return { count: 0, items: [] };
+      },
     },
 
     // Chainable configuration helpers
@@ -161,8 +175,13 @@ export const createMockRazorpay = (options = {}) => {
       defaultOrderHandler = recordOrHandler;
       return mock;
     },
+    mockOrderPayments: (orderId, recordOrHandler) => {
+      orderPaymentHandlers.set(orderId, recordOrHandler);
+      return mock;
+    },
     reset: () => {
       paymentHandlers.clear();
+      orderPaymentHandlers.clear();
       orderHandlers.length = 0;
       defaultPaymentHandler = null;
       defaultOrderHandler = null;

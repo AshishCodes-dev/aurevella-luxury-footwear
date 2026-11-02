@@ -33,7 +33,7 @@ const loadRazorpayScript = () => {
 };
 
 export const Orders = () => {
-  useDocumentTitle('Your Commissions & Orders — AUREVELLA');
+  useDocumentTitle('Your Commissions & Orders — AUREVELLA', { noIndex: true });
   const { user } = useAuth();
 
   const [orders, setOrders] = useState([]);

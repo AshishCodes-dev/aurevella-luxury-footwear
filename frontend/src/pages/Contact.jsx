@@ -27,7 +27,10 @@ const InstagramIcon = ({ size = 18, className = '' }) => (
 );
 
 export const Contact = () => {
-  useDocumentTitle('Contact & Concierge');
+  useDocumentTitle('Contact & Concierge', {
+    description:
+      'Connect with the AUREVELLA concierge for inquiries regarding bespoke commissions, sizing advice, and private client care.',
+  });
 
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState('');

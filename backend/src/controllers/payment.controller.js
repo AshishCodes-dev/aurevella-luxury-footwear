@@ -52,7 +52,7 @@ export const createPaymentOrder = async (req, res) => {
 
     const keyId = getRazorpayKeyId();
 
-    // 3. Idempotency: If Razorpay order was already created, reuse it
+    // 3. Idempotency: If Razorpay order was already created, reuse it immediately
     if (order.paymentDetails?.razorpayOrderId) {
       return res.status(200).json({
         status: 'success',
@@ -64,39 +64,116 @@ export const createPaymentOrder = async (req, res) => {
       });
     }
 
-    // 4. Create order via official Razorpay SDK
-    const razorpay = getRazorpayInstance();
-    const razorpayOrder = await razorpay.orders.create({
-      amount: order.totalPaise, // Guaranteed integer paise from database
-      currency: order.currency || 'INR',
-      receipt: order.orderNumber,
-      notes: {
-        orderId: order._id.toString(),
-        orderNumber: order.orderNumber,
-        userId: req.user._id.toString(),
+    // 4. Concurrency Guard: Atomically acquire payment creation lease
+    const LEASE_DURATION_MS = 15000;
+    const leaseCutoff = new Date(Date.now() - LEASE_DURATION_MS);
+
+    const claimedOrder = await Order.findOneAndUpdate(
+      {
+        _id: orderId,
+        user: req.user._id,
+        status: 'pending_payment',
+        $and: [
+          {
+            $or: [
+              { 'paymentDetails.razorpayOrderId': { $in: [null, ''] } },
+              { 'paymentDetails.razorpayOrderId': { $exists: false } },
+            ],
+          },
+          {
+            $or: [
+              { 'paymentDetails.paymentCreationClaimedAt': { $in: [null] } },
+              { 'paymentDetails.paymentCreationClaimedAt': { $exists: false } },
+              { 'paymentDetails.paymentCreationClaimedAt': { $lt: leaseCutoff } },
+            ],
+          },
+        ],
       },
-    });
+      {
+        $set: {
+          'paymentDetails.paymentCreationClaimedAt': new Date(),
+        },
+      },
+      { new: true }
+    );
 
-    // 5. Store razorpayOrderId on the order
-    order.paymentDetails.razorpayOrderId = razorpayOrder.id;
-    await order.save();
+    if (!claimedOrder) {
+      // Another concurrent worker/request has already claimed payment creation,
+      // or razorpayOrderId was just written. Poll briefly (up to 1.5s in 100ms intervals)
+      // to allow the in-flight request to finish and return the reused razorpayOrderId.
+      for (let poll = 0; poll < 15; poll++) {
+        await new Promise((r) => setTimeout(r, 100));
+        const recheckOrder = await Order.findOne({ _id: orderId, user: req.user._id });
+        if (recheckOrder?.paymentDetails?.razorpayOrderId) {
+          return res.status(200).json({
+            status: 'success',
+            keyId,
+            razorpayOrderId: recheckOrder.paymentDetails.razorpayOrderId,
+            amountPaise: recheckOrder.totalPaise,
+            currency: recheckOrder.currency || 'INR',
+            orderNumber: recheckOrder.orderNumber,
+          });
+        }
+      }
 
-    return res.status(201).json({
-      status: 'success',
-      keyId,
-      razorpayOrderId: razorpayOrder.id,
-      amountPaise: order.totalPaise,
-      currency: order.currency || 'INR',
-      orderNumber: order.orderNumber,
-    });
+      // If still claimed and incomplete after polling:
+      return res.status(409).json({
+        status: 'conflict',
+        code: 'PAYMENT_CREATION_IN_PROGRESS',
+        message:
+          'Payment initiation is already in progress for this order. Please retry shortly.',
+      });
+    }
+
+    // 5. Exclusive lease acquired: Create order via official Razorpay SDK
+    try {
+      const razorpay = getRazorpayInstance();
+      const razorpayOrder = await razorpay.orders.create({
+        amount: claimedOrder.totalPaise, // Guaranteed integer paise from database
+        currency: claimedOrder.currency || 'INR',
+        receipt: claimedOrder.orderNumber,
+        notes: {
+          orderId: claimedOrder._id.toString(),
+          orderNumber: claimedOrder.orderNumber,
+          userId: req.user._id.toString(),
+        },
+      });
+
+      // 6. Atomically persist razorpayOrderId and release creation lease
+      await Order.findOneAndUpdate(
+        { _id: orderId },
+        {
+          $set: { 'paymentDetails.razorpayOrderId': razorpayOrder.id },
+          $unset: { 'paymentDetails.paymentCreationClaimedAt': 1 },
+        }
+      );
+
+      return res.status(201).json({
+        status: 'success',
+        keyId,
+        razorpayOrderId: razorpayOrder.id,
+        amountPaise: claimedOrder.totalPaise,
+        currency: claimedOrder.currency || 'INR',
+        orderNumber: claimedOrder.orderNumber,
+      });
+    } catch (gatewayErr) {
+      // Clear claim on gateway failure so retries can proceed immediately without waiting for lease
+      await Order.updateOne(
+        { _id: orderId },
+        { $unset: { 'paymentDetails.paymentCreationClaimedAt': 1 } }
+      ).catch(() => {});
+      throw gatewayErr;
+    }
   } catch (error) {
-    const errorMsg = error?.message || error?.error?.description || 'Failed to initiate payment with gateway';
+    const errorMsg =
+      error?.message || error?.error?.description || 'Failed to initiate payment with gateway';
     console.error('[Payment Controller - createPaymentOrder]:', errorMsg);
     return res.status(500).json({
       status: 'error',
-      message: typeof errorMsg === 'string' && errorMsg.includes('Razorpay configuration error')
-        ? errorMsg
-        : 'Failed to initiate payment with gateway',
+      message:
+        typeof errorMsg === 'string' && errorMsg.includes('Razorpay configuration error')
+          ? errorMsg
+          : 'Failed to initiate payment with gateway',
     });
   }
 };

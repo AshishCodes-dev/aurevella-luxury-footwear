@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Product from '../models/Product.js';
 import Order from '../models/Order.js';
+import { getRazorpayInstance } from '../config/razorpay.js';
 
 export class InventoryReconciliationError extends Error {
   constructor(message, details = {}) {
@@ -115,10 +116,25 @@ export const processPaymentSuccessAndDeductInventory = async ({
 
   // 3. Atomically claim the order from 'pending_payment' to 'processing'
   // Single-document atomic update guarantees that only ONE worker can transition the order.
+  // Supports recovering orders left in 'processing' by an abandoned worker (> 30s lease).
+  const LEASE_DURATION_MS = 30000;
+  const expiredLeaseCutoff = new Date(Date.now() - LEASE_DURATION_MS);
+
   const claimedOrder = await Order.findOneAndUpdate(
     {
       _id: orderId,
-      status: 'pending_payment',
+      $or: [
+        { status: 'pending_payment' },
+        {
+          status: 'processing',
+          'paymentDetails.inventoryDecremented': { $ne: true },
+          $or: [
+            { 'paymentDetails.processingClaimedAt': { $in: [null] } },
+            { 'paymentDetails.processingClaimedAt': { $exists: false } },
+            { 'paymentDetails.processingClaimedAt': { $lt: expiredLeaseCutoff } },
+          ],
+        },
+      ],
     },
     {
       $set: {
@@ -489,4 +505,136 @@ export const processPaymentSuccessAndDeductInventory = async ({
       message: 'Payment verified and inventory decremented successfully.',
     };
   }
+};
+
+/**
+ * Reconciles and recovers an order stuck in 'processing' status.
+ * Checks the gateway for verified payment status before modifying order or inventory state.
+ *
+ * Rules:
+ * - Only orders in 'processing' status with an expired lease (> maxClaimAgeMs) are reclaimed.
+ * - If gateway confirms captured/authorized payment, completes inventory deduction and marks 'paid'.
+ * - If gateway confirms failed payment, transitions to 'pending_payment' (zero stock decremented).
+ * - If no payments were ever created on gateway, safely reverts to 'pending_payment'.
+ * - Preserves order history and never double-decrements inventory.
+ *
+ * @param {Object} options
+ * @param {string|mongoose.Types.ObjectId} options.orderId
+ * @param {number} [options.maxClaimAgeMs=30000]
+ * @param {Object} [options.customRazorpayClient=null]
+ * @returns {Promise<Object>}
+ */
+export const recoverStuckProcessingOrder = async ({
+  orderId,
+  maxClaimAgeMs = 30000,
+  customRazorpayClient = null,
+}) => {
+  const order = await Order.findById(orderId);
+  if (!order) {
+    return { success: false, message: `Order ${orderId} not found.` };
+  }
+
+  if (order.status !== 'processing') {
+    return {
+      success: true,
+      alreadyResolved: true,
+      status: order.status,
+      order,
+      message: `Order is in "${order.status}" status, not "processing". No recovery required.`,
+    };
+  }
+
+  // Check if lease is still active
+  const claimTime = order.paymentDetails?.processingClaimedAt
+    ? new Date(order.paymentDetails.processingClaimedAt).getTime()
+    : 0;
+  const claimAge = Date.now() - claimTime;
+
+  if (claimAge < maxClaimAgeMs) {
+    return {
+      success: true,
+      inProgress: true,
+      status: 'processing',
+      order,
+      message: `Order processing claim is actively in flight (age: ${claimAge}ms < ${maxClaimAgeMs}ms).`,
+    };
+  }
+
+  // Lease is expired! Reconcile with trusted gateway
+  const razorpay = customRazorpayClient || getRazorpayInstance();
+  const paymentId = order.paymentDetails?.razorpayPaymentId;
+  const razorpayOrderId = order.paymentDetails?.razorpayOrderId;
+
+  let capturedPayment = null;
+  let paymentFailed = false;
+  let failureReason = null;
+
+  try {
+    if (paymentId) {
+      const paymentRecord = await razorpay.payments.fetch(paymentId);
+      if (paymentRecord.status === 'captured' || paymentRecord.status === 'authorized') {
+        capturedPayment = paymentRecord;
+      } else if (paymentRecord.status === 'failed') {
+        paymentFailed = true;
+        failureReason = paymentRecord.error_description || 'Gateway payment failed';
+      }
+    } else if (razorpayOrderId) {
+      const paymentsList = await razorpay.orders.fetchPayments(razorpayOrderId);
+      const items = paymentsList?.items || [];
+      const successful = items.find((p) => p.status === 'captured' || p.status === 'authorized');
+      if (successful) {
+        capturedPayment = successful;
+      } else if (items.length > 0 && items.every((p) => p.status === 'failed')) {
+        paymentFailed = true;
+        failureReason = items[0].error_description || 'All gateway payment attempts failed';
+      }
+    }
+  } catch (gatewayErr) {
+    console.error(
+      `[recoverStuckProcessingOrder] Gateway reconciliation error for order ${order.orderNumber}:`,
+      gatewayErr.message
+    );
+    return {
+      success: false,
+      status: 'processing',
+      order,
+      message: `Gateway reconciliation check failed: ${gatewayErr.message}. Order status left unchanged.`,
+    };
+  }
+
+  if (capturedPayment) {
+    // Payment was actually captured! Fulfill inventory and mark paid safely
+    return await processPaymentSuccessAndDeductInventory({
+      orderId: order._id,
+      razorpayPaymentId: capturedPayment.id,
+      razorpaySignature: order.paymentDetails?.razorpaySignature || null,
+      webhookEventId: 'recovery-auto-reconcile',
+    });
+  }
+
+  // If payment explicitly failed or no payment was ever made:
+  // Reset order to pending_payment, unsetting processingClaimedAt. Stock was NEVER decremented.
+  const updatedOrder = await Order.findByIdAndUpdate(
+    order._id,
+    {
+      $set: {
+        status: 'pending_payment',
+        ...(failureReason ? { 'paymentDetails.failureReason': failureReason } : {}),
+      },
+      $unset: {
+        'paymentDetails.processingClaimedAt': 1,
+      },
+    },
+    { new: true }
+  );
+
+  return {
+    success: true,
+    recovered: true,
+    status: 'pending_payment',
+    order: updatedOrder,
+    message: paymentFailed
+      ? `Payment failed at gateway (${failureReason}). Order safely reset to pending_payment with zero inventory decrement.`
+      : 'No completed payment found on gateway. Abandoned processing claim safely reset to pending_payment.',
+  };
 };

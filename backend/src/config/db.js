@@ -9,15 +9,16 @@ const __dirname = path.dirname(__filename);
 const localEnvPath = path.resolve(__dirname, '../../.env.local');
 
 // Safely load local development override if .env.local exists, without modifying .env
-if (fs.existsSync(localEnvPath)) {
+// Strictly forbidden from overriding configuration in production mode
+if (process.env.NODE_ENV !== 'production' && fs.existsSync(localEnvPath)) {
   dotenv.config({ path: localEnvPath, override: true });
 }
 
 /**
  * Resolves the active MongoDB connection URI.
  * Priority:
- * 1. Explicit override passed to function
- * 2. If USE_LOCAL_DB === 'true', uses MONGODB_LOCAL_URI or 'mongodb://127.0.0.1:27017/aurevella_dev'
+ * 1. Explicit override passed to function (test environments)
+ * 2. If USE_LOCAL_DB === 'true', uses MONGODB_LOCAL_URI or 'mongodb://127.0.0.1:27017/aurevella_dev' (dev/test only)
  * 3. Default: process.env.MONGODB_URI from backend/.env
  */
 export const getActiveMongoUri = (overrideUri) => {
@@ -25,9 +26,22 @@ export const getActiveMongoUri = (overrideUri) => {
     return overrideUri.trim();
   }
   if (process.env.USE_LOCAL_DB === 'true') {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        '[SECURITY FATAL] USE_LOCAL_DB is strictly forbidden in production mode. Production must connect to the configured MONGODB_URI cluster.'
+      );
+    }
     return (
       (process.env.MONGODB_LOCAL_URI && process.env.MONGODB_LOCAL_URI.trim()) ||
       'mongodb://127.0.0.1:27017/aurevella_dev'
+    );
+  }
+  if (
+    process.env.NODE_ENV === 'production' &&
+    (!process.env.MONGODB_URI || !process.env.MONGODB_URI.trim())
+  ) {
+    throw new Error(
+      '[SECURITY FATAL] MONGODB_URI is missing or empty in production mode.'
     );
   }
   return (process.env.MONGODB_URI && process.env.MONGODB_URI.trim()) || '';

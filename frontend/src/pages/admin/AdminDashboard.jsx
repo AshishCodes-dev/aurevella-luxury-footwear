@@ -16,8 +16,10 @@ import AdminOverview from './AdminOverview.jsx';
 import AdminProducts from './AdminProducts.jsx';
 import AdminOrders from './AdminOrders.jsx';
 import AdminInquiries from './AdminInquiries.jsx';
+import useDocumentTitle from '../../utils/useDocumentTitle.js';
 
 export const AdminDashboard = () => {
+  useDocumentTitle('Executive Console — AUREVELLA', { noIndex: true });
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 

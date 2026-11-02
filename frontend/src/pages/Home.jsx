@@ -6,7 +6,10 @@ import ProductCard from '../components/ProductCard.jsx';
 import useDocumentTitle from '../utils/useDocumentTitle.js';
 
 export const Home = () => {
-  useDocumentTitle('AUREVELLA — Luxury Interchangeable Heels');
+  useDocumentTitle('AUREVELLA — Luxury Interchangeable Heels', {
+    description:
+      'AUREVELLA — Luxury Interchangeable Heels. Italian-inspired elegance, handcrafted in India. Luxury, Reimagined.',
+  });
 
   return (
     <div className="space-y-24 sm:space-y-36 py-4 sm:py-8 w-full overflow-hidden">

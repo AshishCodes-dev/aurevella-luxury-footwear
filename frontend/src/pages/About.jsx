@@ -5,7 +5,10 @@ import useDocumentTitle from '../utils/useDocumentTitle.js';
 import siteConfig from '../content/site.js';
 
 export const About = () => {
-  useDocumentTitle('Our Story & Atelier');
+  useDocumentTitle('Our Story & Atelier', {
+    description:
+      'Discover the heritage, design philosophy, and artisanal dedication behind AUREVELLA luxury footwear.',
+  });
 
   const processSteps = [
     {

@@ -13,6 +13,16 @@ export const getAllowedOrigins = () => {
       .filter((origin) => origin.length > 0);
   }
 
-  const single = process.env.CLIENT_URL || 'http://localhost:5173';
-  return [single.trim()];
+  const single = process.env.CLIENT_URL;
+  if (single && single.trim().length > 0) {
+    return [single.trim()];
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      '[SECURITY FATAL] Neither ALLOWED_ORIGINS nor CLIENT_URL is configured in production environment. Refusing to start with insecure origin defaults.'
+    );
+  }
+
+  return ['http://localhost:5173'];
 };

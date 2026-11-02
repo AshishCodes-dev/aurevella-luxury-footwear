@@ -240,6 +240,14 @@ const orderSchema = new mongoose.Schema(
         type: [String],
         default: [],
       },
+      paymentCreationClaimedAt: {
+        type: Date,
+        default: null,
+      },
+      processingClaimedAt: {
+        type: Date,
+        default: null,
+      },
       reconciliationNotes: {
         type: String,
         trim: true,

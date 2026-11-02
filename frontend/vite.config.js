@@ -27,6 +27,12 @@ export default defineConfig(({ mode, command }) => {
         `Production build failed: VITE_API_URL cannot point to localhost in production ("${trimmedUrl}"). Please configure a valid production API URL (e.g. https://api.myaurevella.in).`
       )
     }
+
+    if (!trimmedUrl.startsWith('https://')) {
+      throw new Error(
+        `Production build failed: VITE_API_URL must use HTTPS protocol in production ("${trimmedUrl}"). Insecure HTTP is not permitted.`
+      )
+    }
   }
 
   return {

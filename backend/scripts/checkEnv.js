@@ -8,36 +8,37 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '../..');
 
-console.log('========================================');
-console.log('    AUREVELLA ENVIRONMENT CHECK PANEL    ');
-console.log('========================================\n');
+export const runCheckEnv = (env = process.env) => {
+  console.log('========================================');
+  console.log('    AUREVELLA ENVIRONMENT CHECK PANEL    ');
+  console.log('========================================\n');
 
-let allPassed = true;
+  let allPassed = true;
 
-const pass = (label, reason) => {
-  console.log(`[OK]   ${label}: ${reason}`);
-};
+  const pass = (label, reason) => {
+    console.log(`[OK]   ${label}: ${reason}`);
+  };
 
-const fail = (label, reason) => {
-  allPassed = false;
-  console.log(`[FAIL] ${label}: ${reason}`);
-};
+  const fail = (label, reason) => {
+    allPassed = false;
+    console.log(`[FAIL] ${label}: ${reason}`);
+  };
 
-const info = (label, reason) => {
-  console.log(`[INFO] ${label}: ${reason}`);
-};
+  const info = (label, reason) => {
+    console.log(`[INFO] ${label}: ${reason}`);
+  };
 
-// 1. MONGODB_URI
-const mongoUri = process.env.MONGODB_URI;
-if (mongoUri && mongoUri.trim().length > 0) {
-  pass('MONGODB_URI', 'Set and non-empty');
-} else {
-  fail('MONGODB_URI', 'Missing or empty');
-}
+  // 1. MONGODB_URI
+  const mongoUri = env.MONGODB_URI;
+  if (mongoUri && mongoUri.trim().length > 0) {
+    pass('MONGODB_URI', 'Set and non-empty');
+  } else {
+    fail('MONGODB_URI', 'Missing or empty');
+  }
 
-// 2. CLIENT_URL & ALLOWED_ORIGINS
-const allowedOrigins = process.env.ALLOWED_ORIGINS;
-const clientUrl = process.env.CLIENT_URL;
+  // 2. CLIENT_URL & ALLOWED_ORIGINS
+  const allowedOrigins = env.ALLOWED_ORIGINS;
+  const clientUrl = env.CLIENT_URL;
 if (allowedOrigins && allowedOrigins.trim().length > 0) {
   const count = allowedOrigins.split(',').filter((o) => o.trim().length > 0).length;
   pass('ALLOWED_ORIGINS', `Set (${count} origins configured)`);
@@ -206,13 +207,126 @@ if (process.env.NODE_ENV === 'production' && disableRateLimiter === 'true') {
   pass('DISABLE_RATE_LIMITER', 'Not enabled or active (rate limiters will enforce)');
 }
 
-console.log('\n========================================');
-if (allPassed) {
-  console.log('STATUS: ALL CRITICAL CHECKS PASSED');
-  console.log('========================================\n');
-  process.exit(0);
-} else {
-  console.log('STATUS: ONE OR MORE CHECKS FAILED');
-  console.log('========================================\n');
-  process.exit(1);
+  // 8. Razorpay Configuration Checks
+  const razorpayValid = checkRazorpayConfig(env, { pass, fail, info });
+  if (!razorpayValid) {
+    allPassed = false;
+  }
+
+  console.log('\n========================================');
+  if (allPassed) {
+    console.log('STATUS: ALL CRITICAL CHECKS PASSED');
+    console.log('========================================\n');
+  } else {
+    console.log('STATUS: ONE OR MORE CHECKS FAILED');
+    console.log('========================================\n');
+  }
+
+  return allPassed;
+};
+
+// 8. Razorpay Configuration Checks Helper
+export const checkRazorpayConfig = (env = process.env, logger = {}) => {
+  let valid = true;
+  const p = (l, r) => (logger.pass ? logger.pass(l, r) : console.log(`[OK]   ${l}: ${r}`));
+  const f = (l, r) => {
+    valid = false;
+    if (logger.fail) logger.fail(l, r);
+    else console.log(`[FAIL] ${l}: ${r}`);
+  };
+  const i = (l, r) => (logger.info ? logger.info(l, r) : console.log(`[INFO] ${l}: ${r}`));
+
+  const razorpayKeyId = env.RAZORPAY_KEY_ID;
+  const razorpayKeySecret = env.RAZORPAY_KEY_SECRET;
+  const razorpayWebhookSecret = env.RAZORPAY_WEBHOOK_SECRET;
+  const currentEnv = env.NODE_ENV;
+
+  // Key ID check
+  if (!razorpayKeyId || razorpayKeyId.trim().length === 0) {
+    f('RAZORPAY_KEY_ID', 'Missing or empty');
+  } else {
+    const trimmedKeyId = razorpayKeyId.trim();
+    const isLiveKey = trimmedKeyId.startsWith('rzp_live_');
+    const isTestKey = trimmedKeyId.startsWith('rzp_test_');
+
+    if (!isLiveKey && !isTestKey) {
+      f(
+        'RAZORPAY_KEY_ID',
+        `Invalid key prefix: Must start with "rzp_live_" or "rzp_test_" (length: ${trimmedKeyId.length} chars)`
+      );
+    } else {
+      const prefix = isLiveKey ? 'rzp_live_' : 'rzp_test_';
+      p('RAZORPAY_KEY_ID Prefix', `Valid prefix "${prefix}" (length: ${trimmedKeyId.length} chars)`);
+
+      if (isLiveKey && currentEnv !== 'production') {
+        f(
+          'RAZORPAY_KEY_ID Environment Match',
+          'Live keys are only allowed in production (NODE_ENV === "production")'
+        );
+      } else if (isTestKey && currentEnv === 'production') {
+        i(
+          'RAZORPAY_KEY_ID Mode',
+          'TEST MODE: no real payments (test key rzp_test_ configured in production; allowed for staging)'
+        );
+      } else if (isLiveKey && currentEnv === 'production') {
+        p('RAZORPAY_KEY_ID Mode', 'Live key prefix (rzp_live_) configured in production');
+      } else {
+        p('RAZORPAY_KEY_ID Mode', 'Test key prefix (rzp_test_) configured in development/test');
+      }
+    }
+  }
+
+  // Key Secret check
+  if (!razorpayKeySecret || razorpayKeySecret.trim().length === 0) {
+    f('RAZORPAY_KEY_SECRET', 'Missing or empty');
+  } else {
+    p('RAZORPAY_KEY_SECRET', `Configured (length: ${razorpayKeySecret.trim().length} chars)`);
+  }
+
+  // Webhook Secret check
+  if (currentEnv === 'production') {
+    if (!razorpayWebhookSecret || razorpayWebhookSecret.trim().length === 0) {
+      f('RAZORPAY_WEBHOOK_SECRET', 'Missing or empty in production');
+    } else {
+      const trimmedWebhookSecret = razorpayWebhookSecret.trim();
+      if (trimmedWebhookSecret.length < 16) {
+        f(
+          'RAZORPAY_WEBHOOK_SECRET',
+          `Length is ${trimmedWebhookSecret.length} chars (must be >= 16 chars in production)`
+        );
+      } else if (razorpayKeySecret && trimmedWebhookSecret === razorpayKeySecret.trim()) {
+        f(
+          'RAZORPAY_WEBHOOK_SECRET',
+          'Security violation: RAZORPAY_WEBHOOK_SECRET must NOT equal RAZORPAY_KEY_SECRET'
+        );
+      } else {
+        p(
+          'RAZORPAY_WEBHOOK_SECRET',
+          `Configured and distinct from RAZORPAY_KEY_SECRET (length: ${trimmedWebhookSecret.length} chars >= 16)`
+        );
+      }
+    }
+  } else {
+    if (razorpayWebhookSecret && razorpayWebhookSecret.trim().length > 0) {
+      const trimmedWebhookSecret = razorpayWebhookSecret.trim();
+      if (razorpayKeySecret && trimmedWebhookSecret === razorpayKeySecret.trim()) {
+        f(
+          'RAZORPAY_WEBHOOK_SECRET',
+          'Security violation: RAZORPAY_WEBHOOK_SECRET must NOT equal RAZORPAY_KEY_SECRET'
+        );
+      } else {
+        p('RAZORPAY_WEBHOOK_SECRET', `Configured (length: ${trimmedWebhookSecret.length} chars)`);
+      }
+    } else {
+      i('RAZORPAY_WEBHOOK_SECRET', 'Not set (optional in non-production environments)');
+    }
+  }
+
+  return valid;
+};
+
+const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === __filename;
+if (isDirectRun) {
+  const passed = runCheckEnv(process.env);
+  process.exit(passed ? 0 : 1);
 }

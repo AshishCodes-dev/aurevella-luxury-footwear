@@ -184,6 +184,12 @@ export const getRazorpayInstance = () => {
   const key_id = getRazorpayKeyId();
   const key_secret = getRazorpayKeySecret();
 
+  if (process.env.NODE_ENV !== 'production' && key_id.startsWith('rzp_live_')) {
+    throw new Error(
+      '[SECURITY FATAL] Refusing to initialize real Razorpay client with live key (rzp_live_) in non-production environment.'
+    );
+  }
+
   return new Razorpay({
     key_id,
     key_secret,

@@ -74,6 +74,36 @@ Baked into the compiled client JavaScript bundle at build time (`npm run build`)
 | `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase Cloud Messaging sender identifier. | `123456789012` | **YES** |
 | `VITE_FIREBASE_STORAGE_BUCKET` | Firebase Storage bucket domain. | `aurevella-prod-xxxx.appspot.com` | Optional |
 
+### D. Razorpay Key Security Policy & Webhook Configuration
+
+1. **Environment Key Separation**:
+   - **Local Development & Staging**: Use test keys starting with prefix `rzp_test_` (`RAZORPAY_KEY_ID=rzp_test_...`).
+   - **Production Server Only**: Live keys starting with prefix `rzp_live_` (`RAZORPAY_KEY_ID=rzp_live_...`) must **ONLY** exist in the production server's secure environment.
+   - **Strict Leakage Prevention**: Never commit Razorpay keys into the Git repository, never keep live keys on personal developer laptops, and never paste live keys into AI chat sessions or public issues.
+   - **Runtime & Pre-flight Guards**:
+     - `backend/scripts/checkEnv.js` strictly fails if a `rzp_live_` key is detected when `NODE_ENV !== 'production'`.
+     - `backend/src/config/razorpay.js` enforces a runtime guard that throws a fatal error (`[SECURITY FATAL] Refusing to initialize real Razorpay client with live key (rzp_live_) in non-production environment.`) if `getRazorpayInstance()` is called with a live key in any non-production environment.
+     - In staging with `NODE_ENV === 'production'`, `rzp_test_` keys are allowed with an explicit `[INFO]` warning: `TEST MODE: no real payments`.
+
+2. **Webhook Endpoint & Event Configuration**:
+   - In the Razorpay Merchant Dashboard, navigate to **Settings** $\rightarrow$ **Webhooks** $\rightarrow$ **Add New Webhook**.
+   - **Webhook URL**: `https://api.myaurevella.in/api/payments/webhook`
+   - **Active Events to Subscribe**:
+     - `payment.captured`: Handled at [`backend/src/controllers/payment.controller.js#L343`](file:///C:/Users/dell/OneDrive/Desktop/AureVeLla/backend/src/controllers/payment.controller.js#L343). Verifies payment entity existence, captures status, validates amount/currency match, and performs atomic inventory deduction.
+     - `order.paid`: Handled at [`backend/src/controllers/payment.controller.js#L343`](file:///C:/Users/dell/OneDrive/Desktop/AureVeLla/backend/src/controllers/payment.controller.js#L343). Validates and finalizes orders upon gateway order completion.
+     - `payment.failed`: Handled at [`backend/src/controllers/payment.controller.js#L577`](file:///C:/Users/dell/OneDrive/Desktop/AureVeLla/backend/src/controllers/payment.controller.js#L577). Records failure reasons on pending orders without overwriting already-paid states.
+     - *(Note: All other unhandled events safely return HTTP 200 at [`payment.controller.js#L604`](file:///C:/Users/dell/OneDrive/Desktop/AureVeLla/backend/src/controllers/payment.controller.js#L604) to acknowledge delivery and prevent gateway retry storms).*
+   - **Webhook Secret (`RAZORPAY_WEBHOOK_SECRET`)**:
+     - Must be a separate, dedicated high-entropy string ($\ge$ 16 characters) generated independently.
+     - Must **NOT** equal `RAZORPAY_KEY_SECRET` (enforced by `checkEnv.js`).
+     - Paste this exact secret into the Razorpay Webhooks dashboard when registering the endpoint.
+
+3. **First Live Transaction Verification**:
+   - After completing deployment with live credentials, perform a first live end-to-end verification.
+   - Create a test transaction with a tiny amount (e.g. ₹1 or a nominal low-value item).
+   - Verify payment authorization and capture in the Razorpay Dashboard.
+   - Immediately execute a full refund from the Razorpay Dashboard to return funds and confirm webhook handling.
+
 ---
 
 ## 3. Executive Admin Provisioning Runbook (`backend/src/utils/seedAdmin.js`)
